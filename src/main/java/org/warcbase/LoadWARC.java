@@ -176,7 +176,7 @@ public class LoadWARC {
 		//File inputWarcFile = new File("/Users/milad/UMD/CL/US_Congress/archive/partner.archive-it.org/cgi-bin/getarcs.pl/ARCHIVEIT-3566-DAILY-13015-20130222204213709-00000-wbgrp-crawl062.us.archive.org-6443.warc.gz");
 		//for(File inputWarcFile: inputWarcFolder.listFiles()){
 		System.out.println(inputWarcFolder.listFiles().length + " Files in total.");
-		for(int i=55;i<inputWarcFolder.listFiles().length && i < 60;i++){
+		for(int i=0;i<inputWarcFolder.listFiles().length;i++){
 			File inputWarcFile = inputWarcFolder.listFiles()[i];
 			if(inputWarcFile.getName().charAt(0) == '.')
 				continue;
