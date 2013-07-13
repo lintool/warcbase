@@ -1,3 +1,5 @@
+package org.warcbase;
+
 import java.io.*;
 import java.net.URL;
 import java.net.MalformedURLException;

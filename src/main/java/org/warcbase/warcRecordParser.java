@@ -1,3 +1,4 @@
+package org.warcbase;
 
 public class warcRecordParser {
 	public static String getType(String record){

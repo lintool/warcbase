@@ -1,4 +1,5 @@
 /**
+
  * Container for a Warc Record of type "response"
  * 
  * (C) 2009 - Carnegie Mellon University
@@ -32,6 +33,7 @@
  * @author mhoy@cs.cmu.edu (Mark J. Hoy)
  */
 
+package org.warcbase;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;

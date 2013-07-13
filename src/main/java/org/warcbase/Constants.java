@@ -1,3 +1,4 @@
+package org.warcbase;
 //import iu.pti.hbaseapp.clueweb09.HTMLTextParser;
 
 import org.apache.hadoop.hbase.util.Bytes;

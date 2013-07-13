@@ -1,3 +1,4 @@
+package org.warcbase;
 
 public class WarcbaseRecord {
 	public static byte[] stringToBytesUTFCustom(String str) {

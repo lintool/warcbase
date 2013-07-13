@@ -1,3 +1,5 @@
+package org.warcbase;
+
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.File;
