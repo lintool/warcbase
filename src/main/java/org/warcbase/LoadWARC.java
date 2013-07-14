@@ -13,6 +13,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -26,6 +33,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 public class LoadWARC {
 	
+  private static final String DIR_OPTION = "dir";
+  private static final String START_OPTION = "start";
+  
     public static Configuration hbaseConfig = null;
     public static HTable table = null;
     
@@ -117,9 +127,32 @@ public class LoadWARC {
 	 * @param args
 	 */
 	public static void main(String[] args) {
+	  Options options = new Options();
+	  options.addOption(OptionBuilder.withArgName("dir").hasArg()
+        .withDescription("WARC files location").create(DIR_OPTION));
+	  options.addOption(OptionBuilder.withArgName("start").hasArg()
+        .withDescription("Start from WARC file").create(START_OPTION));
+	  
+	  CommandLine cmdline = null;
+	  CommandLineParser parser = new GnuParser();
+    try {
+      cmdline = parser.parse(options, args);
+    } catch (ParseException exp) {
+      System.err.println("Error parsing command line: " + exp.getMessage());
+      System.exit(-1);
+    }
+    
+    if (!cmdline.hasOption(DIR_OPTION)) {
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.printHelp(LoadWARC.class.getCanonicalName(), options);
+      System.exit(-1);
+    }
+    String path = cmdline.getOptionValue(DIR_OPTION);
+    //System.out.println(path);
 		//if(true)
 			//return;
-		//Create hbase table
+		
+    //Create hbase table
 		creatTable();
 		if(table == null){
     		try {
@@ -160,23 +193,19 @@ public class LoadWARC {
 			e.printStackTrace();
 		}
 		
-		/*FileWriter imgLinks = null;
-		try {
-			imgLinks = new FileWriter("images.txt", true);
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}*/
-		
-		//if(true)
-			//return;
+		File inputWarcFolder = new File(path);
 		//File inputWarcFolder = new File("/Users/milad/UMD/CL/US_Congress/archive/partner.archive-it.org/cgi-bin/getarcs.pl");
-		File inputWarcFolder = new File("/scratch0/milad/partner.archive-it.org/cgi-bin/getarcs.pl");
+		//File inputWarcFolder = new File("/scratch0/milad/partner.archive-it.org/cgi-bin/getarcs.pl");
 		//String inputWarcFile = "/Users/milad/workspace/java/Senate/ARCHIVEIT-3395-NONE-KQSJEZ-20121203173122-00012-wbgrp-crawl068.us.archive.org-6680.warc.gz";
 		//File inputWarcFile = new File("/Users/milad/UMD/CL/US_Congress/archive/partner.archive-it.org/cgi-bin/getarcs.pl/ARCHIVEIT-3566-DAILY-13015-20130222204213709-00000-wbgrp-crawl062.us.archive.org-6443.warc.gz");
 		//for(File inputWarcFile: inputWarcFolder.listFiles()){
 		System.out.println(inputWarcFolder.listFiles().length + " Files in total.");
-		for(int i=0;i<inputWarcFolder.listFiles().length;i++){
+		int i = 0;
+		if(cmdline.hasOption(START_OPTION)) {
+      i = Integer.parseInt(cmdline.getOptionValue(START_OPTION));
+    }
+		
+		for(;i<inputWarcFolder.listFiles().length;i++){
 			File inputWarcFile = inputWarcFolder.listFiles()[i];
 			if(inputWarcFile.getName().charAt(0) == '.')
 				continue;
