@@ -42,6 +42,12 @@
     <version>7</version>
   </parent>
 
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <jettyVersion>8.1.11.v20130520</jettyVersion>
+  </properties>
+
   <build>
     <plugins>
       <plugin>
@@ -57,13 +63,15 @@
           </programs>
         </configuration>
       </plugin>
+	<plugin>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>jetty-maven-plugin</artifactId>
+        <version>${jettyVersion}</version>
+      </plugin>
     </plugins>
   </build>
 
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-  </properties>
+
 
   <dependencies>
     <dependency>
@@ -91,6 +99,11 @@
       <groupId>org.archive.wayback</groupId>
       <artifactId>wayback-core</artifactId>
       <version>1.7.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
+      <version>${jettyVersion}</version>
     </dependency>
   </dependencies>
 
