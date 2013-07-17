@@ -46,6 +46,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jettyVersion>8.1.11.v20130520</jettyVersion>
+    <hadoop.version> 2.0.0-mr1-cdh4.3.0</hadoop.version>
   </properties>
 
   <build>
@@ -95,6 +96,16 @@
       <artifactId>hbase</artifactId>
       <version>0.94.6-cdh4.3.0</version>
     </dependency>
+    <dependency>
+    	<groupId>org.apache.hadoop</groupId>
+    	<artifactId>hadoop-core</artifactId>
+    	<version>${hadoop.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.archive.heritrix</groupId>
+        <artifactId>heritrix-commons</artifactId>
+        <version>3.1.2-SNAPSHOT</version>
+      </dependency>
     <dependency>
       <groupId>org.archive.wayback</groupId>
       <artifactId>wayback-core</artifactId>
