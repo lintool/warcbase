@@ -116,6 +116,7 @@ public class LoadWARC {
 			table.put(put);
 		} catch (IOException e) {
 			System.out.println("addRecord exception: Couldn't insert key: " + key);
+			System.out.println("File Size: " + data.length);
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -245,6 +246,8 @@ public class LoadWARC {
 							continue;
 						if(thisTargetURI.length() > 3 && thisTargetURI.substring(thisTargetURI.length() - 3, thisTargetURI.length()).equals("mp4"))
 							continue;
+						if(thisTargetURI.length() > 3 && thisTargetURI.substring(thisTargetURI.length() - 3, thisTargetURI.length()).equals("MP4"))
+              continue;
 						String content = thisWarcRecord.getContentUTF8();
 						content = thisWarcRecord.toString();
 						parse = get_headers(content);
