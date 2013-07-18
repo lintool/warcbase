@@ -54,6 +54,8 @@ import org.archive.wayback.util.url.UrlOperations;
  * @version $Date$, $Revision$
  */
 public class TextDocument2 {
+  public static String SERVER_PREFIX = "http://tibanna.umiacs.umd.edu:8080/";
+
 	// if documents are marked up before sending to clients, the data is
 	// decoded into a String in chunks. This is how big a chunk to decode with.
 	private final static int C_BUFFER_SIZE = 4096;
@@ -387,7 +389,7 @@ public class TextDocument2 {
 				//sb.append(datespec);
 				//sb.append("http://localhost:8080/warcbase/servlet?date=");
 				//System.out.println("salam");
-				sb.append("http://tibanna.umiacs.umd.edu:8080/warcbase/servlet?date=");
+				sb.append(SERVER_PREFIX + "warcbase/servlet?date=");
 				sb.append(datespec);
 				sb.append("&query=");
 				//sb.append("");

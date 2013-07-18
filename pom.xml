@@ -64,8 +64,8 @@
               <name>LoadWARC</name>
             </program>
             <program>
-              <mainClass>org.warcbase.runJetty</mainClass>
-              <name>runJetty</name>
+              <mainClass>org.warcbase.WarcBrowser</mainClass>
+              <name>WarcBrowser</name>
             </program>
             <program>
               <mainClass>org.warcbase.testHbase</mainClass>
