@@ -67,6 +67,10 @@
               <mainClass>org.warcbase.runJetty</mainClass>
               <name>runJetty</name>
             </program>
+            <program>
+              <mainClass>org.warcbase.testHbase</mainClass>
+              <name>testHbase</name>
+            </program>
           </programs>
         </configuration>
       </plugin>
