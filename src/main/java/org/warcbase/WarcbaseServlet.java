@@ -20,6 +20,8 @@ public class WarcbaseServlet extends HttpServlet
 
 	private void writeResponse(HttpServletResponse resp, byte[] data, String query, String d) throws IOException{
 		String content = new String(data, "UTF8");
+		System.out.println(content);
+		
 		if(!warcRecordParser.getType(content).startsWith("text")){
 			resp.setHeader("Content-Type", ResponseRecord.getType(content));
 			resp.setContentLength(ResponseRecord.getBodyByte(data).length);
