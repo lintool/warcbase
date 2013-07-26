@@ -534,7 +534,7 @@ public class TextDocument2 {
 		}
 		TagMagix.markupCSSImports(sb,uriConverter, captureDate, pageUrl);
 		TagMagix.markupStyleUrls(sb,uriConverter,captureDate,pageUrl);
-    System.out.println(sb.toString());
+    //System.out.println(sb.toString());
 		return sb.toString();
 	}
 	
