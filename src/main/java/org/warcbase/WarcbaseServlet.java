@@ -33,7 +33,7 @@ public class WarcbaseServlet extends HttpServlet
 			PrintWriter out = resp.getWriter();
 			TextDocument2 t2 = new TextDocument2(null, null, null);
 			String bodyContent = new String(ResponseRecord.getBodyByte(data), "UTF8");
-			System.out.println(bodyContent);
+			//System.out.println(bodyContent);
 			out.println(t2.fixURLs(bodyContent, query, d));
 		}
 	}
