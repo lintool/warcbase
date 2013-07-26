@@ -20,7 +20,7 @@ public class WarcbaseServlet extends HttpServlet
 
 	private void writeResponse(HttpServletResponse resp, byte[] data, String query, String d) throws IOException{
 		String content = new String(data, "UTF8");
-		System.out.println(content);
+		//System.out.println(content);
 		
 		if(!warcRecordParser.getType(content).startsWith("text")){
 			resp.setHeader("Content-Type", ResponseRecord.getType(content));
@@ -32,7 +32,9 @@ public class WarcbaseServlet extends HttpServlet
 		else{
 			PrintWriter out = resp.getWriter();
 			TextDocument2 t2 = new TextDocument2(null, null, null);
-			out.println(t2.fixURLs(new String(ResponseRecord.getBodyByte(data)), query, d));
+			String bodyContent = new String(ResponseRecord.getBodyByte(data), "UTF8");
+			System.out.println(bodyContent);
+			out.println(t2.fixURLs(bodyContent, query, d));
 		}
 	}
 	
