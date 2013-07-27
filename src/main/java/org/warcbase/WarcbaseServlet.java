@@ -35,7 +35,7 @@ public class WarcbaseServlet extends HttpServlet
 			String bodyContent = new String(ResponseRecord.getBodyByte(data), "UTF8");
 			bodyContent = t2.fixURLs(bodyContent, query, d);
 			System.out.println(bodyContent);
-			out.println(t2.fixURLs(bodyContent, query, d));
+			out.println(bodyContent);
 		}
 	}
 	
