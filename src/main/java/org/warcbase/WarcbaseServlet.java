@@ -31,6 +31,8 @@ public class WarcbaseServlet extends HttpServlet
 		}
 		else{
 		  System.setProperty("file.encoding", "UTF8");
+		  //resp.setContentType("text/html;charset=UTF-8");
+		  resp.setHeader("Content-Type", ResponseRecord.getType(content));
 			PrintWriter out = resp.getWriter();
 			//out.
 			TextDocument2 t2 = new TextDocument2(null, null, null);
