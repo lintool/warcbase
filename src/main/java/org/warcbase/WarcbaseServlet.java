@@ -30,12 +30,13 @@ public class WarcbaseServlet extends HttpServlet
     		//IOUtils.write(ResponseRecord.getBodyByte(data), resp.getOutputStream());
 		}
 		else{
-			PrintWriter out = resp.getWriter();
+			//PrintWriter out = resp.getWriter();
 			TextDocument2 t2 = new TextDocument2(null, null, null);
 			String bodyContent = new String(ResponseRecord.getBodyByte(data), "UTF8");
 			bodyContent = t2.fixURLs(bodyContent, query, d);
 			//System.out.println(bodyContent);
-			out.println(bodyContent);
+			//out.println(bodyContent);
+			resp.getOutputStream().write(ResponseRecord.getBodyByte(data));
 		}
 	}
 	
