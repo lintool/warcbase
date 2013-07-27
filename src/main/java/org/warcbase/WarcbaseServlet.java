@@ -33,6 +33,7 @@ public class WarcbaseServlet extends HttpServlet
 		  System.setProperty("file.encoding", "UTF8");
 		  //resp.setContentType("text/html;charset=UTF-8");
 		  resp.setHeader("Content-Type", ResponseRecord.getType(content));
+		  resp.setCharacterEncoding("UTF-8");
 			PrintWriter out = resp.getWriter();
 			//out.
 			TextDocument2 t2 = new TextDocument2(null, null, null);
@@ -40,7 +41,7 @@ public class WarcbaseServlet extends HttpServlet
 			bodyContent = t2.fixURLs(bodyContent, query, d);
 			//System.out.println(bodyContent);
 			out.println(bodyContent);
-			//resp.getOutputStream().write(ResponseRecord.getBodyByte(data));
+			//resp.getOutputStream().write(bodyContent.getBytes("UTF-8"));
 		}
 	}
 	
