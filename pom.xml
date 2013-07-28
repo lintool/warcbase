@@ -75,6 +75,10 @@
               <mainClass>org.warcbase.PrintURLS</mainClass>
               <name>PrintURLS</name>
             </program>
+            <program>
+              <mainClass>org.warcbase.Dashboard</mainClass>
+              <name>Dashboard</name>
+            </program>
           </programs>
         </configuration>
       </plugin>
