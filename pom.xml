@@ -71,6 +71,10 @@
               <mainClass>org.warcbase.testHbase</mainClass>
               <name>testHbase</name>
             </program>
+            <program>
+              <mainClass>org.warcbase.PrintURLS</mainClass>
+              <name>PrintURLS</name>
+            </program>
           </programs>
         </configuration>
       </plugin>
