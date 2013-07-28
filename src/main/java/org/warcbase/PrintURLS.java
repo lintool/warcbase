@@ -103,7 +103,6 @@ public class PrintURLS {
       
       try {
         inStream.close();
-        out.close();
       } catch (IOException e2) {
         // TODO Auto-generated catch block
         e2.printStackTrace();
@@ -111,5 +110,6 @@ public class PrintURLS {
       
       System.out.println("Added file: " + inputWarcFile.getName());
     }
+    out.close();
   }
 }
