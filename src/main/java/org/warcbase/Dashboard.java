@@ -70,10 +70,10 @@ public class Dashboard {
 }
   
   public static void main(String[] args) throws IOException {
-    String testString = "com.89north.www/wp-content/plugins/jquery-drop-down-menu-plugin/noConflict.js?ver=3.5.1";
+    /*String testString = "com.89north.www/wp-content/plugins/jquery-drop-down-menu-plugin/noConflict.js?ver=3.5.1";
     System.out.println(getDomain(testString));
     if(true)
-      return;
+      return;*/
     int count = 0;
     try {
       table = new HTable(hbaseConfig, Constants.TABLE_NAME);
