@@ -89,7 +89,7 @@ public class Dashboard {
     }
     HashMap<String, Integer> fileTypeCounter = new HashMap<String, Integer>();
     
-    for (Result rr = scanner.next(); rr != null && count < 200; rr = scanner.next()) {
+    for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
       byte[] key = rr.getRow();
       String url = new String(key, "UTF8");
       count++;
@@ -102,10 +102,14 @@ public class Dashboard {
         fileTypeCounter.put(fileType, 1);
       //System.out.println(new String(key, "UTF8") + " " + getFileType(url));
     }
-    System.out.println(count);
+    System.out.println("Number of URLS in hbase: " + count);
     Map<String, Integer> sortedMap = sortByValue(fileTypeCounter);
+    int i = 0;
     for(Map.Entry<String, Integer> entry: sortedMap.entrySet()){
       System.out.println(entry.getKey() + " " + entry.getValue());
+      if(i > 20)
+        return;
+      i++;
     }
   }
 }
