@@ -20,7 +20,7 @@ public class Dashboard {
   
   public static String getFileType(String url){
     System.out.println(url);
-    String[] splits = url.split(".");
+    String[] splits = url.split("\\.");
     System.out.println(splits.length);
     if(splits.length <= 1)
       return "";
