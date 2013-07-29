@@ -1,8 +1,14 @@
 package org.warcbase;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -40,6 +46,23 @@ public class Dashboard {
         return "";
     return type;
   }
+  
+  public static Map<String, Integer> sortByValue(HashMap<String, Integer> map) {
+    List<Map.Entry<String, Integer>> list = new LinkedList<Map.Entry<String, Integer>>(map.entrySet());
+
+    Collections.sort(list, new Comparator<Map.Entry<String, Integer>>() {
+
+        public int compare(Map.Entry<String, Integer> m1, Map.Entry<String, Integer> m2) {
+            return (m2.getValue()).compareTo(m1.getValue());
+        }
+    });
+
+    Map<String, Integer> result = new LinkedHashMap<String, Integer>();
+    for (Map.Entry<String, Integer> entry : list) {
+        result.put(entry.getKey(), entry.getValue());
+    }
+    return result;
+}
   
   public static void main(String[] args) throws IOException {
     /*String testString = "com.89north.www/wp-content/plugins/jquery-drop-down-menu-plugin/noConflict.js?ver=3.5.1";
@@ -80,11 +103,9 @@ public class Dashboard {
       //System.out.println(new String(key, "UTF8") + " " + getFileType(url));
     }
     System.out.println(count);
-    SortedSet<String> sortedKeys = new TreeSet<String>(fileTypeCounter.keySet());
-    Iterator it = sortedKeys.iterator();
-    while(it.hasNext()){
-      String value=(String)it.next();
-      System.out.println(value + " " + fileTypeCounter.get(value));
+    Map<String, Integer> sortedMap = sortByValue(fileTypeCounter);
+    for(Map.Entry<String, Integer> entry: sortedMap.entrySet()){
+      System.out.println(entry.getKey() + " " + entry.getValue());
     }
   }
 }
