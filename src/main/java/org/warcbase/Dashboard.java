@@ -50,7 +50,7 @@ public class Dashboard {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
-    HashMap<String, Integer> fileTypeCounter = null;
+    HashMap<String, Integer> fileTypeCounter = new HashMap<String, Integer>();
     
     for (Result rr = scanner.next(); rr != null && count < 200; rr = scanner.next()) {
       byte[] key = rr.getRow();
