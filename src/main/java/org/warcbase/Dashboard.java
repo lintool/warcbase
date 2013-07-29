@@ -24,14 +24,28 @@ public class Dashboard {
   
   public static String getFileType(String url){
     //System.out.println(url);
-    String[] splits = url.split("\\.");
+    if(url.length() > 0 && url.charAt(url.length() - 1) == '/')
+      return "";
+    String[] splits = url.split("\\/");
+    if(splits.length == 0)
+      return "";
+    splits = splits[splits.length - 1].split("\\.");
     //System.out.println(splits.length);
     if(splits.length <= 1)
       return "";
-    return splits[splits.length - 1];
+    String type = splits[splits.length - 1];
+    if(type.length() > 8)
+      return "";
+    if(type.length() == 1 && Character.isDigit(type.charAt(0)))
+        return "";
+    return type;
   }
   
   public static void main(String[] args) throws IOException {
+    /*String testString = "com.89north.www/wp-content/plugins/jquery-drop-down-menu-plugin/noConflict.js?ver=3.5.1";
+    System.out.println(getFileType(testString));
+    if(true)
+      return;*/
     int count = 0;
     try {
       table = new HTable(hbaseConfig, Constants.TABLE_NAME);
@@ -56,8 +70,6 @@ public class Dashboard {
       byte[] key = rr.getRow();
       String url = new String(key, "UTF8");
       count++;
-      if(url.length() > 10)
-        url = url.substring(url.length() - 10);
       String fileType = getFileType(url);
       if(fileType.equals(""))
         continue;
@@ -65,7 +77,7 @@ public class Dashboard {
         fileTypeCounter.put(fileType, fileTypeCounter.get(fileType) + 1);
       else
         fileTypeCounter.put(fileType, 1);
-      System.out.println(new String(key, "UTF8") + " " + getFileType(url));
+      //System.out.println(new String(key, "UTF8") + " " + getFileType(url));
     }
     System.out.println(count);
     SortedSet<String> sortedKeys = new TreeSet<String>(fileTypeCounter.keySet());
