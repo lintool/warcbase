@@ -59,11 +59,13 @@ public class Dashboard {
       if(url.length() > 10)
         url = url.substring(url.length() - 10);
       String fileType = getFileType(url);
+      if(fileType.equals(""))
+        continue;
       if(fileTypeCounter.containsKey(fileType))
         fileTypeCounter.put(fileType, fileTypeCounter.get(fileType) + 1);
       else
         fileTypeCounter.put(fileType, 1);
-      //System.out.println(new String(key, "UTF8") + getFileType(url));
+      System.out.println(new String(key, "UTF8") + " " + getFileType(url));
     }
     System.out.println(count);
     SortedSet<String> sortedKeys = new TreeSet<String>(fileTypeCounter.keySet());
