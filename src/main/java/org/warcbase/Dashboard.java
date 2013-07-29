@@ -19,7 +19,9 @@ public class Dashboard {
   }
   
   public static String getFileType(String url){
+    System.out.println(url);
     String[] splits = url.split(".");
+    System.out.println(splits.length);
     if(splits.length <= 1)
       return "";
     return splits[splits.length - 1];
