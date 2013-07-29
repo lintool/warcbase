@@ -18,8 +18,11 @@ public class Dashboard {
     hbaseConfig = HBaseConfiguration.create();
   }
   
-  public static void getFileType(String url){
-    
+  public static String getFileType(String url){
+    String[] splits = url.split(".");
+    if(splits.length == 1)
+      return "";
+    return splits[splits.length - 1];
   }
   
   public static void main(String[] args) throws IOException {
@@ -43,8 +46,9 @@ public class Dashboard {
     }
     for (Result rr = scanner.next(); rr != null && count < 200; rr = scanner.next()) {
       byte[] key = rr.getRow();
+      String url = new String(key, "UTF8");
       count++;
-      System.out.println(new String(key, "UTF8"));
+      System.out.println(new String(key, "UTF8") + getFileType(url.substring(url.length() - 10)));
     }
     System.out.println(count);
   }
