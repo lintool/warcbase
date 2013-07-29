@@ -8,6 +8,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 
 public class Dashboard {
   public static Configuration hbaseConfig = null;
@@ -27,9 +28,11 @@ public class Dashboard {
     }
     
     System.out.println("scanning full table:");
+    Scan scan = new Scan();
+    scan.setFilter(new FirstKeyOnlyFilter());
     ResultScanner scanner = null;
     try {
-      scanner = table.getScanner(new Scan());
+      scanner = table.getScanner(scan);
     } catch (IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
