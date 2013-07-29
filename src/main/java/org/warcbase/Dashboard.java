@@ -2,6 +2,7 @@ package org.warcbase;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -12,7 +13,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
-import org.hsqldb.lib.Iterator;
 
 public class Dashboard {
   public static Configuration hbaseConfig = null;
@@ -67,7 +67,7 @@ public class Dashboard {
     }
     System.out.println(count);
     SortedSet<String> sortedKeys = new TreeSet<String>(fileTypeCounter.keySet());
-    Iterator it = (Iterator) sortedKeys.iterator();
+    Iterator it = sortedKeys.iterator();
     while(it.hasNext()){
       String value=(String)it.next();
       System.out.println(value + " " + fileTypeCounter.get(value));
