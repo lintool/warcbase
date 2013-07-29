@@ -47,6 +47,11 @@ public class Dashboard {
     return type;
   }
   
+  public static String getDomain(String url){
+    String[] splits = url.split("\\/");
+    return splits[0];
+  }
+  
   public static Map<String, Integer> sortByValue(HashMap<String, Integer> map) {
     List<Map.Entry<String, Integer>> list = new LinkedList<Map.Entry<String, Integer>>(map.entrySet());
 
@@ -65,10 +70,10 @@ public class Dashboard {
 }
   
   public static void main(String[] args) throws IOException {
-    /*String testString = "com.89north.www/wp-content/plugins/jquery-drop-down-menu-plugin/noConflict.js?ver=3.5.1";
-    System.out.println(getFileType(testString));
+    String testString = "com.89north.www/wp-content/plugins/jquery-drop-down-menu-plugin/noConflict.js?ver=3.5.1";
+    System.out.println(getDomain(testString));
     if(true)
-      return;*/
+      return;
     int count = 0;
     try {
       table = new HTable(hbaseConfig, Constants.TABLE_NAME);
@@ -88,11 +93,17 @@ public class Dashboard {
       e.printStackTrace();
     }
     HashMap<String, Integer> fileTypeCounter = new HashMap<String, Integer>();
+    HashMap<String, Integer> domainCounter = new HashMap<String, Integer>();
     
     for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
       byte[] key = rr.getRow();
       String url = new String(key, "UTF8");
       count++;
+      String domain = getDomain(url);
+      if(domainCounter.containsKey(domain))
+        domainCounter.put(domain, domainCounter.get(domain) + 1);
+      else
+        domainCounter.put(domain, 1);
       String fileType = getFileType(url);
       if(fileType.equals(""))
         continue;
@@ -102,10 +113,20 @@ public class Dashboard {
         fileTypeCounter.put(fileType, 1);
       //System.out.println(new String(key, "UTF8") + " " + getFileType(url));
     }
-    System.out.println("Number of URLS in hbase: " + count);
+    System.out.println("Number of rows in the table overall: " + count);
+    System.out.println("\nBreakdown by file type:");
     Map<String, Integer> sortedMap = sortByValue(fileTypeCounter);
     int i = 0;
     for(Map.Entry<String, Integer> entry: sortedMap.entrySet()){
+      System.out.println(entry.getKey() + " " + entry.getValue());
+      if(i > 20)
+        return;
+      i++;
+    }
+    System.out.println("\nBreakdown by domain:");
+    Map<String, Integer> sortedDomain = sortByValue(domainCounter);
+    i = 0;
+    for(Map.Entry<String, Integer> entry: sortedDomain.entrySet()){
       System.out.println(entry.getKey() + " " + entry.getValue());
       if(i > 20)
         return;
