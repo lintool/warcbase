@@ -120,7 +120,7 @@ public class Dashboard {
     for(Map.Entry<String, Integer> entry: sortedMap.entrySet()){
       System.out.println(entry.getKey() + " " + entry.getValue());
       if(i > 20)
-        return;
+        break;
       i++;
     }
     System.out.println("\nBreakdown by domain:");
