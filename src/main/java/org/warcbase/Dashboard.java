@@ -48,7 +48,9 @@ public class Dashboard {
       byte[] key = rr.getRow();
       String url = new String(key, "UTF8");
       count++;
-      System.out.println(new String(key, "UTF8") + getFileType(url.substring(url.length() - 10)));
+      if(url.length() > 10)
+        url = url.substring(url.length() - 10);
+      System.out.println(new String(key, "UTF8") + getFileType(url));
     }
     System.out.println(count);
   }
