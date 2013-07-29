@@ -18,6 +18,10 @@ public class Dashboard {
     hbaseConfig = HBaseConfiguration.create();
   }
   
+  public static void getFileType(String url){
+    
+  }
+  
   public static void main(String[] args) throws IOException {
     int count = 0;
     try {
@@ -26,7 +30,7 @@ public class Dashboard {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
-    
+        
     System.out.println("scanning full table:");
     Scan scan = new Scan();
     scan.setFilter(new FirstKeyOnlyFilter());
@@ -37,9 +41,10 @@ public class Dashboard {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
-    for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
+    for (Result rr = scanner.next(); rr != null && count < 200; rr = scanner.next()) {
       byte[] key = rr.getRow();
       count++;
+      System.out.println(new String(key, "UTF8"));
     }
     System.out.println(count);
   }
