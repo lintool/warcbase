@@ -12,6 +12,13 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
@@ -19,8 +26,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.mapreduce.RowCounter;
 
 public class Dashboard {
+  
+  private static final String N_OPTION = "n";
   public static Configuration hbaseConfig = null;
   public static HTable table = null;
   
@@ -74,6 +84,25 @@ public class Dashboard {
     System.out.println(getDomain(testString));
     if(true)
       return;*/
+    Options options = new Options();
+    options.addOption(OptionBuilder.withArgName("n").hasArg()
+        .withDescription("Num").create(N_OPTION));
+    
+    CommandLine cmdline = null;
+    CommandLineParser parser = new GnuParser();
+    try {
+      cmdline = parser.parse(options, args);
+    } catch (ParseException exp) {
+      System.err.println("Error parsing command line: " + exp.getMessage());
+      System.exit(-1);
+    }
+    if (!cmdline.hasOption(N_OPTION)) {
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.printHelp(LoadWARC.class.getCanonicalName(), options);
+      System.exit(-1);
+    }
+    int num = Integer.parseInt(cmdline.getOptionValue(N_OPTION));
+    
     int count = 0;
     try {
       table = new HTable(hbaseConfig, Constants.TABLE_NAME);
@@ -92,6 +121,10 @@ public class Dashboard {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
+    
+    //RowCounter rCounter = new RowCounter();
+    //rCounter.se
+    
     HashMap<String, Integer> fileTypeCounter = new HashMap<String, Integer>();
     HashMap<String, Integer> domainCounter = new HashMap<String, Integer>();
     
@@ -119,7 +152,7 @@ public class Dashboard {
     int i = 0;
     for(Map.Entry<String, Integer> entry: sortedMap.entrySet()){
       System.out.println(entry.getKey() + " " + entry.getValue());
-      if(i > 20)
+      if(i > num)
         break;
       i++;
     }
@@ -128,8 +161,8 @@ public class Dashboard {
     i = 0;
     for(Map.Entry<String, Integer> entry: sortedDomain.entrySet()){
       System.out.println(entry.getKey() + " " + entry.getValue());
-      if(i > 20)
-        return;
+      if(i > num)
+        break;
       i++;
     }
   }
