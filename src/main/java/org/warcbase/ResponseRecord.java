@@ -112,6 +112,7 @@ public class ResponseRecord {
 		}*/
 		int d = 0;
 		String body = byteA2String(data);
+		System.out.println(body.indexOf('\n'));
 		//System.err.println(body);
 		//if(true)
 		//return data;
