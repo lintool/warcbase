@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -51,11 +52,13 @@ public class DuplicatesHbase {
     for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
       //if(rr.raw().length == 0)
         //continue;
-      
-      for(int i=1;i<rr.raw().length;i++){
-        if(rr.raw()[i].getValue().equals(rr.raw()[i - 1].getValue())){
+      byte[] key = rr.getRow();
+      Get get = new Get(key);
+      Result rs = table.get(get);
+      for(int i=1;i<rs.raw().length;i++){
+        if(rs.raw()[i].getValue().equals(rs.raw()[i - 1].getValue())){
           duplicates++;
-          duplicateSize += rr.raw()[i].getValue().length;
+          duplicateSize += rs.raw()[i].getValue().length;
         }
           
       }
