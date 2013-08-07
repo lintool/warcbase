@@ -66,6 +66,8 @@ public class DuplicatesHbase {
         System.out.println(rr.raw()[i].getValue().length);
         System.out.println(rr.raw()[i - 1].getValue().length);
         System.out.println(key.length);
+        if(rr.raw()[i].getValue().length != rr.raw()[i - 1].getValue().length)
+          continue;
         if(Arrays.equals(ResponseRecord.getBodyByte(rr.raw()[i].getValue()), ResponseRecord.getBodyByte(rr.raw()[i - 1].getValue()))){
           duplicates++;
           duplicateSize += rr.raw()[i].getValue().length;
