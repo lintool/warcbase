@@ -64,7 +64,7 @@ public class DuplicatesHbase {
           duplicateSize += rr.raw()[i].getValue().length;
         }
       }
-      if(progress % 50000 == 0)
+      if(progress % 10000 == 0)
         System.out.println("Done with " + progress + " rows.");
     }
     
