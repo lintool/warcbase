@@ -112,7 +112,8 @@ public class ResponseRecord {
 		}*/
 		int d = 0;
 		String body = byteA2String(data);
-		System.out.println(body.contains("\n"));
+		if(!body.contains("\n"))
+		  return data;
 		//System.err.println(body);
 		//if(true)
 		//return data;
@@ -133,7 +134,8 @@ public class ResponseRecord {
 	}
 	
 	public static void main(String[] args) {
-	  
+	  String test = "Salam \n chetory?";
+	  System.out.println(test.contains("\n"));
 	  if(true)
 	    return;
 		// TODO Auto-generated method stub
