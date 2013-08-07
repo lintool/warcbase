@@ -59,13 +59,13 @@ public class DuplicatesHbase {
       //Result rs = table.get(get);
       progress++;
       String url = new String(key, "UTF8");
-      System.out.println(key);
+      System.out.println(url);
       System.out.println(rr.raw().length + " " + duplicates);
       for(int i=1;i<rr.raw().length;i++){
         System.out.println(new String(rr.raw()[i].getQualifier(), "UTF8"));
         System.out.println(rr.raw()[i].getValue().length);
         System.out.println(rr.raw()[i - 1].getValue().length);
-        System.out.println(key.length);
+        //System.out.println(key.length);
         if(rr.raw()[i].getValue().length != rr.raw()[i - 1].getValue().length)
           continue;
         if(Arrays.equals(ResponseRecord.getBodyByte(rr.raw()[i].getValue()), ResponseRecord.getBodyByte(rr.raw()[i - 1].getValue()))){
