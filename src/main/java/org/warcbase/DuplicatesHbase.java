@@ -58,11 +58,11 @@ public class DuplicatesHbase {
       //Get get = new Get(key);
       //Result rs = table.get(get);
       progress++;
-      String url = new String(key, "UTF8");
-      System.out.println(url);
-      System.out.println(rr.raw().length + " " + duplicates);
+      //String url = new String(key, "UTF8");
+      //System.out.println(url);
+      //System.out.println(rr.raw().length + " " + duplicates);
       for(int i=1;i<rr.raw().length;i++){
-        System.out.println(new String(rr.raw()[i].getQualifier(), "UTF8"));
+        //System.out.println(new String(rr.raw()[i].getQualifier(), "UTF8"));
         //System.out.println(rr.raw()[i].getValue().length);
         //System.out.println(rr.raw()[i - 1].getValue().length);
         //System.out.println(key.length);
@@ -73,8 +73,8 @@ public class DuplicatesHbase {
           duplicateSize += rr.raw()[i].getValue().length;
         }
       }
-      if(progress % 10000 == 0)
-        System.out.println("Done with " + progress + " rows.");
+      if(progress % 50000 == 0)
+        System.out.println("Done with " + progress + " rows. duplicates = " + duplicates);
     }
     
     System.out.println("Number of Duplicates: " + duplicates);
