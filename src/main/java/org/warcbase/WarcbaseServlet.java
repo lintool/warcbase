@@ -2,6 +2,7 @@ package org.warcbase;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
 import javax.servlet.*;
@@ -62,8 +63,8 @@ public class WarcbaseServlet extends HttpServlet
     	
         for(int i=1;i<rs.raw().length;i++){
           System.out.println(rs.raw()[i].getValue().length + " " + rs.raw()[i - 1].getValue().length);
-          if(rs.raw()[i].getValue().equals(rs.raw()[i - 1].getValue()))
-            System.out.println("++++++++++++++++++++++++++");
+          if(Arrays.equals(rs.raw()[i].getValue(), rs.raw()[i - 1].getValue()))
+            System.out.println("++++++++++++=================++++++++++++++");
         }
         
         if(rs.raw().length == 0){
