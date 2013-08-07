@@ -58,6 +58,7 @@ public class DuplicatesHbase {
       //Get get = new Get(key);
       //Result rs = table.get(get);
       progress++;
+      System.out.println(rr.raw().length + " " + duplicates);
       for(int i=1;i<rr.raw().length;i++){
         if(Arrays.equals(ResponseRecord.getBodyByte(rr.raw()[i].getValue()), ResponseRecord.getBodyByte(rr.raw()[i - 1].getValue()))){
           duplicates++;
