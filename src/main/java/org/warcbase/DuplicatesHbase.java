@@ -40,6 +40,7 @@ public class DuplicatesHbase {
     
     int duplicates = 0;
     long duplicateSize = 0;
+    int progress = 0;
     
     /*MessageDigest md = null;
     try {
@@ -56,13 +57,15 @@ public class DuplicatesHbase {
       //byte[] key = rr.getRow();
       //Get get = new Get(key);
       //Result rs = table.get(get);
+      progress++;
       for(int i=1;i<rr.raw().length;i++){
         if(Arrays.equals(ResponseRecord.getBodyByte(rr.raw()[i].getValue()), ResponseRecord.getBodyByte(rr.raw()[i - 1].getValue()))){
           duplicates++;
           duplicateSize += rr.raw()[i].getValue().length;
         }
-          
       }
+      if(progress % 50000 == 0)
+        System.out.println("Done with " + progress + " rows.");
     }
     
     System.out.println("Number of Duplicates: " + duplicates);
