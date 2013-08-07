@@ -118,14 +118,14 @@ public class ResponseRecord {
 		//if(true)
 		//return data;
 		//System.err.println("1");
-		while(!body.startsWith("Connection") ){
+		while(!body.startsWith("Connection") && body.contains("\n")){
 			//System.err.println(body.substring(0, body.indexOf('\n')) + " " + body.indexOf('\n'));
 			//if(body.indexOf('\n') == 1)
 				//System.err.println("at 0: "+ body.charAt(0) + "\n".startsWith("\n") + "\n".indexOf('\n') + body.indexOf(' '));
 			body = body.substring(body.indexOf('\n')+1);
 		}
 		body = body.substring(body.indexOf('\n')+1);
-		while(body.charAt(0) == 'c' || body.charAt(0) == 'C' || body.charAt(0) == 'S' || body.charAt(0) == 'D')
+		while((body.charAt(0) == 'c' || body.charAt(0) == 'C' || body.charAt(0) == 'S' || body.charAt(0) == 'D')  && body.contains("\n"))
 			body = body.substring(body.indexOf('\n')+1);
 		//System.err.println(2);
 		
