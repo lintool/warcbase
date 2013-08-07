@@ -60,6 +60,11 @@ public class WarcbaseServlet extends HttpServlet
         String imagePath = null;
         File imageFile = null;
     	
+        for(int i=1;i<rs.raw().length;i++){
+          if(rs.raw()[i].getValue().equals(rs.raw()[i - 1].getValue()))
+            System.out.println("++++++++++++++++++++++++++");
+        }
+        
         if(rs.raw().length == 0){
         	PrintWriter out = resp.getWriter();
         	out.println("Not Found.");
