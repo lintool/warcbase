@@ -63,8 +63,8 @@ public class DuplicatesHbase {
       System.out.println(rr.raw().length + " " + duplicates);
       for(int i=1;i<rr.raw().length;i++){
         System.out.println(new String(rr.raw()[i].getQualifier(), "UTF8"));
-        System.out.println(rr.raw()[i].getValue().length);
-        System.out.println(rr.raw()[i - 1].getValue().length);
+        //System.out.println(rr.raw()[i].getValue().length);
+        //System.out.println(rr.raw()[i - 1].getValue().length);
         //System.out.println(key.length);
         if(rr.raw()[i].getValue().length != rr.raw()[i - 1].getValue().length)
           continue;

@@ -126,6 +126,9 @@ public class ResponseRecord {
 		}
 		//System.out.println(body);
 		body = body.substring(body.indexOf('\n')+1);
+		if(body.length() < 1){
+		  System.out.println(byteA2String(data));
+		}
 		while((body.charAt(0) == 'c' || body.charAt(0) == 'C' || body.charAt(0) == 'S' || body.charAt(0) == 'D')  && body.contains("\n"))
 			body = body.substring(body.indexOf('\n')+1);
 		//System.err.println(2);
