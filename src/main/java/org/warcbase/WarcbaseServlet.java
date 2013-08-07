@@ -61,6 +61,7 @@ public class WarcbaseServlet extends HttpServlet
         File imageFile = null;
     	
         for(int i=1;i<rs.raw().length;i++){
+          System.out.println(rs.raw()[i].getValue().length + " " + rs.raw()[i - 1].getValue().length);
           if(rs.raw()[i].getValue().equals(rs.raw()[i - 1].getValue()))
             System.out.println("++++++++++++++++++++++++++");
         }
