@@ -3,6 +3,7 @@ package org.warcbase;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -52,13 +53,13 @@ public class DuplicatesHbase {
     for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
       //if(rr.raw().length == 0)
         //continue;
-      byte[] key = rr.getRow();
-      Get get = new Get(key);
-      Result rs = table.get(get);
-      for(int i=1;i<rs.raw().length;i++){
-        if(rs.raw()[i].getValue().equals(rs.raw()[i - 1].getValue())){
+      //byte[] key = rr.getRow();
+      //Get get = new Get(key);
+      //Result rs = table.get(get);
+      for(int i=1;i<rr.raw().length;i++){
+        if(Arrays.equals(ResponseRecord.getBodyByte(rr.raw()[i].getValue()), ResponseRecord.getBodyByte(rr.raw()[i - 1].getValue()))){
           duplicates++;
-          duplicateSize += rs.raw()[i].getValue().length;
+          duplicateSize += rr.raw()[i].getValue().length;
         }
           
       }
