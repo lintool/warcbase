@@ -65,6 +65,8 @@ public class WarcbaseServlet extends HttpServlet
           System.out.println(rs.raw()[i].getValue().length + " " + rs.raw()[i - 1].getValue().length);
           if(Arrays.equals(rs.raw()[i].getValue(), rs.raw()[i - 1].getValue()))
             System.out.println("++++++++++++=================++++++++++++++");
+          if(Arrays.equals(rs.raw()[i].getValue(), rs.raw()[i].getValue()))
+            System.out.println("It works");
         }
         
         if(rs.raw().length == 0){
