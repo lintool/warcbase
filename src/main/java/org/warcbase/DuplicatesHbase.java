@@ -54,10 +54,12 @@ public class DuplicatesHbase {
     for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
       //if(rr.raw().length == 0)
         //continue;
-      //byte[] key = rr.getRow();
+      byte[] key = rr.getRow();
       //Get get = new Get(key);
       //Result rs = table.get(get);
       progress++;
+      String url = new String(key, "UTF8");
+      System.out.println(key);
       System.out.println(rr.raw().length + " " + duplicates);
       for(int i=1;i<rr.raw().length;i++){
         if(Arrays.equals(ResponseRecord.getBodyByte(rr.raw()[i].getValue()), ResponseRecord.getBodyByte(rr.raw()[i - 1].getValue()))){
