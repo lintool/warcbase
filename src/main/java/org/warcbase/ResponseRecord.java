@@ -112,7 +112,7 @@ public class ResponseRecord {
 		}*/
 		int d = 0;
 		String body = byteA2String(data);
-		System.out.println(body.concat("\n"));
+		System.out.println(body.contains("\n"));
 		//System.err.println(body);
 		//if(true)
 		//return data;
@@ -133,6 +133,9 @@ public class ResponseRecord {
 	}
 	
 	public static void main(String[] args) {
+	  
+	  if(true)
+	    return;
 		// TODO Auto-generated method stub
 		File inputWarcFile = new File("/Users/milad/UMD/CL/US_Congress/archive/WARCs/ARCHIVEIT-3566-WEEKLY-23128-20130302043208784-00007-wbgrp-svc113.us.archive.org-6443.warc.gz");
 		GZIPInputStream gzInputStream = null;
