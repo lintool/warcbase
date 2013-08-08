@@ -61,13 +61,11 @@ public class WarcbaseServlet extends HttpServlet
         String imagePath = null;
         File imageFile = null;
     	
-        /*for(int i=1;i<rs.raw().length;i++){
+        for(int i=1;i<rs.raw().length;i++){
           System.out.println(rs.raw()[i].getValue().length + " " + rs.raw()[i - 1].getValue().length);
           if(Arrays.equals(ResponseRecord.getBodyByte(rs.raw()[i].getValue()), ResponseRecord.getBodyByte(rs.raw()[i - 1].getValue())))
             System.out.println("++++++++++++=================++++++++++++++");
-          if(Arrays.equals(rs.raw()[i].getValue(), rs.raw()[i].getValue()))
-            System.out.println("It works");
-        }*/
+        }
         
         if(rs.raw().length == 0){
         	PrintWriter out = resp.getWriter();
