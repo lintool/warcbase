@@ -14,11 +14,15 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.warcbase.ingest.IngestWarcFiles;
 
 
-public class WarcbaseServlet extends HttpServlet
-{
-
+public class WarcbaseServlet extends HttpServlet {
+  private static Configuration hbaseConfig = null;
+  static {
+    hbaseConfig = HBaseConfiguration.create();
+  }
+  
 	private void writeResponse(HttpServletResponse resp, byte[] data, String query, String d) throws IOException{
 		String content = new String(data, "UTF8");
 		//System.out.println(content);
@@ -52,9 +56,9 @@ public class WarcbaseServlet extends HttpServlet
         String query = req.getParameter("query");
         String d = req.getParameter("date");
    
-        String q = Util.reverse_hostname(query);
+        String q = Util.reverseHostname(query);
         Configuration config = HBaseConfiguration.create();
-    	HTable table = new HTable(LoadWARC.hbaseConfig, Constants.TABLE_NAME);
+    	HTable table = new HTable(hbaseConfig, Constants.TABLE_NAME);
     	Get get = new Get(Bytes.toBytes(q));
         Result rs = table.get(get);
         byte[] data = null;

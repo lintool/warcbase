@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.mapreduce.RowCounter;
+import org.warcbase.ingest.IngestWarcFiles;
 
 public class Dashboard {
   
@@ -98,7 +99,7 @@ public class Dashboard {
     }
     if (!cmdline.hasOption(N_OPTION)) {
       HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp(LoadWARC.class.getCanonicalName(), options);
+      formatter.printHelp(IngestWarcFiles.class.getCanonicalName(), options);
       System.exit(-1);
     }
     int num = Integer.parseInt(cmdline.getOptionValue(N_OPTION));

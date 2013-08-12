@@ -10,7 +10,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class Constants {
 	public static final String TABLE_NAME = "Web_Archive";
 	//public static final String[] FAMILYS = {"date", "content"};
-	public static final String[] FAMILYS = {"File"};
+	public static final String[] FAMILIES = {"File"};
 	
 	public static final String CF_COUNTS = "counts";
 	

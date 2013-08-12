@@ -60,8 +60,8 @@
         <configuration>
           <programs>
             <program>
-              <mainClass>org.warcbase.LoadWARC</mainClass>
-              <name>LoadWARC</name>
+              <mainClass>org.warcbase.ingest.IngestWarcFiles</mainClass>
+              <name>IngestWarcFiles</name>
             </program>
             <program>
               <mainClass>org.warcbase.WarcBrowser</mainClass>

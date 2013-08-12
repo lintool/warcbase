@@ -4,7 +4,7 @@ import java.net.URL;
 import java.net.MalformedURLException;
 
 public class Util {
-    public static String reverse_hostname(String uri) {
+    public static String reverseHostname(String uri) {
 	URL url = null;
 	try {
 	    url = new URL(uri);
@@ -26,7 +26,16 @@ public class Util {
 	return newhost.toString();
     }
     public static void main(String[] args) {
-		System.out.println(Util.reverse_hostname("http://www.boxer.senate.gov/"));//http://www.ayotte.senate.gov/ 
+		System.out.println(Util.reverseHostname("http://www.boxer.senate.gov/"));//http://www.ayotte.senate.gov/ 
 		
 	}
+
+  public static String getUriExtension(String thisTargetURI) {
+    if (thisTargetURI.length() > 3) {
+      return thisTargetURI.substring(thisTargetURI.length() - 3, thisTargetURI.length());
+    }
+
+    return "";
+  }
+
 }

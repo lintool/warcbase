@@ -17,6 +17,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.warcbase.ingest.IngestWarcFiles;
 
 public class PrintURLS {
   private static final String DIR_OPTION = "dir";
@@ -40,7 +41,7 @@ public class PrintURLS {
     
     if (!cmdline.hasOption(DIR_OPTION) || !cmdline.hasOption(O_OPTION)) {
       HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp(LoadWARC.class.getCanonicalName(), options);
+      formatter.printHelp(IngestWarcFiles.class.getCanonicalName(), options);
       System.exit(-1);
     }
     
@@ -91,7 +92,7 @@ public class PrintURLS {
       }catch (IOException e2) {
         // TODO Auto-generated catch block
         System.out.println("exception2: " + thisTargetURI);
-        System.out.println(Util.reverse_hostname(thisTargetURI));
+        System.out.println(Util.reverseHostname(thisTargetURI));
         e2.printStackTrace();
       }
       catch(Exception e){

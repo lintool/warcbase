@@ -21,6 +21,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.warcbase.ingest.IngestWarcFiles;
 
 public class Fetch {
 	
@@ -73,13 +74,13 @@ public class Fetch {
     		//return;
 
     Configuration config = HBaseConfiguration.create();
-	HTable table = new HTable(LoadWARC.hbaseConfig, Constants.TABLE_NAME);
+	HTable table = new HTable(config, Constants.TABLE_NAME);
 
 	//String query = "com.nytimes.topics/top/reference/timestopics/subjects/a/agriculture/urban_agriculture/index.html/Microsoft.XMLHTTP?offset=10&s=newest&query=ANTIPOVERTY+PROGRAMS&field=des&match=exact";
 	//String query = "http://topics.nytimes.com/top/reference/timestopics/subjects/a/agriculture/urban_agriculture/index.html/2.1_120516.0?query=OAKLAND%20(CALIF)&field=geo&match=exact";
 	//String query = "http://www.boxer.senate.gov/";
 	//String query = "http://www.boxer.senate.gov/";
-	query = Util.reverse_hostname(query);
+	query = Util.reverseHostname(query);
 	Get get = new Get(Bytes.toBytes(query));
     Result rs = table.get(get);
     if(rs.raw().length == 0){
