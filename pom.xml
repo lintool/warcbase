@@ -45,7 +45,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <jettyVersion>8.1.11.v20130520</jettyVersion>
+    <jettyVersion>9.0.4.v20130625</jettyVersion>
     <hadoop.version> 2.0.0-mr1-cdh4.3.0</hadoop.version>
     <hadoop.version2>  2.0.0-cdh4.3.0 </hadoop.version2>
     <zookeeper.version>   3.4.5-cdh4.3.0  </zookeeper.version>
@@ -64,7 +64,7 @@
               <name>IngestWarcFiles</name>
             </program>
             <program>
-              <mainClass>org.warcbase.WarcBrowser</mainClass>
+              <mainClass>org.warcbase.browser.WarcBrowser</mainClass>
               <name>WarcBrowser</name>
             </program>
             <program>
@@ -86,12 +86,6 @@
           </programs>
         </configuration>
       </plugin>
-	<plugin>
-        <groupId>org.mortbay.jetty</groupId>
-        <artifactId>jetty-maven-plugin</artifactId>
-        <version>${jettyVersion}</version>
-      </plugin>
-
     </plugins>
   </build>
 
@@ -196,7 +190,7 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
-      <version>8.1.11.v20130520</version>
+      <version>${jettyVersion}</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>

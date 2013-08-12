@@ -1,4 +1,4 @@
-package org.warcbase;
+package org.warcbase.analysis;
 
 import java.io.IOException;
 import java.security.MessageDigest;
@@ -12,6 +12,8 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.warcbase.Constants;
+import org.warcbase.ResponseRecord;
 
 public class DuplicatesHbase {
   public static Configuration hbaseConfig = null;

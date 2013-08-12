@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
-import org.warcbase.Constants;
 import org.warcbase.Util;
 import org.warcbase.WarcHTMLResponseRecord;
 import org.warcbase.WarcRecord;
@@ -40,29 +39,40 @@ public class IngestWarcFiles {
   private static final int MAX_SIZE = 1024 * 1024;
   private static final Set<String> SKIP = ImmutableSet.of("mp3", "mov", "wmv", "mp4", "MP4");
 
+  public static final String[] FAMILIES = {"content"};
+
   private final HTable table;
+  private final HBaseAdmin admin;
 
-  public IngestWarcFiles() throws Exception {
+  public IngestWarcFiles(String name, boolean create) throws Exception {
     Configuration hbaseConfig = HBaseConfiguration.create();
-    HBaseAdmin admin = new HBaseAdmin(hbaseConfig);
-
-    if (admin.tableExists(Constants.TABLE_NAME)) {
-      LOG.info("Table " + Constants.TABLE_NAME + "already exists: doing nothing");
+    admin = new HBaseAdmin(hbaseConfig);;
+    
+    if (admin.tableExists(name) && !create) {
+      LOG.info(String.format("Table '%s' exists: doing nothing.", name));
     } else {
-      HTableDescriptor tableDesc = new HTableDescriptor(Constants.TABLE_NAME);
-      for (int i = 0; i < Constants.FAMILIES.length; i++) {
-        tableDesc.addFamily(new HColumnDescriptor(Constants.FAMILIES[i]));
+      if (admin.tableExists(name)) {
+        LOG.info(String.format("Table '%s' exists: dropping table and recreating.", name));
+        LOG.info(String.format("Disabling table '%s'", name));
+        admin.disableTable(name);
+        LOG.info(String.format("Droppping table '%s'", name));
+        admin.deleteTable(name);
+      }
+      
+      HTableDescriptor tableDesc = new HTableDescriptor(name);
+      for (int i = 0; i < FAMILIES.length; i++) {
+        tableDesc.addFamily(new HColumnDescriptor(FAMILIES[i]));
       }
       admin.createTable(tableDesc);
-      System.out.println("Successfully created table " + Constants.TABLE_NAME + ".");
+      LOG.info(String.format("Successfully created table '%s'", name));
     }
 
-    table = new HTable(hbaseConfig, Constants.TABLE_NAME);
+    table = new HTable(hbaseConfig, name);
     Field maxKeyValueSizeField = HTable.class.getDeclaredField("maxKeyValueSize");
     maxKeyValueSizeField.setAccessible(true);
     maxKeyValueSizeField.set(table, MAX_SIZE);
     
-    LOG.info("maxKeyValueSize: " + maxKeyValueSizeField.get(table));
+    LOG.info("Setting maxKeyValueSize to " + maxKeyValueSizeField.get(table));
     admin.close();
   }
 
@@ -168,7 +178,7 @@ public class IngestWarcFiles {
   private void addRecord(String key, String date, byte[] data) {
     try {
       Put put = new Put(Bytes.toBytes(key));
-      put.add(Bytes.toBytes(Constants.FAMILIES[0]), Bytes.toBytes(date), data);
+      put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(date), data);
       table.put(put);
     } catch (IOException e) {
       LOG.error("Couldn't insert key: " + key);
@@ -177,16 +187,24 @@ public class IngestWarcFiles {
     }
   }
 
+  private static final String CREATE_OPTION = "create";
+  private static final String APPEND_OPTION = "append";
+  private static final String NAME_OPTION = "name";
   private static final String DIR_OPTION = "dir";
   private static final String START_OPTION = "start";
 
   @SuppressWarnings("static-access")
   public static void main(String[] args) throws Exception {
     Options options = new Options();
-    options.addOption(OptionBuilder.withArgName("dir").hasArg()
+    options.addOption(OptionBuilder.withArgName("name").hasArg()
+        .withDescription("name of the archive").create(NAME_OPTION));
+    options.addOption(OptionBuilder.withArgName("path").hasArg()
         .withDescription("WARC files location").create(DIR_OPTION));
-    options.addOption(OptionBuilder.withArgName("start").hasArg()
-        .withDescription("Start from WARC file").create(START_OPTION));
+    options.addOption(OptionBuilder.withArgName("n").hasArg()
+        .withDescription("Start from the n-th WARC file").create(START_OPTION));
+
+    options.addOption("create", false, "create new table");
+    options.addOption("append", false, "append to existing table");
 
     CommandLine cmdline = null;
     CommandLineParser parser = new GnuParser();
@@ -197,11 +215,19 @@ public class IngestWarcFiles {
       System.exit(-1);
     }
 
-    if (!cmdline.hasOption(DIR_OPTION)) {
+    if (!cmdline.hasOption(DIR_OPTION) || !cmdline.hasOption(NAME_OPTION)) {
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp(IngestWarcFiles.class.getCanonicalName(), options);
       System.exit(-1);
     }
+
+    if (!cmdline.hasOption(CREATE_OPTION) && !cmdline.hasOption(APPEND_OPTION)) {
+      System.err.println(String.format("Must specify either -%s or -%s", CREATE_OPTION, APPEND_OPTION));
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.printHelp(IngestWarcFiles.class.getCanonicalName(), options);
+      System.exit(-1);
+    }
+
     String path = cmdline.getOptionValue(DIR_OPTION);
     File inputWarcFolder = new File(path);
 
@@ -210,7 +236,9 @@ public class IngestWarcFiles {
       i = Integer.parseInt(cmdline.getOptionValue(START_OPTION));
     }
 
-    IngestWarcFiles load = new IngestWarcFiles();
+    String name = cmdline.getOptionValue(NAME_OPTION);
+    boolean create = cmdline.hasOption(CREATE_OPTION);
+    IngestWarcFiles load = new IngestWarcFiles(name, create);
 
     load.ingestFolder(inputWarcFolder, i);
   }

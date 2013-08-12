@@ -1,4 +1,4 @@
-package org.warcbase;
+package org.warcbase.analysis;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.mapreduce.RowCounter;
+import org.warcbase.Constants;
 import org.warcbase.ingest.IngestWarcFiles;
 
 public class Dashboard {

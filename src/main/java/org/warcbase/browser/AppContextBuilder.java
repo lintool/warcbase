@@ -1,4 +1,4 @@
-package org.warcbase;
+package org.warcbase.browser;
 
 import org.eclipse.jetty.webapp.WebAppContext;
 
