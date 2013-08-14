@@ -4,7 +4,7 @@ public class warcRecordParser {
 	public static String getType(String record){
 		String lines[] = record.split("\\r?\\n");
 		for(String line: lines){
-			if(line.startsWith("Content-Type")){
+			if(line.startsWith("Content-Type") || line.startsWith("Content-type") || line.toLowerCase().startsWith("content-type")){
 				return line.substring(14).split(";")[0];
 			}
 		}
