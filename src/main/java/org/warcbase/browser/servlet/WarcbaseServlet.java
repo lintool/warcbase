@@ -61,7 +61,7 @@ public class WarcbaseServlet extends HttpServlet {
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
       throws ServletException, IOException {
     String query = req.getParameter("query");
-    System.out.println(query);
+    System.out.println("\n" + query + "\n");
     
     String d = req.getParameter("date");
 
