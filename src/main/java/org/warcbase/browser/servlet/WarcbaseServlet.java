@@ -20,10 +20,9 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.warcbase.ResponseRecord;
 import org.warcbase.TextDocument2;
 import org.warcbase.Util;
-import org.warcbase.warcRecordParser;
+import org.warcbase.WarcRecordParser;
 
 public class WarcbaseServlet extends HttpServlet {
   private static final long serialVersionUID = 847405540723915805L;
@@ -38,21 +37,22 @@ public class WarcbaseServlet extends HttpServlet {
 
   private void writeResponse(HttpServletResponse resp, byte[] data, String query, String d)
       throws IOException {
-    String content = new String(data, "UTF8");
+    WarcRecordParser warcRecordParser = new WarcRecordParser(data);
+    //String content = new String(data, "UTF8");
     
     //System.out.println("\n" + warcRecordParser.getType(content) + "\n");
 
-    if (!warcRecordParser.getType(content).startsWith("text")) {
-      resp.setHeader("Content-Type", ResponseRecord.getType(content));
-      resp.setContentLength(ResponseRecord.getBodyByte(data).length);
-      resp.getOutputStream().write(ResponseRecord.getBodyByte(data));
+    if (!warcRecordParser.getType().startsWith("text")) {
+      resp.setHeader("Content-Type", warcRecordParser.getType());
+      resp.setContentLength(warcRecordParser.getBodyByte().length);
+      resp.getOutputStream().write(warcRecordParser.getBodyByte());
     } else {
       System.setProperty("file.encoding", "UTF8");
-      resp.setHeader("Content-Type", ResponseRecord.getType(content));
+      resp.setHeader("Content-Type", warcRecordParser.getType());
       resp.setCharacterEncoding("UTF-8");
       PrintWriter out = resp.getWriter();
       TextDocument2 t2 = new TextDocument2(null, null, null);
-      String bodyContent = new String(ResponseRecord.getBodyByte(data), "UTF8");
+      String bodyContent = new String(warcRecordParser.getBodyByte(), "UTF8");
       bodyContent = t2.fixURLs(bodyContent, query, d);
       out.println(bodyContent);
     }
