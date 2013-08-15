@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.text.ParseException;
 
 import javax.servlet.ServletException;
@@ -396,12 +395,8 @@ public class TextDocument2 {
 				sb.append(datespec);
 				sb.append("&query=");
 				//sb.append("");
-				try {
-          sb.append(URLEncoder.encode(UrlOperations.stripDefaultPortFromUrl(url), "US-ASCII"));
-        } catch (UnsupportedEncodingException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
-        }
+				sb.append(UrlOperations.stripDefaultPortFromUrl(url));
+				//sb.append(URLEncoder.encode(UrlOperations.stripDefaultPortFromUrl(url), "US-ASCII"));
 				return sb.toString();
 			}
 			if(url.startsWith(replayURIPrefix)) {

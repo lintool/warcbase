@@ -61,6 +61,8 @@ public class WarcbaseServlet extends HttpServlet {
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
       throws ServletException, IOException {
     String query = req.getParameter("query");
+    System.out.println(query);
+    
     String d = req.getParameter("date");
 
     String q = Util.reverseHostname(query);
@@ -117,8 +119,9 @@ public class WarcbaseServlet extends HttpServlet {
     for (int i = 0; i < rs.raw().length; i++) {
       String date = new String(rs.raw()[i].getQualifier());
       out.println("<br/> <a href='http://" + req.getServerName() + ":" + req.getServerPort()
-          + req.getRequestURI() + "?query=" + URLEncoder.encode(req.getParameter("query"), "US-ASCII") + "&date=" + date + "'>"
+          + req.getRequestURI() + "?query=" + query + "&date=" + date + "'>"
           + date + "</a>");
+      //URLEncoder.encode(req.getParameter("query")
     }
     out.println("</body>");
     out.println("</html>");
@@ -139,13 +142,15 @@ public class WarcbaseServlet extends HttpServlet {
   
   public static void main(String[] args) {
     //final String input = "Tĥïŝ ĩš â fůňķŷ Šťŕĭńġ";
-    final String input = "http://www.mcconnell.senate.gov/";
+    String input = "http://www.mcconnell.senate.gov/";
     /*System.out.println(
         Normalizer
             .normalize(input, Normalizer.Form.NFD)
             .replaceAll("[^\\p{ASCII}]", "")
     );*/
     try {
+      System.out.println(URLEncoder.encode(input, "US-ASCII"));
+      input = URLEncoder.encode(input, "US-ASCII");
       System.out.println(URLEncoder.encode(input, "US-ASCII"));
     } catch (UnsupportedEncodingException e) {
       // TODO Auto-generated catch block
