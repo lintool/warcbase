@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.text.ParseException;
 
 import javax.servlet.ServletException;
@@ -364,12 +365,58 @@ public class TextDocument2 {
 	public void setCharSet(String charSet) {
 		this.charSet = charSet;
 	}
-
+	
 	private class SpecialResultURIConverter implements ResultURIConverter {
+	  private static final String EMAIL_PROTOCOL_PREFIX = "mailto:";
+    private static final String JAVASCRIPT_PROTOCOL_PREFIX = "javascript:";
+    private ResultURIConverter base = null;
+    public SpecialResultURIConverter(ResultURIConverter base) {
+      this.base = base;
+    }
+    public String makeReplayURI(String datespec, String url) {
+      //System.out.println("\ninside makeReplayURI " + datespec + " " + url + "\n");
+      
+      if(url.startsWith(EMAIL_PROTOCOL_PREFIX)) {
+        return url;
+      }
+      if(url.startsWith(JAVASCRIPT_PROTOCOL_PREFIX)) {
+        return url;
+      }
+      //System.err.println(url);
+      //System.err.println(datespec);
+      //return base.makeReplayURI(datespec, url);
+      StringBuilder sb = null;
+      String replayURIPrefix = null;
+      if(replayURIPrefix == null) {
+        sb = new StringBuilder(url.length() + datespec.length());
+        //sb.append(datespec);
+        //sb.append("http://localhost:8080/warcbase/servlet?date=");
+        //System.out.println("salam");
+        sb.append(SERVER_PREFIX + "warcbase/servlet?date=");
+        sb.append(datespec);
+        sb.append("&query=");
+        //sb.append("");
+        sb.append(UrlOperations.stripDefaultPortFromUrl(url));
+        //sb.append(URLEncoder.encode(UrlOperations.stripDefaultPortFromUrl(url), "US-ASCII"));
+        return sb.toString();
+      }
+      if(url.startsWith(replayURIPrefix)) {
+        return url;
+      }
+      sb = new StringBuilder(url.length() + datespec.length());
+      sb.append(replayURIPrefix);
+      sb.append(datespec);
+      sb.append("/");
+      sb.append(UrlOperations.stripDefaultPortFromUrl(url));
+      return sb.toString();
+    }
+  }
+
+	private class SpecialResultURIConverterEncoded implements ResultURIConverter {
 		private static final String EMAIL_PROTOCOL_PREFIX = "mailto:";
 		private static final String JAVASCRIPT_PROTOCOL_PREFIX = "javascript:";
 		private ResultURIConverter base = null;
-		public SpecialResultURIConverter(ResultURIConverter base) {
+		public SpecialResultURIConverterEncoded(ResultURIConverter base) {
 			this.base = base;
 		}
 		public String makeReplayURI(String datespec, String url) {
@@ -395,8 +442,13 @@ public class TextDocument2 {
 				sb.append(datespec);
 				sb.append("&query=");
 				//sb.append("");
-				sb.append(UrlOperations.stripDefaultPortFromUrl(url));
-				//sb.append(URLEncoder.encode(UrlOperations.stripDefaultPortFromUrl(url), "US-ASCII"));
+				//sb.append(UrlOperations.stripDefaultPortFromUrl(url));
+				try {
+          sb.append(URLEncoder.encode(UrlOperations.stripDefaultPortFromUrl(url), "US-ASCII"));
+        } catch (UnsupportedEncodingException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
 				return sb.toString();
 			}
 			if(url.startsWith(replayURIPrefix)) {
@@ -514,7 +566,7 @@ public class TextDocument2 {
 				return null;
 			}
 		};*/
-		ResultURIConverter ruc = new SpecialResultURIConverter(uriConverter);
+        ResultURIConverter rucEncoded = new SpecialResultURIConverterEncoded(uriConverter);
 
 		String markups[][] = {
 				{"FRAME","SRC"},
@@ -533,9 +585,11 @@ public class TextDocument2 {
 				{TagMagix.ANY_TAGNAME,"background"}
 		};
 		for(String tagAttr[] : markups) {
-			TagMagix.markupTagREURIC(sb, ruc, captureDate, pageUrl,
+			TagMagix.markupTagREURIC(sb, rucEncoded, captureDate, pageUrl,
 					tagAttr[0], tagAttr[1]);
 		}
+		
+		ResultURIConverter ruc = new SpecialResultURIConverter(uriConverter);
 		TagMagix.markupCSSImports(sb,ruc, captureDate, pageUrl);
 		TagMagix.markupStyleUrls(sb,ruc,captureDate,pageUrl);
     //System.out.println(sb.toString());

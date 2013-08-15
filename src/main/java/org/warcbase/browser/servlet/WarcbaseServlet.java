@@ -61,7 +61,7 @@ public class WarcbaseServlet extends HttpServlet {
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
       throws ServletException, IOException {
     String query = req.getParameter("query");
-    System.out.println("\n" + query + "\n");
+    //System.out.println("\n" + query + "\n");
     
     String d = req.getParameter("date");
 
@@ -119,7 +119,7 @@ public class WarcbaseServlet extends HttpServlet {
     for (int i = 0; i < rs.raw().length; i++) {
       String date = new String(rs.raw()[i].getQualifier());
       out.println("<br/> <a href='http://" + req.getServerName() + ":" + req.getServerPort()
-          + req.getRequestURI() + "?query=" + query + "&date=" + date + "'>"
+          + req.getRequestURI() + "?query=" + URLEncoder.encode(req.getParameter("query"), "US-ASCII") + "&date=" + date + "'>"
           + date + "</a>");
       //URLEncoder.encode(req.getParameter("query")
     }
