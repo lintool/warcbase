@@ -2,6 +2,9 @@ package org.warcbase.browser.servlet;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -64,12 +67,12 @@ public class WarcbaseServlet extends HttpServlet {
     Result rs = table.get(get);
     byte[] data = null;
 
-    for (int i = 1; i < rs.raw().length; i++) {
+    /*for (int i = 1; i < rs.raw().length; i++) {
       System.out.println(rs.raw()[i].getValue().length + " " + rs.raw()[i - 1].getValue().length);
       if (Arrays.equals(ResponseRecord.getBodyByte(rs.raw()[i].getValue()),
           ResponseRecord.getBodyByte(rs.raw()[i - 1].getValue())))
         System.out.println("++++++++++++=================++++++++++++++");
-    }
+    }*/
 
     if (rs.raw().length == 0) {
       PrintWriter out = resp.getWriter();
@@ -111,7 +114,7 @@ public class WarcbaseServlet extends HttpServlet {
     for (int i = 0; i < rs.raw().length; i++) {
       String date = new String(rs.raw()[i].getQualifier());
       out.println("<br/> <a href='http://" + req.getServerName() + ":" + req.getServerPort()
-          + req.getRequestURI() + "?query=" + req.getParameter("query") + "&date=" + date + "'>"
+          + req.getRequestURI() + "?query=" + URLEncoder.encode(req.getParameter("query"), "US-ASCII") + "&date=" + date + "'>"
           + date + "</a>");
     }
     out.println("</body>");
@@ -129,5 +132,21 @@ public class WarcbaseServlet extends HttpServlet {
     out.println("You entered \"" + field + "\" into the text box.");
     out.println("</body>");
     out.println("</html>");
+  }
+  
+  public static void main(String[] args) {
+    //final String input = "Tĥïŝ ĩš â fůňķŷ Šťŕĭńġ";
+    final String input = "http://www.mcconnell.senate.gov/";
+    /*System.out.println(
+        Normalizer
+            .normalize(input, Normalizer.Form.NFD)
+            .replaceAll("[^\\p{ASCII}]", "")
+    );*/
+    try {
+      System.out.println(URLEncoder.encode(input, "US-ASCII"));
+    } catch (UnsupportedEncodingException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
   }
 }
