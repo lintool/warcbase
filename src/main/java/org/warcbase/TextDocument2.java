@@ -373,7 +373,8 @@ public class TextDocument2 {
 			this.base = base;
 		}
 		public String makeReplayURI(String datespec, String url) {
-		  System.out.println("inside makeReplayURI " + datespec + " " + url);
+		  System.out.println("\ninside makeReplayURI " + datespec + " " + url + "\n");
+		  
 			if(url.startsWith(EMAIL_PROTOCOL_PREFIX)) {
 				return url;
 			}
@@ -534,7 +535,7 @@ public class TextDocument2 {
 			TagMagix.markupTagREURIC(sb, ruc, captureDate, pageUrl,
 					tagAttr[0], tagAttr[1]);
 		}
-		TagMagix.markupCSSImports(sb,uriConverter, captureDate, pageUrl);
+		TagMagix.markupCSSImports(sb,ruc, captureDate, pageUrl);
 		TagMagix.markupStyleUrls(sb,uriConverter,captureDate,pageUrl);
     //System.out.println(sb.toString());
 		return sb.toString();
