@@ -39,6 +39,8 @@ public class WarcbaseServlet extends HttpServlet {
   private void writeResponse(HttpServletResponse resp, byte[] data, String query, String d)
       throws IOException {
     String content = new String(data, "UTF8");
+    
+    System.out.println("\n" + warcRecordParser.getType(content) + "\n");
 
     if (!warcRecordParser.getType(content).startsWith("text")) {
       resp.setHeader("Content-Type", ResponseRecord.getType(content));
@@ -63,7 +65,7 @@ public class WarcbaseServlet extends HttpServlet {
 
     String q = Util.reverseHostname(query);
     HTable table = new HTable(hbaseConfig, name);
-    System.out.println(q);
+    //System.out.println(q);
     Get get = new Get(Bytes.toBytes(q));
     Result rs = table.get(get);
     byte[] data = null;
