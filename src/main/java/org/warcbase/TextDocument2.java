@@ -373,6 +373,7 @@ public class TextDocument2 {
 			this.base = base;
 		}
 		public String makeReplayURI(String datespec, String url) {
+		  System.out.println("inside makeReplayURI " + datespec + " " + url);
 			if(url.startsWith(EMAIL_PROTOCOL_PREFIX)) {
 				return url;
 			}

@@ -63,6 +63,7 @@ public class WarcbaseServlet extends HttpServlet {
 
     String q = Util.reverseHostname(query);
     HTable table = new HTable(hbaseConfig, name);
+    System.out.println(q);
     Get get = new Get(Bytes.toBytes(q));
     Result rs = table.get(get);
     byte[] data = null;
