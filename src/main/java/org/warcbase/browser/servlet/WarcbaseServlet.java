@@ -40,7 +40,7 @@ public class WarcbaseServlet extends HttpServlet {
       throws IOException {
     String content = new String(data, "UTF8");
     
-    System.out.println("\n" + warcRecordParser.getType(content) + "\n");
+    //System.out.println("\n" + warcRecordParser.getType(content) + "\n");
 
     if (!warcRecordParser.getType(content).startsWith("text")) {
       resp.setHeader("Content-Type", ResponseRecord.getType(content));

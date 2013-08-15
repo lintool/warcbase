@@ -373,7 +373,7 @@ public class TextDocument2 {
 			this.base = base;
 		}
 		public String makeReplayURI(String datespec, String url) {
-		  System.out.println("\ninside makeReplayURI " + datespec + " " + url + "\n");
+		  //System.out.println("\ninside makeReplayURI " + datespec + " " + url + "\n");
 		  
 			if(url.startsWith(EMAIL_PROTOCOL_PREFIX)) {
 				return url;
@@ -497,7 +497,7 @@ public class TextDocument2 {
 	}
 	
 	public String fixURLs(String content, String pageUrl, String captureDate){
-	  System.out.println("inside fixURLs: " + pageUrl + " " + captureDate);
+	  //System.out.println("inside fixURLs: " + pageUrl + " " + captureDate);
 		sb = new StringBuilder(content);
 		String existingBaseHref = TagMagix.getBaseHref(sb);
 		if (existingBaseHref != null) {
