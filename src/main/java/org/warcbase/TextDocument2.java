@@ -496,6 +496,7 @@ public class TextDocument2 {
 	}
 	
 	public String fixURLs(String content, String pageUrl, String captureDate){
+	  System.out.println("inside fixURLs: " + pageUrl + " " + captureDate);
 		sb = new StringBuilder(content);
 		String existingBaseHref = TagMagix.getBaseHref(sb);
 		if (existingBaseHref != null) {
