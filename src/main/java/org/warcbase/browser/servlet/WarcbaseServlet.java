@@ -38,9 +38,12 @@ public class WarcbaseServlet extends HttpServlet {
   private void writeResponse(HttpServletResponse resp, byte[] data, String query, String d)
       throws IOException {
     WarcRecordParser warcRecordParser = new WarcRecordParser(data);
+    
     //String content = new String(data, "UTF8");
     
-    //System.out.println("\n" + warcRecordParser.getType(content) + "\n");
+    //System.out.println("\n" + content + "\n");
+    //System.out.println(warcRecordParser.getType());
+    
 
     if (!warcRecordParser.getType().startsWith("text")) {
       resp.setHeader("Content-Type", warcRecordParser.getType());

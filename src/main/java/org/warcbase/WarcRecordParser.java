@@ -89,16 +89,29 @@ public class WarcRecordParser {
     String body = contentASCII;
     if(!body.contains("\n"))
       return data;
-    Boolean hadConnection = false;
+    /*Boolean hadConnection = false;
     while(body.contains("Connection") && !body.startsWith("Connection") && body.contains("\n")){
+      //System.out.println(body.substring(0, body.indexOf('\n')));
       body = body.substring(body.indexOf('\n')+1);
       hadConnection = true;
     }
-    while(!hadConnection && body.contains("Via") && !body.startsWith("Via") && body.contains("\n"))
+    System.out.println("hadConnection? = " + hadConnection);
+    while(!hadConnection && body.contains("Via") && !body.startsWith("Via") && body.contains("\n")){
+      //System.out.println(body.substring(0, body.indexOf('\n')));
       body = body.substring(body.indexOf('\n')+1);
+    }
+    //System.out.println("After Via");
+    String lines[] = body.split("\\r?\\n");
+    for(int i=0;i<10;i++)
+      System.out.println(lines[i]);
     body = body.substring(body.indexOf('\n')+1);
     while((body.charAt(0) == 'c' || body.charAt(0) == 'C' || body.charAt(0) == 'S' || body.charAt(0) == 'D')  && body.contains("\n"))
       body = body.substring(body.indexOf('\n')+1);
+    */
+    while(body.contains("\n") && !(body.startsWith("\n") || body.startsWith(" ") || body.indexOf('\n') < 3) && body.contains("\n")){
+      //System.out.println(body.substring(0, body.indexOf('\n')));
+      body = body.substring(body.indexOf('\n')+1);
+    }
     
     body = body.substring(body.indexOf('\n')+1);
     return Arrays.copyOfRange(data, data.length - body.length(), data.length);

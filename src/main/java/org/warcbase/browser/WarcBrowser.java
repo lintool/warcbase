@@ -12,6 +12,7 @@ import org.apache.log4j.Logger;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.springframework.util.Log4jConfigurer;
 import org.warcbase.TextDocument2;
 import org.warcbase.browser.servlet.WarcbaseServlet;
 
@@ -89,7 +90,10 @@ public class WarcBrowser {
     int port = Integer.parseInt(cmdline.getOptionValue(PORT_OPTION));
     String server = cmdline.getOptionValue(SERVER_OPTION);
     String name = cmdline.getOptionValue(NAME_OPTION);
-
+    
+    Log4jConfigurer.shutdownLogging();
+    org.apache.log4j.Level.toLevel(0);
+    
     LOG.info("Starting server on port " + port + " with server prefix " + server);
     WarcBrowser browser = new WarcBrowser(name, port);
     TextDocument2.SERVER_PREFIX = server;

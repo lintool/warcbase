@@ -574,6 +574,7 @@ public class TextDocument2 {
 				{"LINK","HREF"},
 				{"SCRIPT","SRC"},
 				{"IMG","SRC"},
+				{"INPUT", "SRC"},
 				{"A","HREF"},
 				{"AREA","HREF"},
 				{"OBJECT","CODEBASE"},
