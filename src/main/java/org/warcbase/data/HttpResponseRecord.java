@@ -1,9 +1,9 @@
-package org.warcbase;
+package org.warcbase.data;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
-public class WarcRecordParser {
+public class HttpResponseRecord {
   private byte[] data;
   private String content;
   private String contentASCII;
@@ -11,7 +11,7 @@ public class WarcRecordParser {
   private byte[] bodyByte;
   private String type;
   
-  public WarcRecordParser(byte[] data){
+  public HttpResponseRecord(byte[] data){
     this.data = data;
     try {
       this.content = new String(data, "UTF8");

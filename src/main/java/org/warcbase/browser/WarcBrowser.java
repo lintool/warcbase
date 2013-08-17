@@ -13,8 +13,8 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.springframework.util.Log4jConfigurer;
-import org.warcbase.TextDocument2;
 import org.warcbase.browser.servlet.WarcbaseServlet;
+import org.warcbase.data.TextDocument2;
 
 public class WarcBrowser {
   private static final Logger LOG = Logger.getLogger(WarcBrowser.class);

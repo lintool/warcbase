@@ -18,7 +18,7 @@
  *  limitations under the License.
  */
 
-package org.warcbase;
+package org.warcbase.data;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -444,7 +444,7 @@ public class TextDocument2 {
 				//sb.append("");
 				//sb.append(UrlOperations.stripDefaultPortFromUrl(url));
 				try {
-          sb.append(URLEncoder.encode(UrlOperations.stripDefaultPortFromUrl(url), "US-ASCII"));
+          sb.append(URLEncoder.encode(UrlOperations.stripDefaultPortFromUrl(url.replaceAll("&amp;", "&")), "US-ASCII"));
         } catch (UnsupportedEncodingException e) {
           // TODO Auto-generated catch block
           e.printStackTrace();
@@ -591,8 +591,8 @@ public class TextDocument2 {
 		}
 		
 		ResultURIConverter ruc = new SpecialResultURIConverter(uriConverter);
-		TagMagix.markupCSSImports(sb,ruc, captureDate, pageUrl);
-		TagMagix.markupStyleUrls(sb,ruc,captureDate,pageUrl);
+		TagMagix.markupCSSImports(sb,ruc, captureDate, pageUrl.replaceAll("&amp;", "&"));
+		TagMagix.markupStyleUrls(sb,ruc,captureDate,pageUrl.replaceAll("&amp;", "&"));
     //System.out.println(sb.toString());
 		return sb.toString();
 	}

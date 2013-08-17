@@ -16,7 +16,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.warcbase.WarcRecordParser;
+import org.warcbase.data.HttpResponseRecord;
 import org.warcbase.ingest.IngestWarcFiles;
 
 public class DetectDuplicates {
@@ -60,8 +60,8 @@ public class DetectDuplicates {
         if (rr.raw()[i].getValue().length != rr.raw()[i - 1].getValue().length) {
           continue;
         }
-        WarcRecordParser warcRecordParser1 = new WarcRecordParser(rr.raw()[i].getValue());
-        WarcRecordParser warcRecordParser2 = new WarcRecordParser(rr.raw()[i - 1].getValue());
+        HttpResponseRecord warcRecordParser1 = new HttpResponseRecord(rr.raw()[i].getValue());
+        HttpResponseRecord warcRecordParser2 = new HttpResponseRecord(rr.raw()[i - 1].getValue());
         if (Arrays.equals(warcRecordParser1.getBodyByte(),
             warcRecordParser2.getBodyByte())) {
           duplicates++;

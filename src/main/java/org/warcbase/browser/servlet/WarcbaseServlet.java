@@ -20,9 +20,9 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.warcbase.TextDocument2;
-import org.warcbase.Util;
-import org.warcbase.WarcRecordParser;
+import org.warcbase.data.HttpResponseRecord;
+import org.warcbase.data.TextDocument2;
+import org.warcbase.data.Util;
 
 public class WarcbaseServlet extends HttpServlet {
   private static final long serialVersionUID = 847405540723915805L;
@@ -37,7 +37,7 @@ public class WarcbaseServlet extends HttpServlet {
 
   private void writeResponse(HttpServletResponse resp, byte[] data, String query, String d)
       throws IOException {
-    WarcRecordParser warcRecordParser = new WarcRecordParser(data);
+    HttpResponseRecord httpResponseRecord = new HttpResponseRecord(data);
     
     //String content = new String(data, "UTF8");
     
@@ -45,17 +45,19 @@ public class WarcbaseServlet extends HttpServlet {
     //System.out.println(warcRecordParser.getType());
     
 
-    if (!warcRecordParser.getType().startsWith("text")) {
-      resp.setHeader("Content-Type", warcRecordParser.getType());
-      resp.setContentLength(warcRecordParser.getBodyByte().length);
-      resp.getOutputStream().write(warcRecordParser.getBodyByte());
+    if (!httpResponseRecord.getType().startsWith("text")) {
+      resp.setHeader("Content-Type", httpResponseRecord.getType());
+      resp.setContentLength(httpResponseRecord.getBodyByte().length);
+      resp.getOutputStream().write(httpResponseRecord.getBodyByte());
     } else {
       System.setProperty("file.encoding", "UTF8");
-      resp.setHeader("Content-Type", warcRecordParser.getType());
+      resp.setHeader("Content-Type", httpResponseRecord.getType());
       resp.setCharacterEncoding("UTF-8");
       PrintWriter out = resp.getWriter();
       TextDocument2 t2 = new TextDocument2(null, null, null);
-      String bodyContent = new String(warcRecordParser.getBodyByte(), "UTF8");
+      String bodyContent = new String(httpResponseRecord.getBodyByte(), "UTF8");
+      //System.out.println(query);
+      //System.out.println(query.replaceAll("&amp;", "&"));
       bodyContent = t2.fixURLs(bodyContent, query, d);
       out.println(bodyContent);
     }
@@ -144,6 +146,9 @@ public class WarcbaseServlet extends HttpServlet {
   }
   
   public static void main(String[] args) {
+    String query = "http://www.wyden.senate.gov/styles/global.css?v=2&amp;";
+    System.out.println(query.replaceAll("&amp;", "&"));
+    
     //final String input = "Tĥïŝ ĩš â fůňķŷ Šťŕĭńġ";
     String input = "http://www.mcconnell.senate.gov/";
     /*System.out.println(
