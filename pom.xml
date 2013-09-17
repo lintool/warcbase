@@ -243,5 +243,11 @@
       <artifactId>slf4j-log4j12</artifactId>
       <version>1.6.4</version>                        
     </dependency>
+    <dependency>
+  <!-- jsoup HTML parser library @ http://jsoup.org/ -->
+  <groupId>org.jsoup</groupId>
+  <artifactId>jsoup</artifactId>
+  <version>1.7.2</version>
+</dependency>
   </dependencies>
 </project>
