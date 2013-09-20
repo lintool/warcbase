@@ -46,10 +46,11 @@ public class WarcbaseServlet extends HttpServlet {
     //String content = new String(data, "UTF8");
     
     //System.out.println("\n" + content + "\n");
-    //System.out.println(warcRecordParser.getType());
+    //System.out.println(httpResponseRecord.getType());
+
     
 
-    if (!httpResponseRecord.getType().startsWith("text")) {
+    if (httpResponseRecord.getType().startsWith("text/plain") || !httpResponseRecord.getType().startsWith("text")) {
       resp.setHeader("Content-Type", httpResponseRecord.getType());
       resp.setContentLength(httpResponseRecord.getBodyByte().length);
       resp.getOutputStream().write(httpResponseRecord.getBodyByte());
@@ -83,6 +84,9 @@ public class WarcbaseServlet extends HttpServlet {
       PrintWriter out = resp.getWriter();
       TextDocument2 t2 = new TextDocument2(null, null, null);
       String bodyContent = new String(httpResponseRecord.getBodyByte(), "UTF8");
+      //String content = new String(data, "UTF8");
+      //System.out.println(content);
+      //System.out.println(bodyContent);
       //System.out.println(query);
       //System.out.println(query.replaceAll("&amp;", "&"));      
       bodyContent = t2.fixURLs(bodyContent, query, d);
