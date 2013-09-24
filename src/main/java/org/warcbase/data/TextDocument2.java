@@ -556,6 +556,7 @@ public class TextDocument2 {
 		if (existingBaseHref != null) {
 			pageUrl = existingBaseHref;
 		}
+		//System.out.println(existingBaseHref);
 		//ResultURIConverter uriConverter = null;
         ResultURIConverter uriConverter = new ArchivalUrlResultURIConverter();
 		/*ResultURIConverter uriConverter = new ResultURIConverter() {
