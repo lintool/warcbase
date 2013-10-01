@@ -18,7 +18,7 @@
  *  limitations under the License.
  */
 
-package org.warcbase;
+package org.warcbase.data;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.text.ParseException;
 
 import javax.servlet.ServletException;
@@ -364,15 +365,63 @@ public class TextDocument2 {
 	public void setCharSet(String charSet) {
 		this.charSet = charSet;
 	}
-
+	
 	private class SpecialResultURIConverter implements ResultURIConverter {
+	  private static final String EMAIL_PROTOCOL_PREFIX = "mailto:";
+    private static final String JAVASCRIPT_PROTOCOL_PREFIX = "javascript:";
+    private ResultURIConverter base = null;
+    public SpecialResultURIConverter(ResultURIConverter base) {
+      this.base = base;
+    }
+    public String makeReplayURI(String datespec, String url) {
+      //System.out.println("\ninside makeReplayURI " + datespec + " " + url + "\n");
+      
+      if(url.startsWith(EMAIL_PROTOCOL_PREFIX)) {
+        return url;
+      }
+      if(url.startsWith(JAVASCRIPT_PROTOCOL_PREFIX)) {
+        return url;
+      }
+      //System.err.println(url);
+      //System.err.println(datespec);
+      //return base.makeReplayURI(datespec, url);
+      StringBuilder sb = null;
+      String replayURIPrefix = null;
+      if(replayURIPrefix == null) {
+        sb = new StringBuilder(url.length() + datespec.length());
+        //sb.append(datespec);
+        //sb.append("http://localhost:8080/warcbase/servlet?date=");
+        //System.out.println("salam");
+        sb.append(SERVER_PREFIX + "warcbase/servlet?date=");
+        sb.append(datespec);
+        sb.append("&query=");
+        //sb.append("");
+        sb.append(UrlOperations.stripDefaultPortFromUrl(url));
+        //sb.append(URLEncoder.encode(UrlOperations.stripDefaultPortFromUrl(url), "US-ASCII"));
+        return sb.toString();
+      }
+      if(url.startsWith(replayURIPrefix)) {
+        return url;
+      }
+      sb = new StringBuilder(url.length() + datespec.length());
+      sb.append(replayURIPrefix);
+      sb.append(datespec);
+      sb.append("/");
+      sb.append(UrlOperations.stripDefaultPortFromUrl(url));
+      return sb.toString();
+    }
+  }
+
+	private class SpecialResultURIConverterEncoded implements ResultURIConverter {
 		private static final String EMAIL_PROTOCOL_PREFIX = "mailto:";
 		private static final String JAVASCRIPT_PROTOCOL_PREFIX = "javascript:";
 		private ResultURIConverter base = null;
-		public SpecialResultURIConverter(ResultURIConverter base) {
+		public SpecialResultURIConverterEncoded(ResultURIConverter base) {
 			this.base = base;
 		}
 		public String makeReplayURI(String datespec, String url) {
+		  //System.out.println("\ninside makeReplayURI " + datespec + " " + url + "\n");
+		  
 			if(url.startsWith(EMAIL_PROTOCOL_PREFIX)) {
 				return url;
 			}
@@ -393,7 +442,13 @@ public class TextDocument2 {
 				sb.append(datespec);
 				sb.append("&query=");
 				//sb.append("");
-				sb.append(UrlOperations.stripDefaultPortFromUrl(url));
+				//sb.append(UrlOperations.stripDefaultPortFromUrl(url));
+				try {
+          sb.append(URLEncoder.encode(UrlOperations.stripDefaultPortFromUrl(url.replaceAll("&amp;", "&")), "US-ASCII"));
+        } catch (UnsupportedEncodingException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
 				return sb.toString();
 			}
 			if(url.startsWith(replayURIPrefix)) {
@@ -495,11 +550,13 @@ public class TextDocument2 {
 	}
 	
 	public String fixURLs(String content, String pageUrl, String captureDate){
+	  //System.out.println("inside fixURLs: " + pageUrl + " " + captureDate);
 		sb = new StringBuilder(content);
 		String existingBaseHref = TagMagix.getBaseHref(sb);
 		if (existingBaseHref != null) {
 			pageUrl = existingBaseHref;
 		}
+		//System.out.println(existingBaseHref);
 		//ResultURIConverter uriConverter = null;
         ResultURIConverter uriConverter = new ArchivalUrlResultURIConverter();
 		/*ResultURIConverter uriConverter = new ResultURIConverter() {
@@ -510,7 +567,7 @@ public class TextDocument2 {
 				return null;
 			}
 		};*/
-		ResultURIConverter ruc = new SpecialResultURIConverter(uriConverter);
+        ResultURIConverter rucEncoded = new SpecialResultURIConverterEncoded(uriConverter);
 
 		String markups[][] = {
 				{"FRAME","SRC"},
@@ -518,6 +575,7 @@ public class TextDocument2 {
 				{"LINK","HREF"},
 				{"SCRIPT","SRC"},
 				{"IMG","SRC"},
+				{"INPUT", "SRC"},
 				{"A","HREF"},
 				{"AREA","HREF"},
 				{"OBJECT","CODEBASE"},
@@ -529,11 +587,13 @@ public class TextDocument2 {
 				{TagMagix.ANY_TAGNAME,"background"}
 		};
 		for(String tagAttr[] : markups) {
-			TagMagix.markupTagREURIC(sb, ruc, captureDate, pageUrl,
+			TagMagix.markupTagREURIC(sb, rucEncoded, captureDate, pageUrl,
 					tagAttr[0], tagAttr[1]);
 		}
-		TagMagix.markupCSSImports(sb,uriConverter, captureDate, pageUrl);
-		TagMagix.markupStyleUrls(sb,uriConverter,captureDate,pageUrl);
+		
+		ResultURIConverter ruc = new SpecialResultURIConverter(uriConverter);
+		TagMagix.markupCSSImports(sb,ruc, captureDate, pageUrl.replaceAll("&amp;", "&"));
+		TagMagix.markupStyleUrls(sb,ruc,captureDate,pageUrl.replaceAll("&amp;", "&"));
     //System.out.println(sb.toString());
 		return sb.toString();
 	}

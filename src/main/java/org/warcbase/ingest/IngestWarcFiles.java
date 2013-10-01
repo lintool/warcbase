@@ -27,9 +27,8 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
-import org.warcbase.Util;
-import org.warcbase.WarcHTMLResponseRecord;
-import org.warcbase.WarcRecord;
+import org.warcbase.data.Util;
+import org.warcbase.data.WarcRecord;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -103,9 +102,10 @@ public class IngestWarcFiles {
           // see if it's a response record
           if (record.getHeaderRecordType().equals("response")) {
             // it is - create a WarcHTML record
-            WarcHTMLResponseRecord htmlRecord = new WarcHTMLResponseRecord(record);
+            //WarcHTMLResponseRecord htmlRecord = new WarcHTMLResponseRecord(record);
             // get our TREC ID and target URI
-            thisTargetURI = htmlRecord.getTargetURI();
+            //thisTargetURI = htmlRecord.getTargetURI();
+            thisTargetURI = record.getHeaderMetadataItem("WARC-Target-URI");
             if (SKIP.contains(Util.getUriExtension(thisTargetURI))) {
               skipped++;
             }

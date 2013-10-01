@@ -44,7 +44,7 @@ Lemur License Agreement
  * and open the template in the editor.
  */
 
-package org.warcbase;
+package org.warcbase.data;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
