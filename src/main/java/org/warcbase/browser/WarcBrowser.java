@@ -27,7 +27,10 @@ public class WarcBrowser {
     ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
     context.setContextPath("/");
     server.setHandler(context);
-    context.addServlet(new ServletHolder(new WarcbaseServlet(name)), "/warcbase/servlet");
+    //context.addServlet(new ServletHolder(new WarcbaseServlet(name)), "/warcbase/servlet");
+    context.addServlet(new ServletHolder(new WarcbaseServlet(name)), "/warcbase/servlet/*");
+    //context.addServlet(new ServletHolder(new WarcbaseServlet(name)), "/warcbase/*");
+    //context.set
 
     ServletHolder holder = context.addServlet(org.eclipse.jetty.servlet.DefaultServlet.class,
         "/warcbase/*");

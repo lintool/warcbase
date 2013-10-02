@@ -392,11 +392,14 @@ public class TextDocument2 {
         //sb.append(datespec);
         //sb.append("http://localhost:8080/warcbase/servlet?date=");
         //System.out.println("salam");
-        sb.append(SERVER_PREFIX + "warcbase/servlet?date=");
+        //sb.append(SERVER_PREFIX + "warcbase/servlet?date=");
+        sb.append(SERVER_PREFIX + "warcbase/servlet/");
         sb.append(datespec);
-        sb.append("&query=");
+        //sb.append("&query=");
+        sb.append("/");
         //sb.append("");
-        sb.append(UrlOperations.stripDefaultPortFromUrl(url));
+        //sb.append(UrlOperations.stripDefaultPortFromUrl(url));
+        sb.append(url);
         //sb.append(URLEncoder.encode(UrlOperations.stripDefaultPortFromUrl(url), "US-ASCII"));
         return sb.toString();
       }
@@ -438,17 +441,20 @@ public class TextDocument2 {
 				//sb.append(datespec);
 				//sb.append("http://localhost:8080/warcbase/servlet?date=");
 				//System.out.println("salam");
-				sb.append(SERVER_PREFIX + "warcbase/servlet?date=");
+				//sb.append(SERVER_PREFIX + "warcbase/servlet?date=");
+				sb.append(SERVER_PREFIX + "warcbase/servlet/");
 				sb.append(datespec);
-				sb.append("&query=");
+				//sb.append("&query=");
+				sb.append("/");
 				//sb.append("");
 				//sb.append(UrlOperations.stripDefaultPortFromUrl(url));
-				try {
+				/*try {
           sb.append(URLEncoder.encode(UrlOperations.stripDefaultPortFromUrl(url.replaceAll("&amp;", "&")), "US-ASCII"));
         } catch (UnsupportedEncodingException e) {
           // TODO Auto-generated catch block
           e.printStackTrace();
-        }
+        }*/
+				sb.append(url);
 				return sb.toString();
 			}
 			if(url.startsWith(replayURIPrefix)) {
