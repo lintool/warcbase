@@ -16,7 +16,12 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.rest.client.Client;
+import org.apache.hadoop.hbase.rest.model.TableListModel;
+import org.apache.hadoop.hbase.rest.client.RemoteAdmin;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -32,11 +37,11 @@ public class WarcbaseServlet extends HttpServlet {
   private static final long serialVersionUID = 847405540723915805L;
 
   private final Configuration hbaseConfig;
-  private final String name;
+  private String tableName;
 
   public WarcbaseServlet(String name) {
     this.hbaseConfig = HBaseConfiguration.create();
-    this.name = name;
+    this.tableName = name;
   }
 
   private void writeResponse(HttpServletResponse resp, Result rs, byte[] data, String query, String d, int num)
@@ -100,7 +105,7 @@ public class WarcbaseServlet extends HttpServlet {
       //else
         //System.out.println(base.html());
       bodyContent = doc.html();
-      bodyContent = t2.fixURLs(bodyContent, query, d);
+      bodyContent = t2.fixURLs(bodyContent, query, d, tableName);
       doc = Jsoup.parse(bodyContent);
       base = doc.select("base").first();
       if(base != null){
@@ -114,7 +119,8 @@ public class WarcbaseServlet extends HttpServlet {
       //Elements bodies = doc.getElementsByTag("body");
       //Elements heads = doc.getElementsByTag("head");
       head = doc.select("head").first();
-      String baseUrl = TextDocument2.SERVER_PREFIX + "warcbase/servlet?date=" + d + "&query=" + query;
+      //String baseUrl = TextDocument2.SERVER_PREFIX + "warcbase/servlet?date=" + d + "&query=" + query;
+      String baseUrl = TextDocument2.SERVER_PREFIX + tableName +"/" + d + "/" + query;
       //head.prepend("<script>setbasehref('"+ baseUrl + "');</script>");
       //head.prepend("<script type=\"text/javascript\"> function setbasehref(basehref) { var thebase = document.getElementsByTagName(\"base\"); thebase[0].href = basehref; } </script>");
      // head.prepend("<script defer> var d = document; d.getElementsByTagName('base')[0].setAttribute('href', 'http://www.google.com/'); </script>");
@@ -130,21 +136,22 @@ public class WarcbaseServlet extends HttpServlet {
       //body.prepend("<br/><h1>domain:<script type=\"text/javascript\">writeDomain()</script></h1>");
       body.prepend("<div id=\"wm-ipp\" style=\"display: block; position: relative; padding: 0px 5px; min-height: 70px; min-width: 800px; z-index: 9000;\"><div id=\"wm-ipp-inside\" style=\"position:fixed;padding:0!important;margin:0!important;width:97%;min-width:780px;border:5px solid #000;border-top:none;background-image:url(" + TextDocument2.SERVER_PREFIX + "warcbase/" + "images/wm_tb_bk_trns.png);text-align:center;-moz-box-shadow:1px 1px 3px #333;-webkit-box-shadow:1px 1px 3px #333;box-shadow:1px 1px 3px #333;font-size:11px!important;font-family:'Lucida Grande','Arial',sans-serif!important;\">    <table style=\"border-collapse:collapse;margin:0;padding:0;width:100%;\"><tbody><tr>    <td style=\"padding:10px;vertical-align:top;min-width:110px;\">    <a href=\""
           //+ "http://web.archive.org/web/"
-          + TextDocument2.SERVER_PREFIX + "warcbase"
-          + "\" title=\"Warcbase home page\" style=\"background-color:transparent;border:none;\">Warcbase</a>    </td>            <td style=\"padding:0!important;text-align:center;vertical-align:top;width:100%;\">         <table style=\"border-collapse:collapse;margin:0 auto;padding:0;width:570px;\"><tbody><tr>        <td style=\"padding:3px 0;\" colspan=\"2\">        <form target=\"_top\" method=\"get\" action=\"" + TextDocument2.SERVER_PREFIX + "warcbase/" + "servlet\" name=\"wmtb\" id=\"wmtb\" style=\"margin:0!important;padding:0!important;\"><input name=\"query\" id=\"wmtbURL\" value=\""
+          + TextDocument2.SERVER_PREFIX //+ "warcbase"
+          + "\" title=\"Warcbase home page\" style=\"background-color:transparent;border:none;\">Warcbase</a>    </td>            <td style=\"padding:0!important;text-align:center;vertical-align:top;width:100%;\">         <table style=\"border-collapse:collapse;margin:0 auto;padding:0;width:570px;\"><tbody><tr>        <td style=\"padding:3px 0;\" colspan=\"2\">        <form target=\"_top\" method=\"get\" action=\"" 
+          + TextDocument2.SERVER_PREFIX + tableName + "\" name=\"wmtb\" id=\"wmtb\" style=\"margin:0!important;padding:0!important;\"><input name=\"query\" id=\"wmtbURL\" value=\""
               //+ "http://www.wikipedia.org/"
               + query
               + "\" style=\"width:400px;font-size:11px;font-family:'Lucida Grande','Arial',sans-serif;\" onfocus=\"javascript:this.focus();this.select();\" type=\"text\"><input name=\"date\" value=\"\" type=\"hidden\"><input name=\"type\" value=\"replay\" type=\"hidden\"><input name=\"date\" value=\"20120201185436\" type=\"hidden\"><input value=\"Go\" style=\"font-size:11px;font-family:'Lucida Grande','Arial',sans-serif;margin-left:5px;\" type=\"submit\"><span id=\"wm_tb_options\" style=\"display:block;\"></span></form>        </td>        <td style=\"vertical-align:bottom;padding:5px 0 0 0!important;\" rowspan=\"2\">            <table style=\"border-collapse:collapse;width:110px;color:#99a;font-family:'Helvetica','Lucida Grande','Arial',sans-serif;\"><tbody>                  <!-- NEXT/PREV MONTH NAV AND MONTH INDICATOR -->            <tr style=\"width:110px;height:16px;font-size:10px!important;\">              <td style=\"padding-right:9px;font-size:11px!important;font-weight:bold;text-transform:uppercase;text-align:right;white-space:nowrap;overflow:visible;\" nowrap=\"nowrap\">                                     <strong>PREV</strong>                                     </td>         <td style=\"padding-left:9px;font-size:11px!important;font-weight:bold;text-transform:uppercase;white-space:nowrap;overflow:visible;\" nowrap=\"nowrap\">                <strong>NEXT</strong>                                    </td>            </tr>             <!-- NEXT/PREV CAPTURE NAV AND DAY OF MONTH INDICATOR -->            <tr>                <td style=\"padding-right:9px;white-space:nowrap;overflow:visible;text-align:right!important;vertical-align:middle!important;\" nowrap=\"nowrap\">                                    <a href=\""
                   //+ "http://web.archive.org/web/20120201165858/http://www.wikipedia.org/"
                   //+ TextDocument2.SERVER_PREFIX + "warcbase/servlet?date=" + prevDate + "&query=" + query
-                  + TextDocument2.SERVER_PREFIX + "warcbase/servlet/" + prevDate + "/" + query
+                  + TextDocument2.SERVER_PREFIX + tableName + "/" + prevDate + "/" + query
                   + "\" title=\""
                   //+ "16:58:58 Feb 1, 2012"
                   + prevDate
                   + "\" style=\"background-color:transparent;border:none;\"><img src=\"" + TextDocument2.SERVER_PREFIX + "warcbase/" + "images/wm_tb_prv_on.png\" alt=\"Previous capture\" border=\"0\" height=\"16\" width=\"14\"></a>                                    </td>         <td style=\"padding-left:9px;white-space:nowrap;overflow:visible;text-align:left!important;vertical-align:middle!important;\" nowrap=\"nowrap\">                                    <a href=\""
                       //+ "http://web.archive.org/web/20120201230139/http://www.wikipedia.org/"
                       //+ TextDocument2.SERVER_PREFIX + "warcbase/servlet?date=" + nextDate + "&query=" + query
-                      + TextDocument2.SERVER_PREFIX + "warcbase/servlet/" + nextDate + "/" + query
+                      + TextDocument2.SERVER_PREFIX + tableName + "/" + nextDate + "/" + query
                       + "\" title=\""
                       //+ "23:01:39 Feb 1, 2012"
                       + nextDate
@@ -168,25 +175,45 @@ public class WarcbaseServlet extends HttpServlet {
     //resp.setContentType("text/html");
     //resp.setStatus(HttpServletResponse.SC_OK);
     //resp.getWriter().println("<h1>Hello Servlet <br/>" + req.getPathInfo()+ "</h1>");
-    String query = null;
-    String d = null;
-    if(req.getPathInfo() == null){
-      query = req.getParameter("query");
-      d = req.getParameter("date");
+    //System.out.println("begining");
+    String query = req.getParameter("query");
+    String d = req.getParameter("date");
+    //System.out.println("geting parameters");
+    
+    WarcbaseResponse warcbaseResponse = new WarcbaseResponse();
+    
+    //System.out.println(req.getPathInfo());
+    if(req.getPathInfo() == null || req.getPathInfo() == "/"){
+      warcbaseResponse.writeTables(resp);
+      return;
     }
-    else{
-      String pathInfo = req.getPathInfo();
-      //resp.setContentType("text/html");
-      //resp.setStatus(HttpServletResponse.SC_OK);
-      //resp.getWriter().println("<h1>Hello Servlet <br/>" + req.getPathInfo()+ "</h1>");
-      String[] splits = pathInfo.split("\\/");
-      //System.out.println(splits[1]);
-      d = splits[1];
-      //System.out.println(pathInfo.substring(2 + splits[1].length(), pathInfo.length()));
-      query = pathInfo.substring(2 + splits[1].length(), pathInfo.length());
-      //if(true)
-        //return;
+    String pathInfo = req.getPathInfo();
+    String[] splits = pathInfo.split("\\/");
+    if(splits.length < 2){
+      warcbaseResponse.writeTables(resp);
+      return;
     }
+    this.tableName = splits[1];
+
+    if(splits.length == 2 && query == null){
+      warcbaseResponse.tableSearch(resp, tableName);
+      return;
+    }
+    if(splits.length == 2 && d == null){
+      warcbaseResponse.writeDates(resp, tableName, query);
+      return;
+    }
+    //System.out.println(splits.length);
+    //System.out.println(query);
+    //System.out.println(d);
+    if(d == null)
+      d = splits[2];
+    if(query == null)
+      query = pathInfo.substring(3 + splits[1].length() + splits[2].length(), pathInfo.length());
+    //System.out.println(query);
+    //System.out.println(d);
+    //if(true)
+      //return;
       //resp.getWriter().println("<h1>it is null</h1>");
     
 
@@ -195,7 +222,7 @@ public class WarcbaseServlet extends HttpServlet {
     //System.out.println("\n" + query + "\n");
 
     String q = Util.reverseHostname(query);
-    HTable table = new HTable(hbaseConfig, name);
+    HTable table = new HTable(hbaseConfig, tableName);
     //System.out.println(q);
     Get get = new Get(Bytes.toBytes(q));
     Result rs = table.get(get);
@@ -252,6 +279,7 @@ public class WarcbaseServlet extends HttpServlet {
       //out.println("<br/> <a href='http://" + req.getServerName() + ":" + req.getServerPort()
       //    + req.getRequestURI() + "?query=" + URLEncoder.encode(req.getParameter("query"), "US-ASCII") + "&date=" + date + "'>"
       //    + date + "</a>");
+      //System.out.println(req.getServerName() + ":" + req.getServerPort() + req.getRequestURI());
       out.println("<br/> <a href='http://" + req.getServerName() + ":" + req.getServerPort() + req.getRequestURI() + "/" + date + "/" + query + "'>" + date + "</a>");
       //URLEncoder.encode(req.getParameter("query")
     }

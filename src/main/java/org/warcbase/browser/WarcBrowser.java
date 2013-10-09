@@ -28,12 +28,15 @@ public class WarcBrowser {
     context.setContextPath("/");
     server.setHandler(context);
     //context.addServlet(new ServletHolder(new WarcbaseServlet(name)), "/warcbase/servlet");
-    context.addServlet(new ServletHolder(new WarcbaseServlet(name)), "/warcbase/servlet/*");
-    //context.addServlet(new ServletHolder(new WarcbaseServlet(name)), "/warcbase/*");
+    //context.addServlet(new ServletHolder(new WarcbaseServlet(name)), "/" + name + "/*");
+    //context.addServlet(new ServletHolder(new WarcbaseServlet(name)), "/warcbase/servlet/*");
+    context.addServlet(new ServletHolder(new WarcbaseServlet(name)), "/*");
     //context.set
 
     ServletHolder holder = context.addServlet(org.eclipse.jetty.servlet.DefaultServlet.class,
         "/warcbase/*");
+    //ServletHolder holder = context.addServlet(org.eclipse.jetty.servlet.DefaultServlet.class,
+      //  "/*");
     holder.setInitParameter("resourceBase", "src/main/webapp/");
     holder.setInitParameter("pathInfoOnly", "true");
   }

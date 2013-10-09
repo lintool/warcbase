@@ -151,7 +151,7 @@ public class TextDocument2 {
 		if (existingBaseHref != null) {
 			pageUrl = existingBaseHref;
 		}
-		ResultURIConverter ruc = new SpecialResultURIConverter(uriConverter);
+		ResultURIConverter ruc = new SpecialResultURIConverter(uriConverter, null);
 		
 		// TODO: forms...?
 		String markups[][] = {
@@ -370,8 +370,10 @@ public class TextDocument2 {
 	  private static final String EMAIL_PROTOCOL_PREFIX = "mailto:";
     private static final String JAVASCRIPT_PROTOCOL_PREFIX = "javascript:";
     private ResultURIConverter base = null;
-    public SpecialResultURIConverter(ResultURIConverter base) {
+    private String tableName;
+    public SpecialResultURIConverter(ResultURIConverter base, String tableName) {
       this.base = base;
+      this.tableName = tableName;
     }
     public String makeReplayURI(String datespec, String url) {
       //System.out.println("\ninside makeReplayURI " + datespec + " " + url + "\n");
@@ -393,7 +395,7 @@ public class TextDocument2 {
         //sb.append("http://localhost:8080/warcbase/servlet?date=");
         //System.out.println("salam");
         //sb.append(SERVER_PREFIX + "warcbase/servlet?date=");
-        sb.append(SERVER_PREFIX + "warcbase/servlet/");
+        sb.append(SERVER_PREFIX + tableName + "/");
         sb.append(datespec);
         //sb.append("&query=");
         sb.append("/");
@@ -419,8 +421,10 @@ public class TextDocument2 {
 		private static final String EMAIL_PROTOCOL_PREFIX = "mailto:";
 		private static final String JAVASCRIPT_PROTOCOL_PREFIX = "javascript:";
 		private ResultURIConverter base = null;
-		public SpecialResultURIConverterEncoded(ResultURIConverter base) {
+		private String tableName;
+		public SpecialResultURIConverterEncoded(ResultURIConverter base, String tableName) {
 			this.base = base;
+			this.tableName = tableName;
 		}
 		public String makeReplayURI(String datespec, String url) {
 		  //System.out.println("\ninside makeReplayURI " + datespec + " " + url + "\n");
@@ -442,7 +446,7 @@ public class TextDocument2 {
 				//sb.append("http://localhost:8080/warcbase/servlet?date=");
 				//System.out.println("salam");
 				//sb.append(SERVER_PREFIX + "warcbase/servlet?date=");
-				sb.append(SERVER_PREFIX + "warcbase/servlet/");
+				sb.append(SERVER_PREFIX + tableName + "/");
 				sb.append(datespec);
 				//sb.append("&query=");
 				sb.append("/");
@@ -527,7 +531,7 @@ public class TextDocument2 {
 				return null;
 			}
 		};*/
-		ResultURIConverter ruc = new SpecialResultURIConverter(uriConverter);
+		ResultURIConverter ruc = new SpecialResultURIConverter(uriConverter, null);
 
 		String markups[][] = {
 				{"FRAME","SRC"},
@@ -555,7 +559,7 @@ public class TextDocument2 {
 
 	}
 	
-	public String fixURLs(String content, String pageUrl, String captureDate){
+	public String fixURLs(String content, String pageUrl, String captureDate, String tableName){
 	  //System.out.println("inside fixURLs: " + pageUrl + " " + captureDate);
 		sb = new StringBuilder(content);
 		String existingBaseHref = TagMagix.getBaseHref(sb);
@@ -573,7 +577,7 @@ public class TextDocument2 {
 				return null;
 			}
 		};*/
-        ResultURIConverter rucEncoded = new SpecialResultURIConverterEncoded(uriConverter);
+        ResultURIConverter rucEncoded = new SpecialResultURIConverterEncoded(uriConverter, tableName);
 
 		String markups[][] = {
 				{"FRAME","SRC"},
@@ -597,7 +601,7 @@ public class TextDocument2 {
 					tagAttr[0], tagAttr[1]);
 		}
 		
-		ResultURIConverter ruc = new SpecialResultURIConverter(uriConverter);
+		ResultURIConverter ruc = new SpecialResultURIConverter(uriConverter, tableName);
 		TagMagix.markupCSSImports(sb,ruc, captureDate, pageUrl.replaceAll("&amp;", "&"));
 		TagMagix.markupStyleUrls(sb,ruc,captureDate,pageUrl.replaceAll("&amp;", "&"));
     //System.out.println(sb.toString());

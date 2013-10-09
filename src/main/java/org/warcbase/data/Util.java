@@ -34,8 +34,13 @@ public class Util {
     if (thisTargetURI.length() > 3) {
       return thisTargetURI.substring(thisTargetURI.length() - 3, thisTargetURI.length());
     }
+    
 
     return "";
+  }
+
+  public static String urlTRansform(String q, String date){
+    return null;
   }
 
 }
