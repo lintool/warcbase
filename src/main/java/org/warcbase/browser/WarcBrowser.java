@@ -21,7 +21,7 @@ public class WarcBrowser {
 
   private Server server;
 
-  public WarcBrowser(String name, int runningPort) throws Exception {
+  public WarcBrowser(int runningPort) throws Exception {
     server = new Server(runningPort);
 
     ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
@@ -30,7 +30,7 @@ public class WarcBrowser {
     //context.addServlet(new ServletHolder(new WarcbaseServlet(name)), "/warcbase/servlet");
     //context.addServlet(new ServletHolder(new WarcbaseServlet(name)), "/" + name + "/*");
     //context.addServlet(new ServletHolder(new WarcbaseServlet(name)), "/warcbase/servlet/*");
-    context.addServlet(new ServletHolder(new WarcbaseServlet(name)), "/*");
+    context.addServlet(new ServletHolder(new WarcbaseServlet()), "/*");
     //context.set
 
     ServletHolder holder = context.addServlet(org.eclipse.jetty.servlet.DefaultServlet.class,
@@ -66,8 +66,8 @@ public class WarcBrowser {
   public static void main(String[] args) throws Exception {
     Options options = new Options();
 
-    options.addOption(OptionBuilder.withArgName("name").hasArg()
-        .withDescription("name of the archive").create(NAME_OPTION));
+    //options.addOption(OptionBuilder.withArgName("name").hasArg()
+      //  .withDescription("name of the archive").create(NAME_OPTION));
     options.addOption(OptionBuilder.withArgName("num").hasArg().withDescription("port to serve on")
         .create(PORT_OPTION));
     options.addOption(OptionBuilder.withArgName("url").hasArg().withDescription("server prefix")
@@ -85,8 +85,8 @@ public class WarcBrowser {
       System.exit(-1);
     }
 
-    if (!cmdline.hasOption(PORT_OPTION) || !cmdline.hasOption(SERVER_OPTION) ||
-        !cmdline.hasOption(NAME_OPTION)) {
+    if (!cmdline.hasOption(PORT_OPTION) || !cmdline.hasOption(SERVER_OPTION) ) {//||
+     //   !cmdline.hasOption(NAME_OPTION)) {
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp(WarcBrowser.class.getClass().getName(), options);
       ToolRunner.printGenericCommandUsage(System.out);
@@ -95,13 +95,13 @@ public class WarcBrowser {
 
     int port = Integer.parseInt(cmdline.getOptionValue(PORT_OPTION));
     String server = cmdline.getOptionValue(SERVER_OPTION);
-    String name = cmdline.getOptionValue(NAME_OPTION);
+    //String name = cmdline.getOptionValue(NAME_OPTION);
     
     Log4jConfigurer.shutdownLogging();
     org.apache.log4j.Level.toLevel(0);
     
     LOG.info("Starting server on port " + port + " with server prefix " + server);
-    WarcBrowser browser = new WarcBrowser(name, port);
+    WarcBrowser browser = new WarcBrowser(port);
     TextDocument2.SERVER_PREFIX = server;
 
     browser.start();

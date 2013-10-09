@@ -39,9 +39,9 @@ public class WarcbaseServlet extends HttpServlet {
   private final Configuration hbaseConfig;
   private String tableName;
 
-  public WarcbaseServlet(String name) {
+  public WarcbaseServlet() {
     this.hbaseConfig = HBaseConfiguration.create();
-    this.tableName = name;
+    //this.tableName = name;
   }
 
   private void writeResponse(HttpServletResponse resp, Result rs, byte[] data, String query, String d, int num)
