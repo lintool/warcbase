@@ -50,6 +50,7 @@
     <hadoop.version2>2.0.0-cdh4.3.0</hadoop.version2>
     <hbase.version>0.94.6-cdh4.3.0</hbase.version>
     <zookeeper.version>3.4.5-cdh4.3.0</zookeeper.version>
+    <jwat.version>1.0.0</jwat.version>
   </properties>
 
   <build>
@@ -63,6 +64,10 @@
             <program>
               <mainClass>org.warcbase.ingest.IngestWarcFiles</mainClass>
               <name>IngestWarcFiles</name>
+            </program>
+            <program>
+              <mainClass>org.warcbase.ingest.IngestArcFiles</mainClass>
+              <name>IngestArcFiles</name>
             </program>
             <program>
               <mainClass>org.warcbase.browser.WarcBrowser</mainClass>
@@ -260,5 +265,25 @@
       <version>3.0.0.v201112011016</version>
       <scope>provided</scope>
     </dependency>-->
+     <dependency>
+    <groupId>org.jwat</groupId>
+    <artifactId>jwat-common</artifactId>
+    <version>${jwat.version}</version>
+  </dependency>
+  <dependency>
+    <groupId>org.jwat</groupId>
+    <artifactId>jwat-gzip</artifactId>
+    <version>${jwat.version}</version>
+  </dependency>
+  <dependency>
+    <groupId>org.jwat</groupId>
+    <artifactId>jwat-arc</artifactId>
+    <version>${jwat.version}</version>
+  </dependency>
+  <dependency>
+    <groupId>org.jwat</groupId>
+    <artifactId>jwat-warc</artifactId>
+    <version>${jwat.version}</version>
+  </dependency>
   </dependencies>
 </project>
