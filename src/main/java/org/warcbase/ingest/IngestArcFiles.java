@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
@@ -37,8 +38,13 @@ import org.jwat.arc.ArcRecord;
 import org.jwat.arc.ArcRecordBase;
 import org.jwat.arc.ArcVersionHeader;
 import org.jwat.common.ByteCountingPushBackInputStream;
+import org.jwat.common.HeaderLine;
+import org.jwat.common.HttpHeader;
+import org.jwat.common.Payload;
 import org.jwat.gzip.GzipEntry;
 import org.jwat.gzip.GzipReader;
+import org.jwat.warc.WarcReader;
+import org.jwat.warc.WarcReaderFactory;
 import org.warcbase.data.ArcParser;
 import org.warcbase.data.Util;
 
@@ -57,17 +63,17 @@ public class IngestArcFiles {
   
   private final int PUSHBACK_BUFFER_SIZE = 16;
 
-  public static final String[] FAMILIES = {"content"};
+  public static final String[] FAMILIES = {"content", "type"};
 
   private final HTable table;
   private final HBaseAdmin admin;
 
   public IngestArcFiles(String name, boolean create) throws IOException, SecurityException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
     // TODO Auto-generated constructor stub
-    //admin = null;
-    //table = null;
-   // if(true)
-     // return;
+    admin = null;
+    table = null;
+    if(true)
+      return;
     
     Configuration hbaseConfig = HBaseConfiguration.create();
     admin = new HBaseAdmin(hbaseConfig);;
@@ -197,10 +203,16 @@ public class IngestArcFiles {
     }
   }*/
   
-  private void addRecord(String key, String date, byte[] data) {
+  private void addRecord(String key, String date, byte[] data, String type) {
     try {
       Put put = new Put(Bytes.toBytes(key));
       put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(date), data);
+      if(type == null || Bytes.toBytes(type) == null){
+        System.out.println(key);
+        System.out.println(date);
+        System.out.println(type);
+      }
+      put.add(Bytes.toBytes(FAMILIES[1]), Bytes.toBytes(date), Bytes.toBytes(type));
       table.put(put);
     } catch (IOException e) {
       LOG.error("Couldn't insert key: " + key);
@@ -219,6 +231,8 @@ public class IngestArcFiles {
     String url = null;
     String date = null;
     byte[] content = null;
+    String type = null;
+    String key = null;
     
     for (; i < inputArcFolder.listFiles().length; i++) {
       if(cnt % 10000 == 0 && cnt > 0){
@@ -243,7 +257,8 @@ public class IngestArcFiles {
           url = record.getUrlStr();
           date = record.getArchiveDateStr();
           content = IOUtils.toByteArray(record.getPayloadContent());
-          String key = Util.reverseHostname(url);
+          key = Util.reverseHostname(url);
+          type = record.getContentTypeStr();
           
           if (key == null) {
             continue;
@@ -253,7 +268,11 @@ public class IngestArcFiles {
             skipped++;
           }
           else{
-            addRecord(key, date, content);
+            //if(type.equals("text/html"))
+              //System.out.println(new String(content, "UTF8"));
+            if(type == null)
+               type = "text/plain";
+            addRecord(key, date, content, type);
             cnt++;
           }
         }
@@ -263,6 +282,7 @@ public class IngestArcFiles {
       }
     }
   }
+  
 
   @SuppressWarnings("static-access")
   public static void main(String[] args) throws SecurityException, IllegalArgumentException, IOException, NoSuchFieldException, IllegalAccessException {
