@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
 import org.jwat.arc.ArcReaderCompressed;
 import org.jwat.arc.ArcReaderFactory;
@@ -38,6 +40,7 @@ import org.jwat.common.ByteCountingPushBackInputStream;
 import org.jwat.gzip.GzipEntry;
 import org.jwat.gzip.GzipReader;
 import org.warcbase.data.ArcParser;
+import org.warcbase.data.Util;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -61,10 +64,10 @@ public class IngestArcFiles {
 
   public IngestArcFiles(String name, boolean create) throws IOException, SecurityException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
     // TODO Auto-generated constructor stub
-    admin = null;
-    table = null;
-    if(true)
-      return;
+    //admin = null;
+    //table = null;
+   // if(true)
+     // return;
     
     Configuration hbaseConfig = HBaseConfiguration.create();
     admin = new HBaseAdmin(hbaseConfig);;
@@ -105,23 +108,27 @@ public class IngestArcFiles {
     System.out.println("          Type: " + record.getContentTypeStr());
     System.out.println("      Filename: " + record.getFileName());
     System.out.println("     Record-ID: " + record.getUrlStr());
-    System.out.println("          Date: " + record.getArchiveDate());
-    System.out.println("Content-Length: " + record.getArchiveLengthStr());
+    System.out.println("          Date: " + record.getArchiveDate().getTime());
+    System.out.println("          Date2: " + record.getArchiveDateStr());
+    System.out.println("Content-LengthStr: " + record.getArchiveLengthStr());
+    System.out.println("Content-Length: " + record.getArchiveLength());
     System.out.println("  Content-Type: " + record.getContentType());
-    System.out.println("   Data: " + record.getLocation());
+    System.out.println("   Data: " + record.getVersion());
     System.out.println(record.getResultCodeStr());
     System.out.println(record.toString());
     byte[] b = null;
     //ArcRecord record2 = (ArcRecord) record;
     try {
-      System.out.println(record.getPayloadContent().read(b));
+      b = IOUtils.toByteArray(record.getPayloadContent());
+      if(record.getContentTypeStr().equals("text/html"))
+        System.out.println(new String(b, "UTF8"));
     } catch (IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
 }
   
-  private void ingestFolder(File inputArcFolder, int i) {
+  /*private void ingestFolder(File inputArcFolder, int i) {
     // TODO Auto-generated method stub
     long startTime = System.currentTimeMillis();
     int cnt = 0;
@@ -160,6 +167,101 @@ public class IngestArcFiles {
       
     }
     
+  }*/
+  
+  /*private void ingestFolder(File inputArcFolder, int i) {
+    System.out.println("salam");
+    File inputArcFile = inputArcFolder;
+    InputStream in = null;
+    try {
+      in = new FileInputStream( inputArcFile );
+    } catch (FileNotFoundException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    ArcReader reader = null;
+    try {
+      reader = ArcReaderFactory.getReader(in);
+    } catch (IOException e1) {
+      // TODO Auto-generated catch block
+      e1.printStackTrace();
+    }
+    ArcRecordBase record;
+    try {
+      while((record = reader.getNextRecord()) != null){
+        printRecord(record);
+      }
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+  }*/
+  
+  private void addRecord(String key, String date, byte[] data) {
+    try {
+      Put put = new Put(Bytes.toBytes(key));
+      put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(date), data);
+      table.put(put);
+    } catch (IOException e) {
+      LOG.error("Couldn't insert key: " + key);
+      LOG.error("File Size: " + data.length);
+      e.printStackTrace();
+    }
+  }
+  
+  private void ingestFolder(File inputArcFolder, int i) {
+    long startTime = System.currentTimeMillis();
+    int cnt = 0;
+    int skipped = 0;
+    InputStream in = null;
+    ArcReader reader = null;
+    ArcRecordBase record = null;
+    String url = null;
+    String date = null;
+    byte[] content = null;
+    
+    for (; i < inputArcFolder.listFiles().length; i++) {
+      if(cnt % 10000 == 0 && cnt > 0){
+        LOG.info("Ingested " + cnt + "records to Hbase.");
+      }
+      File inputArcFile = inputArcFolder.listFiles()[i];
+      try {
+        in = new FileInputStream( inputArcFile );
+      } catch (FileNotFoundException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+      try {
+        reader = ArcReaderFactory.getReader(in);
+      } catch (IOException e1) {
+        // TODO Auto-generated catch block
+        e1.printStackTrace();
+      }
+      try {
+        while((record = reader.getNextRecord()) != null){
+          //printRecord(record);
+          url = record.getUrlStr();
+          date = record.getArchiveDateStr();
+          content = IOUtils.toByteArray(record.getPayloadContent());
+          String key = Util.reverseHostname(url);
+          
+          if (key == null) {
+            continue;
+          }
+          if(record.getArchiveLength() > MAX_SIZE){
+            LOG.info("Skipping " + key + " with " + record.getArchiveLength() + " byte record");
+            skipped++;
+          }
+          else{
+            addRecord(key, date, content);
+            cnt++;
+          }
+        }
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
   }
 
   @SuppressWarnings("static-access")
