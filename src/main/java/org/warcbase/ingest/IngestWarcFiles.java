@@ -114,6 +114,7 @@ public class IngestWarcFiles {
     String key = null;
     
     for (; i < inputWarcFolder.listFiles().length; i++) {
+      System.out.println("Processing file " + i);
       File inputWarcFile = inputWarcFolder.listFiles()[i];
       
       try {
@@ -164,7 +165,7 @@ public class IngestWarcFiles {
                 //}
                 key = Util.reverseHostname(uri);
                 if(key != null && type == null){//key.equals("gov.house.bernie/application/text_only/index.asp")){
-                  System.out.println("##################################################################");
+                  /*System.out.println("##################################################################");
                   System.out.println(warcRecord.header.contentTypeStr);
                   System.out.println(warcRecord.header.warcTypeStr);
                   for(HeaderLine hline: httpHeader.getHeaderList()){
@@ -176,7 +177,7 @@ public class IngestWarcFiles {
                     System.out.println(hline.name);
                     System.out.println(hline.value);
                     System.out.println("------------");
-                  }
+                  }*/
                   type = "text/plain";
                 }
                 if(key != null && warcRecord.getHeader("WARC-Type").value.toLowerCase().equals("response")){
@@ -188,7 +189,14 @@ public class IngestWarcFiles {
                     if(cnt % 10000 == 0 && cnt > 0){
                       LOG.info("Ingested " + cnt + "records to Hbase.");
                     }
-                    addRecord(key, date, content, type);
+                    if(addRecord(key, date, content, type))
+                      if(key.equals("gov.house.www/")){
+                        System.out.println("##################################################################");
+                        System.out.println(new String(content, "UTF8"));
+                        System.out.println(date);
+                        System.out.println(type);
+                        System.out.println(new String(table.getTableName(), "UTF8"));
+                      }
                     cnt++;
                   }
                 }
@@ -405,21 +413,18 @@ public class IngestWarcFiles {
     return hdr;
   }
 
-  private void addRecord(String key, String date, byte[] data, String type) {
+  private Boolean addRecord(String key, String date, byte[] data, String type) {
     try {
       Put put = new Put(Bytes.toBytes(key));
       put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(date), data);
-      if(type == null || Bytes.toBytes(type) == null){
-        System.out.println(key);
-        System.out.println(date);
-        System.out.println(type);
-      }
       put.add(Bytes.toBytes(FAMILIES[1]), Bytes.toBytes(date), Bytes.toBytes(type));
       table.put(put);
+      return true;
     } catch (IOException e) {
       LOG.error("Couldn't insert key: " + key);
       LOG.error("File Size: " + data.length);
       e.printStackTrace();
+      return false;
     }
   }
 

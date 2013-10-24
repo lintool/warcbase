@@ -70,11 +70,11 @@ public class IngestArcFiles {
 
   public IngestArcFiles(String name, boolean create) throws IOException, SecurityException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
     // TODO Auto-generated constructor stub
-    admin = null;
+    /*admin = null;
     table = null;
     if(true)
       return;
-    
+    */
     Configuration hbaseConfig = HBaseConfiguration.create();
     admin = new HBaseAdmin(hbaseConfig);;
     
@@ -238,6 +238,7 @@ public class IngestArcFiles {
       if(cnt % 10000 == 0 && cnt > 0){
         LOG.info("Ingested " + cnt + "records to Hbase.");
       }
+      System.out.println("Processing file " + i);
       File inputArcFile = inputArcFolder.listFiles()[i];
       try {
         in = new FileInputStream( inputArcFile );

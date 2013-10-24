@@ -2,6 +2,7 @@ package org.warcbase.browser.servlet;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -85,6 +86,7 @@ public class WarcbaseResponse {
 
   public void writeDates(HttpServletResponse resp, String tableName, String query){
     String q = Util.reverseHostname(query);
+    //System.out.println("query = " + q);
     HTable table = null;
     try {
       table = new HTable(hbaseConfig, tableName);
@@ -110,6 +112,7 @@ public class WarcbaseResponse {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
+    //System.out.println("num of results = " + rs.raw().length);
     out.println("<html>");
     out.println("<body>");
     if (rs.raw().length == 0) {
@@ -117,7 +120,7 @@ public class WarcbaseResponse {
       out.println("<br/><a href='" + TextDocument2.SERVER_PREFIX + tableName + "'>" + "back to tableName" + "</a>");
     }
     else{
-      for (int i = 0; i < rs.raw().length; i++) {
+      for (int i = 0; i < rs.raw().length; i+=2) {
         String date = new String(rs.raw()[i].getQualifier());
         out.println("<br/> <a href='" + TextDocument2.SERVER_PREFIX + tableName + "/" + date + "/" + query + "'>" + date + "</a>");
       }
