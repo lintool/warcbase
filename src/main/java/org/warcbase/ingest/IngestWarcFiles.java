@@ -40,6 +40,7 @@ import org.jwat.common.HeaderLine;
 import org.jwat.common.HttpHeader;
 import org.jwat.common.Payload;
 import org.jwat.common.RandomAccessFileInputStream;
+import org.jwat.common.UriProfile;
 import org.jwat.gzip.GzipEntry;
 import org.jwat.gzip.GzipReader;
 import org.jwat.warc.WarcReader;
@@ -98,7 +99,115 @@ public class IngestWarcFiles {
     admin.close();
   }
   
-  private void ingestFolder(File inputWarcFolder, int i) {
+  private void ingestFolder(File inputWarcFolder, int i) throws IOException {
+    long startTime = System.currentTimeMillis();
+    int cnt = 0;
+    int skipped = 0;
+    InputStream inFile = null;
+    WarcReader reader = null;
+    WarcReader warcReader = null;
+    org.jwat.warc.WarcRecord warcRecord = null;
+    org.jwat.warc.WarcRecord record = null;
+    String uri = null;
+    String date = null;
+    String type = null;
+    byte[] content = null;
+    String key = null;
+    
+    UriProfile uriProfile = UriProfile.RFC3986_ABS_16BIT_LAX;
+    boolean bBlockDigestEnabled = true;
+    boolean bPayloadDigestEnabled = true;
+    int recordHeaderMaxSize = 8192;
+    int payloadHeaderMaxSize = 32768;
+
+    
+    for (; i < inputWarcFolder.listFiles().length; i++) {
+      //System.out.println("Processing file " + i);
+      File inputWarcFile = inputWarcFolder.listFiles()[i];
+      //inFile = new FileInputStream( inputWarcFile );
+      //IngestFiles.parse(inputWarcFile);
+      //if(true)
+        // continue;
+      GZIPInputStream gzInputStream = null;
+      gzInputStream = new GZIPInputStream(new FileInputStream(inputWarcFile));
+      ByteCountingPushBackInputStream pbin = new ByteCountingPushBackInputStream( new BufferedInputStream( gzInputStream, 8192 ), 32 );
+      warcReader = WarcReaderFactory.getReaderUncompressed( pbin );
+      warcReader.setWarcTargetUriProfile(uriProfile);
+      warcReader.setBlockDigestEnabled( bBlockDigestEnabled );
+      warcReader.setPayloadDigestEnabled( bPayloadDigestEnabled );
+      warcReader.setRecordHeaderMaxSize( recordHeaderMaxSize );
+      warcReader.setPayloadHeaderMaxSize( payloadHeaderMaxSize );
+      if ( warcReader != null ) {
+        while ( (warcRecord = warcReader.getNextRecord()) != null ) {
+          uri = warcRecord.header.warcTargetUriStr;
+          //System.out.println(uri);
+          key = Util.reverseHostname(uri);
+          /*if(key != null && key.equals("gov.house.www/")){
+            System.out.println("##################################################################");
+            System.out.println("at " + inputWarcFile.getName());
+            System.out.println("Not added yet");
+          }*/
+          //if(true) continue;
+          Payload payload = warcRecord.getPayload();
+          HttpHeader httpHeader = null;
+          InputStream payloadStream = null;
+          if (payload != null) {
+                  httpHeader = warcRecord.getHttpHeader();
+                  if (httpHeader != null ) {
+                      //System.out.println("##################################################################");
+                          payloadStream = httpHeader.getPayloadInputStream();
+                          //System.out.println(httpHeader.contentType);
+                          type = httpHeader.contentType;
+                          //System.out.println(httpHeader.payloadLength);
+                  } else {
+                          payloadStream = payload.getInputStreamComplete();
+                  }
+          }
+          date = warcRecord.header.warcDateStr;
+          if (payloadStream != null) {
+            content = IOUtils.toByteArray(payloadStream);
+            if(key != null && type == null){//key.equals("gov.house.bernie/application/text_only/index.asp")){
+              type = "text/plain";
+            }
+            if(key != null && warcRecord.getHeader("WARC-Type").value.toLowerCase().equals("response")){
+              if(content.length > MAX_SIZE){
+                //LOG.info("Skipping " + uri + " with " + content.length + " byte record");
+                skipped++;
+              }
+              else{
+                if(cnt % 10000 == 0 && cnt > 0){
+                  LOG.info("Ingested " + cnt + "records to Hbase.");
+                }
+                if(addRecord(key, date, content, type)){
+                  /*if(key.equals("gov.house.www/")){
+                    System.out.println("##################################################################");
+                    System.out.println(new String(content, "UTF8"));
+                    System.out.println(date);
+                    System.out.println(type);
+                    System.out.println(new String(table.getTableName(), "UTF8"));
+                  }*/
+                cnt++;
+                }
+                else
+                  skipped++;
+              }
+          }
+        }
+      }
+      }
+      else{
+        LOG.info("warcReader is null");
+      }
+         
+    }
+    
+    long totalTime = System.currentTimeMillis() - startTime;
+    LOG.info("Total " + cnt + " records inserted, " + skipped + " records skipped");
+    LOG.info("Total time: " + totalTime + "ms");
+    LOG.info("Ingest rate: " + cnt / (totalTime/1000) + " records per second.");
+  }
+  
+  private void ingestFolder_old1(File inputWarcFolder, int i) {
     long startTime = System.currentTimeMillis();
     int cnt = 0;
     int skipped = 0;
@@ -149,13 +258,25 @@ public class IngestWarcFiles {
                               payloadStream = payload.getInputStreamComplete();
                       }
               }
+              date = warcRecord.header.warcDateStr;
+              uri = warcRecord.header.warcTargetUriStr;
+              key = Util.reverseHostname(uri);
+              if(key != null && key.equals("gov.house.www/")){
+                System.out.println("##################################################################");
+                System.out.println("at " + inputWarcFile.getName());
+                System.out.println("Not added yet");
+                System.out.println(new String(content, "UTF8"));
+                System.out.println(date);
+                System.out.println(type);
+                System.out.println(new String(table.getTableName(), "UTF8"));
+              }
               if (payloadStream != null) {
                 content = IOUtils.toByteArray(payloadStream);
                 //System.out.println(new String(content, "UTF8"));
                 //System.out.println(warcRecord.header.warcDateStr);
-                date = warcRecord.header.warcDateStr;
+                
                 //System.out.println(warcRecord.header.warcTargetUriStr);
-                uri = warcRecord.header.warcTargetUriStr;
+                
                 //System.out.println(warcRecord.header.warcRecordIdUri.getPath());
                 //System.out.println(warcRecord.getHeader("WARC-Type").value.toLowerCase().equals("response"));
                 //for(HeaderLine hline: warcRecord.getHeaderList()){
@@ -163,33 +284,20 @@ public class IngestWarcFiles {
                   //System.out.println(hline.value);
                   //System.out.println("------------");
                 //}
-                key = Util.reverseHostname(uri);
+                
                 if(key != null && type == null){//key.equals("gov.house.bernie/application/text_only/index.asp")){
-                  /*System.out.println("##################################################################");
-                  System.out.println(warcRecord.header.contentTypeStr);
-                  System.out.println(warcRecord.header.warcTypeStr);
-                  for(HeaderLine hline: httpHeader.getHeaderList()){
-                    System.out.println(hline.name);
-                    System.out.println(hline.value);
-                    System.out.println("------------");
-                  }
-                  for(HeaderLine hline: warcRecord.getHeaderList()){
-                    System.out.println(hline.name);
-                    System.out.println(hline.value);
-                    System.out.println("------------");
-                  }*/
                   type = "text/plain";
                 }
                 if(key != null && warcRecord.getHeader("WARC-Type").value.toLowerCase().equals("response")){
                   if(content.length > MAX_SIZE){
-                    LOG.info("Skipping " + uri + " with " + content.length + " byte record");
+                    //LOG.info("Skipping " + uri + " with " + content.length + " byte record");
                     skipped++;
                   }
                   else{
                     if(cnt % 10000 == 0 && cnt > 0){
                       LOG.info("Ingested " + cnt + "records to Hbase.");
                     }
-                    if(addRecord(key, date, content, type))
+                    if(addRecord(key, date, content, type)){
                       if(key.equals("gov.house.www/")){
                         System.out.println("##################################################################");
                         System.out.println(new String(content, "UTF8"));
@@ -198,6 +306,9 @@ public class IngestWarcFiles {
                         System.out.println(new String(table.getTableName(), "UTF8"));
                       }
                     cnt++;
+                    }
+                    else
+                      skipped++;
                   }
                 }
                 payloadStream.close();
@@ -219,105 +330,16 @@ public class IngestWarcFiles {
           e.printStackTrace();
         }
     }
-      /*try {
-        reader = WarcReaderFactory.getReader(in);
-      } catch (IOException e1) {
-        // TODO Auto-generated catch block
-        e1.printStackTrace();
-      }
-      try {
-        while((record = reader.getNextRecord()) != null){
-          //printRecord(record);
-          //content = IOUtils.toByteArray(record.getPayload().getInputStream());
-          //System.out.println(new String(content, "UTF8"));
-          Payload payload = record.getPayload();
-          HttpHeader httpHeader = null;
-          InputStream payloadStream = null;
-          if (payload != null) {
-                  httpHeader = record.getHttpHeader();
-                  if (httpHeader != null ) {
-                          payloadStream = httpHeader.getPayloadInputStream();
-                  } else {
-                          payloadStream = payload.getInputStreamComplete();
-                  }
-          }
-          if (payloadStream != null) {
-            content = IOUtils.toByteArray(payloadStream);
-            /*FileOutputStream out = new FileOutputStream(new File("extracted." + recordNr), false);
-            int read;
-            while ((read = payloadStream.read(tmpBuf)) != -1) {
-                    out.write(tmpBuf, 0, read);
-            }
-            out.flush();
-            out.close();/
-            System.out.println(new String(content, "UTF8"));
-            payloadStream.close();
-    }
-    if (httpHeader != null) {
-            httpHeader.close();
-    }
-    if (payload != null) {
-            payload.close();
-    }
-    record.close();*/
-          /*System.out.println(record.header.warcDateStr);
-          System.out.println(record.header.warcTypeStr);
-          System.out.println(record.header.warcRecordIdStr);
-          System.out.println(record.header.contentLengthStr);
-          System.out.println(record.header.contentTypeStr);
-          System.out.println(record.header.warcProfileStr);
-          System.out.println(record.header.warcTargetUriStr);
-          System.out.println(record.header.contentLength);
-          System.out.println(record.header.contentType);
-          System.out.println(record.header.warcDate);
-          System.out.println(record.header.warcTargetUriUri);
-          System.out.println(record.header.warcRecordIdUri.getPath());
-          System.out.println(record.header.toString());
-          System.out.println(record.header);
-          System.out.println(record.getHttpHeader());
-          System.out.println(reader.getWarcTargetUriProfile().toString());
-          System.out.println("------------");*/
-          /*for(HeaderLine hline: record.getHeaderList()){
-            System.out.println(hline.line);
-            System.out.println(hline.name);
-            System.out.println(hline.value);
-            System.out.println(hline.type);
-            System.out.println(hline.raw);
-            System.out.println(hline.bfErrors);
-            System.out.println("------------");
-          }
-          if(true)
-            continue;
-          url = record.getHeader("WARC-Target-URI").value;
-          date = record.getHeader("WARC-Date").value;
-          content = IOUtils.toByteArray(record.getPayloadContent());
-          System.out.println(url + date);
-          if(true)
-            continue;
-          String key = Util.reverseHostname(url);
-          if (key == null) {
-            continue;
-          }
-          if(content.length > MAX_SIZE){
-            LOG.info("Skipping " + key + " with " + content.length + " byte record");
-            skipped++;
-          }
-          else{
-            addRecord(key, date, content);
-            cnt++;
-          }
-        }
-      } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }*/
+    System.out.println(cnt + " records added.");
+    System.out.println(skipped + " records skipped.");
   }
 
-  /*public void ingestFolder(File inputWarcFolder, int i) {
+  public void ingestFolder_old2(File inputWarcFolder, int i) {
     long startTime = System.currentTimeMillis();
     int cnt = 0;
     int skipped = 0;
     for (; i < inputWarcFolder.listFiles().length; i++) {
+      //System.out.println("Processing file " + i);
       File inputWarcFile = inputWarcFolder.listFiles()[i];
       if (inputWarcFile.getName().charAt(0) == '.')
         continue;
@@ -344,9 +366,9 @@ public class IngestWarcFiles {
             // get our TREC ID and target URI
             //thisTargetURI = htmlRecord.getTargetURI();
             thisTargetURI = record.getHeaderMetadataItem("WARC-Target-URI");
-            if (SKIP.contains(Util.getUriExtension(thisTargetURI))) {
-              skipped++;
-            }
+            //if (SKIP.contains(Util.getUriExtension(thisTargetURI))) {
+              //skipped++;
+            //}
 
             String content = record.getContentUTF8();
             content = record.toString();
@@ -355,12 +377,19 @@ public class IngestWarcFiles {
             if (key == null) {
               continue;
             }
+            System.out.println(thisTargetURI);
+            /*if(key.equals("gov.house.www/")){
+              System.out.println("at " + inputWarcFile.getName());
+              System.out.println("http://www.house.gov/ found");
+              System.out.println(thisTargetURI);
+              System.out.println(new String(table.getTableName(), "UTF8"));
+            }*/
             byte[] data = record.getByteContent();
             if ( data.length > MAX_SIZE) {
-              LOG.info("Skipping " + key + " with " + data.length + " byte record");
+              //LOG.info("Skipping " + key + " with " + data.length + " byte record");
               skipped++;
             } else {
-              addRecord(key, parse.get("WARC-Date"), record.getByteContent());
+              //addRecord(key, parse.get("WARC-Date"), record.getByteContent());
               cnt++;
             }
 
@@ -380,7 +409,7 @@ public class IngestWarcFiles {
     LOG.info("Total " + cnt + " records inserted, " + skipped + " records skipped");
     LOG.info("Total time: " + totalTime + "ms");
     LOG.info("Ingest rate: " + cnt / (totalTime/1000) + " records per second.");
-  }*/
+  }
 
   private Map<String, String> getHeaders(String doc) {
     Map<String, String> hdr = Maps.newHashMapWithExpectedSize(20);
@@ -414,6 +443,7 @@ public class IngestWarcFiles {
   }
 
   private Boolean addRecord(String key, String date, byte[] data, String type) {
+    //if(true) return true;
     try {
       Put put = new Put(Bytes.toBytes(key));
       put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(date), data);
