@@ -122,7 +122,7 @@ public class IngestWarcFiles {
 
     
     for (; i < inputWarcFolder.listFiles().length; i++) {
-      //System.out.println("Processing file " + i);
+      System.out.println("Processing file " + i);
       File inputWarcFile = inputWarcFolder.listFiles()[i];
       //inFile = new FileInputStream( inputWarcFile );
       //IngestFiles.parse(inputWarcFile);
@@ -451,9 +451,14 @@ public class IngestWarcFiles {
       table.put(put);
       return true;
     } catch (IOException e) {
-      LOG.error("Couldn't insert key: " + key);
+      LOG.error("IOException: Couldn't insert key: " + key);
       LOG.error("File Size: " + data.length);
       e.printStackTrace();
+      return false;
+    } catch (IllegalArgumentException e) {
+      // TODO: handle exception
+      LOG.error("IllegalArgumentException: Couldn't insert key: " + key);
+      LOG.error("File Size: " + data.length);
       return false;
     }
   }

@@ -172,6 +172,8 @@ public class WarcbaseServlet extends HttpServlet {
 
   private void writeResponse(HttpServletResponse resp, Result rs, byte[] content, String query, String d, String type, int num)
       throws IOException {
+    //System.out.println(new String(content, "UTF8"));
+    //System.out.println(type);
     if (type.startsWith("text/plain") || !type.startsWith("text")) {
       resp.setHeader("Content-Type", type);
       resp.setContentLength(content.length);
@@ -359,22 +361,45 @@ public class WarcbaseServlet extends HttpServlet {
       table.close();
       return;
     }
+    /*for (int i = 0; i < rs.raw().length; i++){
+      System.out.println(new String(rs.raw()[i].getFamily(), "UTF8"));
+      if(new String(rs.raw()[i].getFamily(), "UTF8").equals("content"))
+        System.out.println(new String(rs.raw()[i].getQualifier()));
+    }*/
     if (d != null && d != "") {
-      for (int i = 0; i < rs.raw().length; i+=2) {
+      for (int i = 0; i < rs.raw().length; i++) {
+        //System.out.println(new String(rs.raw()[i].getFamily(), "UTF8"));
+        //if(new String(rs.raw()[i].getFamily(), "UTF8").equals("type"))
+          //System.out.println("salam");
+        if(!(new String(rs.raw()[i].getFamily(), "UTF8").equals("content")))
+          continue;
         String date = new String(rs.raw()[i].getQualifier());
         if (date.equals(d)) {
           data = rs.raw()[i].getValue();
-          writeResponse(resp, rs, data, query, d, new String(rs.raw()[i + 1].getValue(), "UTF8"), rs.raw().length / 2);
+          String type = new String(rs.raw()[i + 1].getValue(), "UTF8");
+          for (int j = 0; j < rs.raw().length; j++){
+            //System.out.println(new String(rs.raw()[j].getFamily(), "UTF8"));
+            //System.out.println((new String(rs.raw()[j].getFamily(), "UTF8").equals("type")));
+            //System.out.println(new String(rs.raw()[j].getQualifier()).equals(date));
+            if((new String(rs.raw()[j].getFamily(), "UTF8").equals("type")) && new String(rs.raw()[j].getQualifier()).equals(date) ){
+              type = new String(rs.raw()[j].getValue(), "UTF8");
+              break;
+            }
+          }
+          //System.out.println(type);
+          //System.out.println(date);
+          writeResponse(resp, rs, data, query, d, type, rs.raw().length / 2);
           //writeResponse(resp, rs, data, query, d, rs.raw().length);
           table.close();
           return;
         }
       }
       ArrayList<String> dates = new ArrayList<String>(10);
-      for (int i = 0; i < rs.raw().length; i+=2)
-        dates.add(new String(rs.raw()[i].getQualifier()));
+      for (int i = 0; i < rs.raw().length; i++)
+        if(new String(rs.raw()[i].getFamily(), "UTF8").equals("content"))
+          dates.add(new String(rs.raw()[i].getQualifier()));
       Collections.sort(dates);
-      for (int i = 1; i < dates.size(); i++)
+      for (int i = 1; i < dates.size(); i++)//check family. don't do 2*
         if (dates.get(i).compareTo(d) > 0) {// d < i
           data = rs.raw()[2 * i].getValue();
           //writeResponse(resp, rs, data, query, d, rs.raw().length);
