@@ -17,7 +17,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.warcbase.data.HttpResponseRecord;
-import org.warcbase.ingest.IngestWarcFiles;
+import org.warcbase.ingest.IngestFiles;
 
 public class DetectDuplicates {
   private static final String NAME_OPTION = "name";
@@ -41,7 +41,7 @@ public class DetectDuplicates {
 
     if (!cmdline.hasOption(NAME_OPTION)) {
       HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp(IngestWarcFiles.class.getCanonicalName(), options);
+      formatter.printHelp(IngestFiles.class.getCanonicalName(), options);
       System.exit(-1);
     }
     String name = cmdline.getOptionValue(NAME_OPTION);

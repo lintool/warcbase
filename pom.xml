@@ -62,12 +62,8 @@
         <configuration>
           <programs>
             <program>
-              <mainClass>org.warcbase.ingest.IngestWarcFiles</mainClass>
-              <name>IngestWarcFiles</name>
-            </program>
-            <program>
-              <mainClass>org.warcbase.ingest.IngestArcFiles</mainClass>
-              <name>IngestArcFiles</name>
+              <mainClass>org.warcbase.ingest.IngestFiles</mainClass>
+              <name>IngestFiles</name>
             </program>
             <program>
               <mainClass>org.warcbase.browser.WarcBrowser</mainClass>
