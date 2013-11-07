@@ -66,6 +66,10 @@
               <name>IngestFiles</name>
             </program>
             <program>
+              <mainClass>org.warcbase.ingest.SearchForUri</mainClass>
+              <name>SearchForUri</name>
+            </program>
+            <program>
               <mainClass>org.warcbase.browser.WarcBrowser</mainClass>
               <name>WarcBrowser</name>
             </program>
