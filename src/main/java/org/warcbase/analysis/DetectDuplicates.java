@@ -16,7 +16,6 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.warcbase.data.HttpResponseRecord;
 import org.warcbase.ingest.IngestFiles;
 
 public class DetectDuplicates {
@@ -56,21 +55,19 @@ public class DetectDuplicates {
     
     for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
       progress++;
-      for (int i = 1; i < rr.raw().length; i++) {
-        if (rr.raw()[i].getValue().length != rr.raw()[i - 1].getValue().length) {
-          continue;
+      for (int i = 0; i < rr.raw().length; i++) 
+        for(int j=i + 1; j < rr.raw().length; j++){
+          if (rr.raw()[i].getValue().length != rr.raw()[j].getValue().length) {
+            continue;
+          }
+          if (Arrays.equals(rr.raw()[i].getValue(), rr.raw()[j].getValue())) {
+            duplicates++;
+            duplicateSize += rr.raw()[i].getValue().length;
+          }
         }
-        HttpResponseRecord warcRecordParser1 = new HttpResponseRecord(rr.raw()[i].getValue());
-        HttpResponseRecord warcRecordParser2 = new HttpResponseRecord(rr.raw()[i - 1].getValue());
-        if (Arrays.equals(warcRecordParser1.getBodyByte(),
-            warcRecordParser2.getBodyByte())) {
-          duplicates++;
-          duplicateSize += rr.raw()[i].getValue().length;
+        if (progress % 10000 == 0) {
+          System.out.println("Done with " + progress + " rows. duplicates = " + duplicates);
         }
-      }
-      if (progress % 10000 == 0) {
-        System.out.println("Done with " + progress + " rows. duplicates = " + duplicates);
-      }
     }
     table.close();
 
