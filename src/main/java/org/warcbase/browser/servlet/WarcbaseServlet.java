@@ -10,10 +10,11 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.warcbase.data.Util;
@@ -21,11 +22,12 @@ import org.warcbase.data.Util;
 public class WarcbaseServlet extends HttpServlet {
   private static final long serialVersionUID = 847405540723915805L;
 
-  private final Configuration hbaseConfig;
   private String tableName;
+  private static HTablePool pool = new HTablePool();
+  private static WarcbaseResponse warcbaseResponse;
 
-  public WarcbaseServlet() {
-    this.hbaseConfig = HBaseConfiguration.create();
+  public WarcbaseServlet() throws MasterNotRunningException, ZooKeeperConnectionException {
+    warcbaseResponse = new WarcbaseResponse();
   }
 
 
@@ -34,7 +36,7 @@ public class WarcbaseServlet extends HttpServlet {
       throws ServletException, IOException {
     String query = req.getParameter("query");
     String d = req.getParameter("date");
-    WarcbaseResponse warcbaseResponse = new WarcbaseResponse();
+    
     
     if(req.getPathInfo() == null || req.getPathInfo() == "/"){
       warcbaseResponse.writeTables(resp);
@@ -62,8 +64,7 @@ public class WarcbaseServlet extends HttpServlet {
       query = pathInfo.substring(3 + splits[1].length() + splits[2].length(), pathInfo.length());
 
     String q = Util.reverseHostname(query);
-    HTable table = new HTable(hbaseConfig, tableName);
-    //System.out.println(q);
+    HTableInterface table = pool.getTable(tableName);
     Get get = new Get(Bytes.toBytes(q));
     Result rs = table.get(get);
 

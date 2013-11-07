@@ -14,7 +14,8 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.jsoup.Jsoup;
@@ -26,6 +27,7 @@ import org.warcbase.data.Util;
 public class WarcbaseResponse {
   private final Configuration hbaseConfig;
   private HBaseAdmin hbaseAdmin;
+  private static HTablePool pool = new HTablePool();
   
   public WarcbaseResponse() throws MasterNotRunningException, ZooKeeperConnectionException{
     this.hbaseConfig = HBaseConfiguration.create();
@@ -70,8 +72,7 @@ public class WarcbaseResponse {
 
   public void writeDates(HttpServletResponse resp, String tableName, String query) throws IOException{
     String q = Util.reverseHostname(query);
-    HTable table = null;
-    table = new HTable(hbaseConfig, tableName);
+    HTableInterface table = pool.getTable(tableName);
     
     Get get = new Get(Bytes.toBytes(q));
     Result rs = null;
@@ -183,8 +184,7 @@ public class WarcbaseResponse {
     byte[] data = null;
     String type = null;
     String q = Util.reverseHostname(query);
-    HTable table = null;
-    table = new HTable(hbaseConfig, tableName);
+    HTableInterface table = pool.getTable(tableName);
     Get get = new Get(Bytes.toBytes(q));
     Result rs = null;
     rs = table.get(get);
