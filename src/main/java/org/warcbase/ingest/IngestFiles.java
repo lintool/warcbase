@@ -171,6 +171,8 @@ public class IngestFiles {
         
     for (; i < inputFolder.listFiles().length; i++) {
       File inputFile = inputFolder.listFiles()[i];
+      LOG.info("processing file " + i + ": " + inputFile.getName());
+      //System.out.println("processing file " + i + ": " + inputFile.getName());
       raf = new RandomAccessFile( inputFile, "r" );
       rafin = new RandomAccessFileInputStream( raf );
       pbin = new ByteCountingPushBackInputStream( new BufferedInputStream( rafin, 8192 ), 32 );

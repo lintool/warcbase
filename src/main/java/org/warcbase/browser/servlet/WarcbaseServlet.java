@@ -375,21 +375,16 @@ public class WarcbaseServlet extends HttpServlet {
           continue;
         String date = new String(rs.raw()[i].getQualifier());
         if (date.equals(d)) {
-          data = rs.raw()[i].getValue();
+          warcbaseResponse.writeContent(resp, tableName, query, date, d);
+          /*data = rs.raw()[i].getValue();
           String type = new String(rs.raw()[i + 1].getValue(), "UTF8");
           for (int j = 0; j < rs.raw().length; j++){
-            //System.out.println(new String(rs.raw()[j].getFamily(), "UTF8"));
-            //System.out.println((new String(rs.raw()[j].getFamily(), "UTF8").equals("type")));
-            //System.out.println(new String(rs.raw()[j].getQualifier()).equals(date));
             if((new String(rs.raw()[j].getFamily(), "UTF8").equals("type")) && new String(rs.raw()[j].getQualifier()).equals(date) ){
               type = new String(rs.raw()[j].getValue(), "UTF8");
               break;
             }
           }
-          //System.out.println(type);
-          //System.out.println(date);
-          writeResponse(resp, rs, data, query, d, type, rs.raw().length / 2);
-          //writeResponse(resp, rs, data, query, d, rs.raw().length);
+          writeResponse(resp, rs, data, query, d, type, rs.raw().length / 2);*/
           table.close();
           return;
         }
@@ -401,16 +396,18 @@ public class WarcbaseServlet extends HttpServlet {
       Collections.sort(dates);
       for (int i = 1; i < dates.size(); i++)//check family. don't do 2*
         if (dates.get(i).compareTo(d) > 0) {// d < i
-          data = rs.raw()[2 * i].getValue();
+          warcbaseResponse.writeContent(resp, tableName, query, dates.get(i), d);
+          /*data = rs.raw()[2 * i].getValue();
           //writeResponse(resp, rs, data, query, d, rs.raw().length);
-          writeResponse(resp, rs, data, query, d, new String(rs.raw()[2 * i + 1].getValue(), "UTF8"), rs.raw().length / 2);
+          writeResponse(resp, rs, data, query, d, new String(rs.raw()[2 * i + 1].getValue(), "UTF8"), rs.raw().length / 2);*/
           table.close();
           return;
         }
       int i = dates.size();
-      data = rs.raw()[2 * i - 2].getValue();
+      warcbaseResponse.writeContent(resp, tableName, query, dates.get(i - 1), d);
+      //data = rs.raw()[2 * i - 2].getValue();
       //writeResponse(resp, rs, data, query, d, rs.raw().length);
-      writeResponse(resp, rs, data, query, d, new String(rs.raw()[2 * i - 1].getValue(), "UTF8"), rs.raw().length / 2);
+      //writeResponse(resp, rs, data, query, d, new String(rs.raw()[2 * i - 1].getValue(), "UTF8"), rs.raw().length / 2);
       table.close();
       return;
     }
