@@ -136,6 +136,10 @@ public class IngestFiles {
         }
         date = warcRecord.header.warcDateStr;
         if (payloadStream != null) {
+          if(payloadStream.available() > MAX_CONTENT_SIZE){
+            skipped++;
+            continue;
+          }
           content = IOUtils.toByteArray(payloadStream);
           if(key != null && type == null){//key.equals("gov.house.bernie/application/text_only/index.asp")){
             type = "text/plain";
