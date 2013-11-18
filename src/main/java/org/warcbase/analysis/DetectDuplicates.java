@@ -48,15 +48,15 @@ public class DetectDuplicates {
     HTable table = new HTable(hbaseConfig, name);
     Scan scan = new Scan();
     ResultScanner scanner = table.getScanner(scan);
-    
+
     int duplicates = 0;
     long duplicateSize = 0;
     int progress = 0;
-    
+
     for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
       progress++;
-      for (int i = 0; i < rr.raw().length; i++) 
-        for(int j=i + 1; j < rr.raw().length; j++){
+      for (int i = 0; i < rr.raw().length; i++)
+        for (int j = i + 1; j < rr.raw().length; j++) {
           if (rr.raw()[i].getValue().length != rr.raw()[j].getValue().length) {
             continue;
           }
@@ -65,9 +65,9 @@ public class DetectDuplicates {
             duplicateSize += rr.raw()[i].getValue().length;
           }
         }
-        if (progress % 10000 == 0) {
-          System.out.println("Done with " + progress + " rows. duplicates = " + duplicates);
-        }
+      if (progress % 10000 == 0) {
+        System.out.println("Done with " + progress + " rows. duplicates = " + duplicates);
+      }
     }
     table.close();
 

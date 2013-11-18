@@ -1,6 +1,5 @@
 package org.warcbase.data;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 
 import org.apache.hadoop.conf.Configuration;
@@ -15,17 +14,17 @@ import org.apache.log4j.Logger;
 import org.warcbase.ingest.IngestFiles;
 
 public class HbaseManager {
-  private static final String[] FAMILIES = {"content", "type"};
+  private static final String[] FAMILIES = { "content", "type" };
   private static final Logger LOG = Logger.getLogger(HbaseManager.class);
   private static final int MAX_KEY_VALUE_SIZE = IngestFiles.MAX_CONTENT_SIZE + 200;
 
   private final HTable table;
   private final HBaseAdmin admin;
-  
+
   public HbaseManager(String name, boolean create) throws Exception {
     Configuration hbaseConfig = HBaseConfiguration.create();
-    admin = new HBaseAdmin(hbaseConfig);;
-    
+    admin = new HBaseAdmin(hbaseConfig);
+
     if (admin.tableExists(name) && !create) {
       LOG.info(String.format("Table '%s' exists: doing nothing.", name));
     } else {
@@ -36,7 +35,7 @@ public class HbaseManager {
         LOG.info(String.format("Droppping table '%s'", name));
         admin.deleteTable(name);
       }
-      
+
       HTableDescriptor tableDesc = new HTableDescriptor(name);
       for (int i = 0; i < FAMILIES.length; i++) {
         tableDesc.addFamily(new HColumnDescriptor(FAMILIES[i]));
@@ -46,35 +45,29 @@ public class HbaseManager {
     }
 
     table = new HTable(hbaseConfig, name);
+    // TODO: This doesn't seem right.
+    // Look in HBase book to see how you can set table parameters programmatically.
     Field maxKeyValueSizeField = HTable.class.getDeclaredField("maxKeyValueSize");
     maxKeyValueSizeField.setAccessible(true);
     maxKeyValueSizeField.set(table, MAX_KEY_VALUE_SIZE);
-    
+
     LOG.info("Setting maxKeyValueSize to " + maxKeyValueSizeField.get(table));
     admin.close();
-
   }
-  
-  public Boolean addRecord(String key, String date, byte[] data, String type) {
+
+  public boolean addRecord(String key, String date, byte[] data, String type) {
     try {
       Put put = new Put(Bytes.toBytes(key));
       put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(date), data);
       put.add(Bytes.toBytes(FAMILIES[1]), Bytes.toBytes(date), Bytes.toBytes(type));
       table.put(put);
       return true;
-    } catch (IOException e) {
-      LOG.error("IOException: Couldn't insert key: " + key);
+    } catch (Exception e) {
+      LOG.error("Couldn't insert key: " + key);
       LOG.error("File Size: " + data.length);
       LOG.error(e.getMessage());
       e.printStackTrace();
       return false;
-    } catch (IllegalArgumentException e) {
-      // TODO: handle exception
-      LOG.error("IllegalArgumentException: Couldn't insert key: " + key);
-      LOG.error("File Size: " + data.length);
-      LOG.error(e.getMessage());
-      return false;
     }
   }
-
 }

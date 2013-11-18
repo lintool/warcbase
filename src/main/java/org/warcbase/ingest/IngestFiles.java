@@ -5,8 +5,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.RandomAccessFile;
 import java.util.zip.GZIPInputStream;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -22,11 +22,10 @@ import org.jwat.arc.ArcRecordBase;
 import org.jwat.common.ByteCountingPushBackInputStream;
 import org.jwat.common.HttpHeader;
 import org.jwat.common.Payload;
-import org.jwat.common.RandomAccessFileInputStream;
 import org.jwat.common.UriProfile;
-import org.jwat.gzip.GzipReader;
 import org.jwat.warc.WarcReader;
 import org.jwat.warc.WarcReaderFactory;
+import org.jwat.warc.WarcRecord;
 import org.warcbase.data.HbaseManager;
 import org.warcbase.data.Util;
 
@@ -36,169 +35,184 @@ public class IngestFiles {
   private static final String NAME_OPTION = "name";
   private static final String DIR_OPTION = "dir";
   private static final String START_OPTION = "start";
-  
+
   private static final Logger LOG = Logger.getLogger(IngestFiles.class);
+  // TODO: rename to constants and make final
+  private static final UriProfile uriProfile = UriProfile.RFC3986_ABS_16BIT_LAX;
+  private static final boolean bBlockDigestEnabled = true;
+  private static final boolean bPayloadDigestEnabled = true;
+  private static final int recordHeaderMaxSize = 8192;
+  private static final int payloadHeaderMaxSize = 32768;
+
   public static final int MAX_CONTENT_SIZE = 1024 * 1024;
-  private static int cnt = 0;
-  private static int skipped = 0;
+
+  private int cnt = 0;
+  private int skipped = 0;
 
   private final HbaseManager hbaseManager;
 
   public IngestFiles(String name, boolean create) throws Exception {
     hbaseManager = new HbaseManager(name, create);
   }
-  
+
   private void ingestArcFile(File inputArcFile) throws IOException {
-    InputStream in = null;
-    ArcReader reader = null;
     ArcRecordBase record = null;
     String url = null;
     String date = null;
     byte[] content = null;
     String type = null;
     String key = null;
-    
-    in = new FileInputStream( inputArcFile );
-    reader = ArcReaderFactory.getReader(in);
-    while((record = reader.getNextRecord()) != null){
+
+    InputStream in = new FileInputStream(inputArcFile);
+    ArcReader reader = ArcReaderFactory.getReader(in);
+    while ((record = reader.getNextRecord()) != null) {
       url = record.getUrlStr();
       date = record.getArchiveDateStr();
       content = IOUtils.toByteArray(record.getPayloadContent());
       key = Util.reverseHostname(url);
       type = record.getContentTypeStr();
-      
-      if(key != null && type == null){
+
+      if (key != null && type == null) {
         type = "text/plain";
       }
-          
+
       if (key == null) {
         continue;
-       }
-       if(content.length > MAX_CONTENT_SIZE){
-         skipped++;
-       }
-       else{
-         if(cnt % 10000 == 0 && cnt > 0){
-           LOG.info("Ingested " + cnt + "records to Hbase.");
-         }
-         if(hbaseManager.addRecord(key, date, content, type)){
-            cnt++;
-          }
-         else{
-           skipped++;
+      }
+
+      if (content.length > MAX_CONTENT_SIZE) {
+        skipped++;
+      } else {
+        if (cnt % 10000 == 0 && cnt > 0) {
+          LOG.info("Ingested " + cnt + "records to Hbase.");
+        }
+        if (hbaseManager.addRecord(key, date, content, type)) {
+          cnt++;
+        } else {
+          skipped++;
         }
       }
     }
+    // TODO: properly close streams.
+    reader.close();
+    in.close();
   }
-  
+
   private void ingestWarcFile(File inputWarcFile) throws IOException {
-    WarcReader warcReader = null;
-    org.jwat.warc.WarcRecord warcRecord = null;
+    WarcRecord warcRecord = null;
     String uri = null;
     String date = null;
     String type = null;
     byte[] content = null;
     String key = null;
-    
-    UriProfile uriProfile = UriProfile.RFC3986_ABS_16BIT_LAX;
-    boolean bBlockDigestEnabled = true;
-    boolean bPayloadDigestEnabled = true;
-    int recordHeaderMaxSize = 8192;
-    int payloadHeaderMaxSize = 32768;
 
-    
-    GZIPInputStream gzInputStream = null;
-    gzInputStream = new GZIPInputStream(new FileInputStream(inputWarcFile));
-    ByteCountingPushBackInputStream pbin = new ByteCountingPushBackInputStream( new BufferedInputStream( gzInputStream, 8192 ), 32 );
-    warcReader = WarcReaderFactory.getReaderUncompressed( pbin );
-    if(warcReader == null)
-       return;
+    GZIPInputStream gzInputStream = new GZIPInputStream(new FileInputStream(inputWarcFile));
+    ByteCountingPushBackInputStream pbin = new ByteCountingPushBackInputStream(
+        new BufferedInputStream(gzInputStream, 8192), 32);
+    WarcReader warcReader = WarcReaderFactory.getReaderUncompressed(pbin);
+
+    if (warcReader == null) {
+      // TODO: LOG?
+      LOG.info("Can't read warc file " + inputWarcFile.getName());
+      return;
+    }
+
     warcReader.setWarcTargetUriProfile(uriProfile);
-    warcReader.setBlockDigestEnabled( bBlockDigestEnabled );
-    warcReader.setPayloadDigestEnabled( bPayloadDigestEnabled );
-    warcReader.setRecordHeaderMaxSize( recordHeaderMaxSize );
-    warcReader.setPayloadHeaderMaxSize( payloadHeaderMaxSize );
-    if ( warcReader != null ) {
-      while ( (warcRecord = warcReader.getNextRecord()) != null ) {
-        uri = warcRecord.header.warcTargetUriStr;
-        key = Util.reverseHostname(uri);
-        Payload payload = warcRecord.getPayload();
-        HttpHeader httpHeader = null;
-        InputStream payloadStream = null;
-        if (payload != null) {
-          httpHeader = warcRecord.getHttpHeader();
-          if (httpHeader != null ) {
-            payloadStream = httpHeader.getPayloadInputStream();
-            type = httpHeader.contentType;
-          } else {
-            payloadStream = payload.getInputStreamComplete();
-          }
+    warcReader.setBlockDigestEnabled(bBlockDigestEnabled);
+    warcReader.setPayloadDigestEnabled(bPayloadDigestEnabled);
+    warcReader.setRecordHeaderMaxSize(recordHeaderMaxSize);
+    warcReader.setPayloadHeaderMaxSize(payloadHeaderMaxSize);
+
+    while ((warcRecord = warcReader.getNextRecord()) != null) {
+      uri = warcRecord.header.warcTargetUriStr;
+      key = Util.reverseHostname(uri);
+      Payload payload = warcRecord.getPayload();
+      HttpHeader httpHeader = null;
+      InputStream payloadStream = null;
+
+      // TODO: change int this:
+      if (payload == null) {
+        continue;
+      }
+
+      httpHeader = warcRecord.getHttpHeader();
+      if (httpHeader != null) {
+        payloadStream = httpHeader.getPayloadInputStream();
+        type = httpHeader.contentType;
+      } else {
+        payloadStream = payload.getInputStreamComplete();
+      }
+
+      if (payloadStream == null) {
+        skipped++;
+        continue;
+      }
+
+      date = warcRecord.header.warcDateStr;
+
+      if (payloadStream.available() > MAX_CONTENT_SIZE) {
+        skipped++;
+        continue;
+      }
+      content = IOUtils.toByteArray(payloadStream);
+      // TODO: fix this
+      if (key == null) {
+        skipped++;
+        continue;
+      }
+
+      if (type == null) {
+        type = "text/plain";
+      }
+
+      if (warcRecord.getHeader("WARC-Type").value.toLowerCase().equals("response")) {
+        if (content.length > MAX_CONTENT_SIZE) {
+          skipped++;
+          continue;
         }
-        date = warcRecord.header.warcDateStr;
-        if (payloadStream != null) {
-          if(payloadStream.available() > MAX_CONTENT_SIZE){
-            skipped++;
-            continue;
-          }
-          content = IOUtils.toByteArray(payloadStream);
-          if(key != null && type == null){//key.equals("gov.house.bernie/application/text_only/index.asp")){
-            type = "text/plain";
-          }
-          if(key != null && warcRecord.getHeader("WARC-Type").value.toLowerCase().equals("response")){
-            if(content.length > MAX_CONTENT_SIZE){
-              skipped++;
-            }
-            else{
-              if(cnt % 10000 == 0 && cnt > 0){
-                LOG.info("Ingested " + cnt + "records to Hbase.");
-              }
-              if(hbaseManager.addRecord(key, date, content, type)){
-                cnt++;
-              }
-              else
-                skipped++;
-            }
+        if (cnt % 10000 == 0 && cnt > 0) {
+          LOG.info("Ingested " + cnt + "records to Hbase.");
+        }
+        if (hbaseManager.addRecord(key, date, content, type)) {
+          cnt++;
+        } else {
+          skipped++;
         }
       }
     }
-   }
+    // TODO: properly close streams.
+    warcReader.close();
+    pbin.close();
+    gzInputStream.close();
   }
-  
+
   private void ingestFolder(File inputFolder, int i) throws IOException {
     long startTime = System.currentTimeMillis();
     cnt = 0;
     skipped = 0;
-    RandomAccessFile raf = null;
-    RandomAccessFileInputStream rafin = null;
-    ByteCountingPushBackInputStream pbin = null;
     GZIPInputStream gzInputStream = null;
-        
+
     for (; i < inputFolder.listFiles().length; i++) {
       File inputFile = inputFolder.listFiles()[i];
       LOG.info("processing file " + i + ": " + inputFile.getName());
-      //System.out.println("processing file " + i + ": " + inputFile.getName());
-      raf = new RandomAccessFile( inputFile, "r" );
-      rafin = new RandomAccessFileInputStream( raf );
-      pbin = new ByteCountingPushBackInputStream( new BufferedInputStream( rafin, 8192 ), 32 );
-      if ( GzipReader.isGzipped( pbin ) ){
+
+      if (inputFile.toString().toLowerCase().endsWith(".gz")) {
         gzInputStream = new GZIPInputStream(new FileInputStream(inputFile));
         ByteCountingPushBackInputStream in = new ByteCountingPushBackInputStream(gzInputStream, 32);
-        if(ArcReaderFactory.isArcFile( in )){
+        if (ArcReaderFactory.isArcFile(in)) {
           ingestArcFile(inputFile);
-        }
-        else if ( WarcReaderFactory.isWarcFile( in ) ) {
+        } else if (WarcReaderFactory.isWarcFile(in)) {
           ingestWarcFile(inputFile);
         }
       }
-        
     }
-    
+
     long totalTime = System.currentTimeMillis() - startTime;
     LOG.info("Total " + cnt + " records inserted, " + skipped + " records skipped");
     LOG.info("Total time: " + totalTime + "ms");
-    LOG.info("Ingest rate: " + cnt / (totalTime/1000) + " records per second.");
+    LOG.info("Ingest rate: " + cnt / (totalTime / 1000) + " records per second.");
   }
-  
+
   @SuppressWarnings("static-access")
   public static void main(String[] args) throws Exception {
     Options options = new Options();
@@ -228,7 +242,8 @@ public class IngestFiles {
     }
 
     if (!cmdline.hasOption(CREATE_OPTION) && !cmdline.hasOption(APPEND_OPTION)) {
-      System.err.println(String.format("Must specify either -%s or -%s", CREATE_OPTION, APPEND_OPTION));
+      System.err.println(String.format("Must specify either -%s or -%s", CREATE_OPTION,
+          APPEND_OPTION));
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp(IngestFiles.class.getCanonicalName(), options);
       System.exit(-1);

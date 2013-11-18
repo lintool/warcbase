@@ -27,14 +27,12 @@ public class CountRowTypes {
   private static final Logger LOG = Logger.getLogger(CountRowTypes.class);
 
   public static String getFileType(String url) {
-    // System.out.println(url);
     if (url.length() > 0 && url.charAt(url.length() - 1) == '/')
       return "";
     String[] splits = url.split("\\/");
     if (splits.length == 0)
       return "";
     splits = splits[splits.length - 1].split("\\.");
-    // System.out.println(splits.length);
     if (splits.length <= 1)
       return "";
     String type = splits[splits.length - 1];
@@ -85,10 +83,8 @@ public class CountRowTypes {
     ResultScanner scanner = null;
     scanner = table.getScanner(scan);
 
-    Object2IntFrequencyDistribution<String> fileTypeCounter =
-        new Object2IntFrequencyDistributionEntry<String>();
-    Object2IntFrequencyDistribution<String> domainCounter =
-        new Object2IntFrequencyDistributionEntry<String>();
+    Object2IntFrequencyDistribution<String> fileTypeCounter = new Object2IntFrequencyDistributionEntry<String>();
+    Object2IntFrequencyDistribution<String> domainCounter = new Object2IntFrequencyDistributionEntry<String>();
 
     int cnt = 0;
     for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {

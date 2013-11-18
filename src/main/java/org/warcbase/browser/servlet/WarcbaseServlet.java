@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -30,38 +31,41 @@ public class WarcbaseServlet extends HttpServlet {
     warcbaseResponse = new WarcbaseResponse();
   }
 
-
-  
-  protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-      throws ServletException, IOException {
+  protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException,
+      IOException {
     String query = req.getParameter("query");
     String d = req.getParameter("date");
-    
-    
-    if(req.getPathInfo() == null || req.getPathInfo() == "/"){
+
+    if (req.getPathInfo() == null || req.getPathInfo() == "/") {
       warcbaseResponse.writeTables(resp);
       return;
     }
     String pathInfo = req.getPathInfo();
     String[] splits = pathInfo.split("\\/");
-    if(splits.length < 2){
+    if (splits.length < 2) {
       warcbaseResponse.writeTables(resp);
       return;
     }
     this.tableName = splits[1];
 
-    if(splits.length == 2 && query == null){
+    // Request has table name, but not URL.
+    if (splits.length == 2 && query == null) {
       warcbaseResponse.tableSearch(resp, tableName);
       return;
     }
-    if(splits.length == 2 && d == null){
+
+    // If there isn't a date for a URL, print out list of available versions.
+    if (splits.length == 2 && d == null) {
       warcbaseResponse.writeDates(resp, tableName, query);
       return;
     }
-    if(d == null)
+
+    if (d == null) {
       d = splits[2];
-    if(query == null)
+    }
+    if (query == null) {
       query = pathInfo.substring(3 + splits[1].length() + splits[2].length(), pathInfo.length());
+    }
 
     String q = Util.reverseHostname(query);
     HTableInterface table = pool.getTable(tableName);
@@ -74,9 +78,10 @@ public class WarcbaseServlet extends HttpServlet {
       table.close();
       return;
     }
+
     if (d != null && d != "") {
       for (int i = 0; i < rs.raw().length; i++) {
-        if(!(new String(rs.raw()[i].getFamily(), "UTF8").equals("content")))
+        if (!(new String(rs.raw()[i].getFamily(), "UTF8").equals("content")))
           continue;
         String date = new String(rs.raw()[i].getQualifier());
         if (date.equals(d)) {
@@ -85,9 +90,10 @@ public class WarcbaseServlet extends HttpServlet {
           return;
         }
       }
-      ArrayList<String> dates = new ArrayList<String>(10);
+
+      List<String> dates = new ArrayList<String>(10);
       for (int i = 0; i < rs.raw().length; i++)
-        if(new String(rs.raw()[i].getFamily(), "UTF8").equals("content"))
+        if (new String(rs.raw()[i].getFamily(), "UTF8").equals("content"))
           dates.add(new String(rs.raw()[i].getQualifier()));
       Collections.sort(dates);
       for (int i = 1; i < dates.size(); i++)
@@ -109,7 +115,8 @@ public class WarcbaseServlet extends HttpServlet {
     out.println("<body>");
     for (int i = 0; i < rs.raw().length; i++) {
       String date = new String(rs.raw()[i].getQualifier());
-      out.println("<br/> <a href='http://" + req.getServerName() + ":" + req.getServerPort() + req.getRequestURI() + "/" + date + "/" + query + "'>" + date + "</a>");
+      out.println("<br/> <a href='http://" + req.getServerName() + ":" + req.getServerPort()
+          + req.getRequestURI() + "/" + date + "/" + query + "'>" + date + "</a>");
     }
     out.println("</body>");
     out.println("</html>");
@@ -126,8 +133,5 @@ public class WarcbaseServlet extends HttpServlet {
     out.println("You entered \"" + field + "\" into the text box.");
     out.println("</body>");
     out.println("</html>");
-  }
-  
-  public static void main(String[] args) {
   }
 }
