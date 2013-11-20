@@ -50,6 +50,7 @@
     <hadoop.version2>2.0.0-cdh4.3.0</hadoop.version2>
     <hbase.version>0.94.6-cdh4.3.0</hbase.version>
     <zookeeper.version>3.4.5-cdh4.3.0</zookeeper.version>
+    <jwat.version>1.0.0</jwat.version>
   </properties>
 
   <build>
@@ -61,8 +62,12 @@
         <configuration>
           <programs>
             <program>
-              <mainClass>org.warcbase.ingest.IngestWarcFiles</mainClass>
-              <name>IngestWarcFiles</name>
+              <mainClass>org.warcbase.ingest.IngestFiles</mainClass>
+              <name>IngestFiles</name>
+            </program>
+            <program>
+              <mainClass>org.warcbase.ingest.SearchForUri</mainClass>
+              <name>SearchForUri</name>
             </program>
             <program>
               <mainClass>org.warcbase.browser.WarcBrowser</mainClass>
@@ -79,6 +84,11 @@
           </programs>
         </configuration>
       </plugin>
+      <!-- <plugin>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-maven-plugin</artifactId>
+        <version>${jettyVersion}</version>
+      </plugin> -->
     </plugins>
   </build>
 
@@ -249,5 +259,36 @@
   <artifactId>jsoup</artifactId>
   <version>1.7.2</version>
 </dependency>
+<!--<dependency>
+      <groupId>org.eclipse.jetty.orbit</groupId>
+      <artifactId>javax.servlet</artifactId>
+      <version>3.0.0.v201112011016</version>
+      <scope>provided</scope>
+    </dependency>-->
+     <dependency>
+    <groupId>org.jwat</groupId>
+    <artifactId>jwat-common</artifactId>
+    <version>${jwat.version}</version>
+  </dependency>
+  <dependency>
+    <groupId>org.jwat</groupId>
+    <artifactId>jwat-gzip</artifactId>
+    <version>${jwat.version}</version>
+  </dependency>
+  <dependency>
+    <groupId>org.jwat</groupId>
+    <artifactId>jwat-arc</artifactId>
+    <version>${jwat.version}</version>
+  </dependency>
+  <dependency>
+    <groupId>org.jwat</groupId>
+    <artifactId>jwat-warc</artifactId>
+    <version>${jwat.version}</version>
+  </dependency>
+  <dependency>
+    <groupId>org.jwat</groupId>
+    <artifactId>jwat-tools</artifactId>
+    <version>0.5.6-SNAPSHOT</version>
+  </dependency>
   </dependencies>
 </project>
