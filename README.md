@@ -1,7 +1,7 @@
 WarcBase
 ========
 
-A web archive browser built on HBase
+A web archive browser built on HBase.
 
 Getting Started
 ---------------
@@ -16,8 +16,7 @@ Ingesting WARC files:
 
 ```
 $ setenv CLASSPATH_PREFIX "/etc/hbase/conf/"
-$ sh target/appassembler/bin/IngestWarcFiles \
-   -dir /path/to/warc/ -name archive_name -create
+$ sh target/appassembler/bin/IngestWarcFiles -dir /path/to/warc/ -name archive_name -create
 ```
 
 Command-line options:
@@ -30,7 +29,7 @@ Starting the browser:
 
 ```
 $ setenv CLASSPATH_PREFIX "/etc/hbase/conf/"
-$ sh target/appassembler/bin/WarcBrowser -port 9191 \
-   -server http://myhost:9191/ -name archive_name
+$ sh target/appassembler/bin/WarcBrowser -port 9191 -server http://myhost:9191/
 ```
 
+Navigate to `http://myhost:9191/` to browse the archive.
