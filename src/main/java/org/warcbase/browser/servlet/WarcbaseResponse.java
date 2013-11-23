@@ -17,21 +17,12 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.warcbase.analysis.CountRowTypes;
 import org.warcbase.data.TextDocument2;
 import org.warcbase.data.Util;
-
-import tl.lin.data.SortableEntries.Order;
-import tl.lin.data.fd.Object2IntFrequencyDistribution;
-import tl.lin.data.fd.Object2IntFrequencyDistributionEntry;
-import tl.lin.data.pair.PairOfObjectInt;
 
 public class WarcbaseResponse {
   private final Configuration hbaseConfig;
@@ -170,7 +161,7 @@ public class WarcbaseResponse {
           + TextDocument2.SERVER_PREFIX
           + "warcbase/"
           + "images/wm_tb_bk_trns.png);text-align:center;-moz-box-shadow:1px 1px 3px #333;-webkit-box-shadow:1px 1px 3px #333;box-shadow:1px 1px 3px #333;font-size:11px!important;font-family:'Lucida Grande','Arial',sans-serif!important;\">    <table style=\"border-collapse:collapse;margin:0;padding:0;width:100%;\"><tbody><tr>    <td style=\"padding:10px;vertical-align:top;min-width:110px;\">    <a href=\""
-          + TextDocument2.SERVER_PREFIX 
+          + TextDocument2.SERVER_PREFIX
           + "\" title=\"Warcbase home page\" style=\"background-color:transparent;border:none;\">Warcbase</a>    </td>            <td style=\"padding:0!important;text-align:center;vertical-align:top;width:100%;\">         <table style=\"border-collapse:collapse;margin:0 auto;padding:0;width:570px;\"><tbody><tr>        <td style=\"padding:3px 0;\" colspan=\"2\">        <form target=\"_top\" method=\"get\" action=\""
           + TextDocument2.SERVER_PREFIX
           + tableName
@@ -249,24 +240,6 @@ public class WarcbaseResponse {
     }
     writeResponse(resp, rs, data, query, realDate, type, rs.raw().length / 2, tableName);
     table.close();
-  }
-
-  public void writeAllUris(HttpServletResponse resp, String tableName) throws IOException {
-    HTableInterface table = pool.getTable(tableName);
-    Scan scan = new Scan();
-    scan.setFilter(new FirstKeyOnlyFilter());
-    ResultScanner scanner = null;
-    scanner = table.getScanner(scan);
-    Object2IntFrequencyDistribution<String> domainCounter = new Object2IntFrequencyDistributionEntry<String>();
-    for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
-      byte[] key = rr.getRow();
-      String url = new String(key, "UTF8");
-      String domain = CountRowTypes.getDomain(url);
-      domainCounter.increment(domain);
-    }
-    for (PairOfObjectInt<String> entry : domainCounter.getEntries(Order.ByRightElementDescending)) {
-      System.out.println(entry.getLeftElement());
-    }
   }
 
 }

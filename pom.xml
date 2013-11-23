@@ -81,6 +81,10 @@
               <mainClass>org.warcbase.analysis.DetectDuplicates</mainClass>
               <name>DetectDuplicates</name>
             </program>
+            <program>
+              <mainClass>org.warcbase.analysis.PrintAllUris</mainClass>
+              <name>PrintAllUris</name>
+            </program>
           </programs>
         </configuration>
       </plugin>

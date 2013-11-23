@@ -18,10 +18,12 @@ import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.log4j.Logger;
 import org.warcbase.data.Util;
 
 public class WarcbaseServlet extends HttpServlet {
   private static final long serialVersionUID = 847405540723915805L;
+  private static final Logger LOG = Logger.getLogger(WarcbaseServlet.class);
 
   private String tableName;
   private static HTablePool pool = new HTablePool();
@@ -42,6 +44,7 @@ public class WarcbaseServlet extends HttpServlet {
     }
     String pathInfo = req.getPathInfo();
     String[] splits = pathInfo.split("\\/");
+
     if (splits.length < 2) {
       warcbaseResponse.writeTables(resp);
       return;
