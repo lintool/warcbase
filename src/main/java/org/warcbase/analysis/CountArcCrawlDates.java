@@ -15,7 +15,7 @@ import org.jwat.arc.ArcRecordBase;
 public class CountArcCrawlDates {
   private static final Logger LOG = Logger.getLogger(CountArcCrawlDates.class);
 
-  private static enum Records { TOTAL };
+  private static enum Records { TOTAL, ERROR };
 
   public static class MyMapper
       extends Mapper<LongWritable, ArcRecordBase, Text, IntWritable> {
@@ -26,8 +26,13 @@ public class CountArcCrawlDates {
       context.getCounter(Records.TOTAL).increment(1);
 
       // Get the crawl day (ignore hour, minute, second)
-      String date = record.getArchiveDateStr().substring(0, 8);
-      context.write(new Text(date), ONE);
+      String date = record.getArchiveDateStr();
+      if ( date.length() < 8) {
+        context.getCounter(Records.ERROR).increment(1);
+      } else {
+        date = date.substring(0, 8);
+        context.write(new Text(date), ONE);
+      }
     }
   }
 
