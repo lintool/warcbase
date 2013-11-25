@@ -22,14 +22,14 @@ import org.apache.lucene.util.fst.PositiveIntOutputs;
 import org.apache.lucene.util.fst.Util.MinResult;
 import org.apache.lucene.util.fst.Util;
 
-public class urlMapping {
+public class UriMapping {
 	private FST<Long> fst;
 	
 	public UriMapping(FST<Long> fst){
 		this.fst = fst;
 	}
 	
-	public urlMapping(String MappingFileName) throws IOException{
+	public UriMapping(String MappingFileName) throws IOException{
 	    PositiveIntOutputs outputs = PositiveIntOutputs.getSingleton();
 	    Builder<Long> builder = new Builder<Long>(INPUT_TYPE.BYTE1, outputs);
 	    BytesRef scratchBytes = new BytesRef();
