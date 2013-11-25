@@ -25,12 +25,12 @@ import org.apache.lucene.util.fst.Util;
 public class urlMapping {
 	private FST<Long> fst;
 	
-	urlMapping(FST<Long> fst){
+	public urlMapping(FST<Long> fst){
 		this.fst = fst;
 	}
 	
-	urlMapping(String MappingFileName) throws IOException{
-		PositiveIntOutputs outputs = PositiveIntOutputs.getSingleton();
+	public urlMapping(String MappingFileName) throws IOException{
+	    PositiveIntOutputs outputs = PositiveIntOutputs.getSingleton();
 	    Builder<Long> builder = new Builder<Long>(INPUT_TYPE.BYTE1, outputs);
 	    BytesRef scratchBytes = new BytesRef();
 	    IntsRef scratchInts = new IntsRef();
@@ -49,7 +49,7 @@ public class urlMapping {
 		this.fst = builder.finish();
 	}
 	
-	int getID(String url){
+	public int getID(String url){
 		Long id = null;
 		try {
 			id = Util.get(fst, new BytesRef(url));
@@ -60,7 +60,7 @@ public class urlMapping {
 		}
 		return id.intValue();
 	}
-	String getUrl(int id){
+	public String getUrl(int id){
 		BytesRef scratchBytes = new BytesRef();
 		IntsRef key = null;
 		try {
