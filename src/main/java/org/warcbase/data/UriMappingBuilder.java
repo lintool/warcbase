@@ -1,4 +1,5 @@
 package org.warcbase.data;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
@@ -27,7 +28,7 @@ import org.apache.lucene.util.fst.PositiveIntOutputs;
 import org.apache.lucene.util.fst.Util.MinResult;
 import org.apache.lucene.util.fst.Util;
 
-public class urlMappingBuilder {
+public class UriMappingBuilder {
 	private static List readURL(String fileName) throws IOException {
 		BufferedReader br = new BufferedReader(new FileReader(fileName));
 		List url = new ArrayList<String>();
@@ -59,8 +60,8 @@ public class urlMappingBuilder {
 		}
 		// Be Careful about the file size
 		long size = inputValues.size();
-		List outputValues = new ArrayList<Long>(); // create the mapping id
-													// array
+		List outputValues = new ArrayList<Long>(); // create the mapping id array
+						
 		for (long i = 0; i < size; i++) {
 			outputValues.add(i);
 		}
