@@ -23,7 +23,7 @@ import org.apache.lucene.util.fst.Util.MinResult;
 import org.apache.lucene.util.fst.Util;
 
 public class urlMapping {
-	public FST<Long> fst;
+	private FST<Long> fst;
 	
 	urlMapping(FST<Long> fst){
 		this.fst = fst;
@@ -70,7 +70,7 @@ public class urlMapping {
 			System.out.println("id may not exist");
 			e.printStackTrace();
 		}
-		String url = Util.toBytesRef(key, scratchBytes).utf8ToString();
-		return url;
+		return Util.toBytesRef(key, scratchBytes).utf8ToString();
+		
 	}
 }
