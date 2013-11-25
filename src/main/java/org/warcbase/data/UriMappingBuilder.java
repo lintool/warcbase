@@ -1,16 +1,19 @@
-package org.warcbase.data;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.lucene.store.DataOutput;
+import org.apache.lucene.store.OutputStreamDataOutput;
 import org.apache.lucene.util.ArrayUtil;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
@@ -24,6 +27,7 @@ import org.apache.lucene.util.fst.FST.Arc;
 import org.apache.lucene.util.fst.FST.BytesReader;
 import org.apache.lucene.util.fst.FST;
 import org.apache.lucene.util.fst.FST.INPUT_TYPE;
+import org.apache.lucene.util.fst.Outputs;
 import org.apache.lucene.util.fst.PositiveIntOutputs;
 import org.apache.lucene.util.fst.Util.MinResult;
 import org.apache.lucene.util.fst.Util;
@@ -60,8 +64,9 @@ public class UriMappingBuilder {
 		}
 		// Be Careful about the file size
 		long size = inputValues.size();
-		List outputValues = new ArrayList<Long>(); // create the mapping id array
-						
+		List outputValues = new ArrayList<Long>(); // create the mapping id
+													// array
+
 		for (long i = 0; i < size; i++) {
 			outputValues.add(i);
 		}
@@ -83,17 +88,8 @@ public class UriMappingBuilder {
 		}
 		FST<Long> fst = builder.finish();
 
-		// Write Mapping Result into File
-		Writer writer = new BufferedWriter(new OutputStreamWriter(
-				new FileOutputStream(outputFileName), "utf-8"));
-		BytesRefFSTEnum<Long> iterator = new BytesRefFSTEnum<Long>(fst);
-		while (iterator.next() != null) {
-			InputOutput<Long> mapEntry = iterator.current();
-			String dns = mapEntry.input.utf8ToString(); // input string
-			long id = mapEntry.output; // output id
-			String line = id + ":" + dns + "\n";
-			writer.write(line);
-		}
-		writer.close();
+		// Save FST to file
+		File outputFile = new File(outputFileName);
+		fst.save(outputFile);
 	}
 }

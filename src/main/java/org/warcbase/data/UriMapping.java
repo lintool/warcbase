@@ -1,5 +1,5 @@
-package org.warcbase.data;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -28,27 +28,16 @@ public class UriMapping {
 	public UriMapping(FST<Long> fst) {
 		this.fst = fst;
 	}
-
-	public UriMapping(String MappingFileName) throws IOException {
+	
+	public UriMapping(String outputFileName) throws IOException {
 		PositiveIntOutputs outputs = PositiveIntOutputs.getSingleton();
-		Builder<Long> builder = new Builder<Long>(INPUT_TYPE.BYTE1, outputs);
-		BytesRef scratchBytes = new BytesRef();
-		IntsRef scratchInts = new IntsRef();
-
-		BufferedReader br = new BufferedReader(new FileReader(MappingFileName));
-		String line;
-		while ((line = br.readLine()) != null) {
-			int sepIndex = line.indexOf(':');
-			if (sepIndex != -1) {
-				long id = Long.parseLong(line.substring(0, sepIndex));
-				String url = line.substring(sepIndex + 1);
-				scratchBytes.copyChars(url);
-				builder.add(Util.toIntsRef(scratchBytes, scratchInts), id);
-			}
-		}
-		this.fst = builder.finish();
+		File outputFile = new File(outputFileName);
+		this.fst = FST.read(outputFile, outputs);
 	}
-
+	
+	public FST<Long> getFst(){
+		return fst;
+	}
 	public int getID(String url) {
 		Long id = null;
 		try {
