@@ -24,32 +24,32 @@ import org.apache.lucene.util.fst.Util;
 
 public class UriMapping {
 	private FST<Long> fst;
-	
-	public UriMapping(FST<Long> fst){
+
+	public UriMapping(FST<Long> fst) {
 		this.fst = fst;
 	}
-	
-	public UriMapping(String MappingFileName) throws IOException{
-	    PositiveIntOutputs outputs = PositiveIntOutputs.getSingleton();
-	    Builder<Long> builder = new Builder<Long>(INPUT_TYPE.BYTE1, outputs);
-	    BytesRef scratchBytes = new BytesRef();
-	    IntsRef scratchInts = new IntsRef();
-		
+
+	public UriMapping(String MappingFileName) throws IOException {
+		PositiveIntOutputs outputs = PositiveIntOutputs.getSingleton();
+		Builder<Long> builder = new Builder<Long>(INPUT_TYPE.BYTE1, outputs);
+		BytesRef scratchBytes = new BytesRef();
+		IntsRef scratchInts = new IntsRef();
+
 		BufferedReader br = new BufferedReader(new FileReader(MappingFileName));
 		String line;
-		while( (line = br.readLine()) != null){
+		while ((line = br.readLine()) != null) {
 			int sepIndex = line.indexOf(':');
-			if(sepIndex != -1){
+			if (sepIndex != -1) {
 				long id = Long.parseLong(line.substring(0, sepIndex));
-				String url = line.substring(sepIndex+1);
+				String url = line.substring(sepIndex + 1);
 				scratchBytes.copyChars(url);
-				builder.add(Util.toIntsRef(scratchBytes, scratchInts),id);
+				builder.add(Util.toIntsRef(scratchBytes, scratchInts), id);
 			}
 		}
 		this.fst = builder.finish();
 	}
-	
-	public int getID(String url){
+
+	public int getID(String url) {
 		Long id = null;
 		try {
 			id = Util.get(fst, new BytesRef(url));
@@ -60,7 +60,8 @@ public class UriMapping {
 		}
 		return id.intValue();
 	}
-	public String getUrl(int id){
+
+	public String getUrl(int id) {
 		BytesRef scratchBytes = new BytesRef();
 		IntsRef key = null;
 		try {
@@ -71,6 +72,6 @@ public class UriMapping {
 			e.printStackTrace();
 		}
 		return Util.toBytesRef(key, scratchBytes).utf8ToString();
-		
+
 	}
 }
