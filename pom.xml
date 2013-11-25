@@ -62,6 +62,10 @@
         <configuration>
           <programs>
             <program>
+              <mainClass>org.warcbase.data.urlMappingBuilder</mainClass>
+              <name>urlMappingBuilder</name>
+            </program>
+            <program>
               <mainClass>org.warcbase.ingest.IngestFiles</mainClass>
               <name>IngestFiles</name>
             </program>
@@ -110,6 +114,11 @@
       <artifactId>junit</artifactId>
       <version>4.11</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-core</artifactId>
+      <version>4.5.1</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
