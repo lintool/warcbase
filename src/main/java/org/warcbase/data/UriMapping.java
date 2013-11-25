@@ -25,7 +25,7 @@ import org.apache.lucene.util.fst.Util;
 public class urlMapping {
 	private FST<Long> fst;
 	
-	public urlMapping(FST<Long> fst){
+	public UriMapping(FST<Long> fst){
 		this.fst = fst;
 	}
 	
