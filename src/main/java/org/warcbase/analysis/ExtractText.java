@@ -103,6 +103,7 @@ public class ExtractText {
       
       String id = "";
       String keyStr = Bytes.toString(key);
+      String uri = Util.reverseBacUri(keyStr);
       boolean ambiguous = false;
       for(int i=0;i<ids.size();i++){
         if(keyStr.contains(ids.get(i))){
