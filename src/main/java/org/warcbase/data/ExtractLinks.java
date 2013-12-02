@@ -106,18 +106,15 @@ public class ExtractLinks extends Configured implements Tool{
 						linkNode.set(linkUrl);
 						context.write(urlNode, linkNode);
 						emitFlag = true;
-						context.getCounter(Records.LINK_COUNT).increment(1);
 					}
 					if(emitFlag==false){ //contain no links which are indexed in UriMapping 
 						linkNode = new Text();
 						context.write(urlNode, linkNode);
-						context.getCounter(Records.LINK_COUNT).increment(1);
 					}
 					
 				}else{ // webpage without outgoing links
 					linkNode = new Text();
 					context.write(urlNode, linkNode);
-					context.getCounter(Records.LINK_COUNT).increment(1);
 				}
 			}
 		}
@@ -132,6 +129,7 @@ public class ExtractLinks extends Configured implements Tool{
 			String linkIds = "";
 			for (Text link : values) {
 				linkIds += link.toString()+" ";
+				context.getCounter(Records.LINK_COUNT).increment(1);
 			}
 			links.set(linkIds);
 			context.write(key, links);
