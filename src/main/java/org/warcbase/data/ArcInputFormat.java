@@ -1,3 +1,5 @@
+package org.warcbase.data;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 
