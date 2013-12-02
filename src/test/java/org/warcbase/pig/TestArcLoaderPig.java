@@ -20,8 +20,28 @@ import java.util.Iterator;
 public class TestArcLoaderPig {
 
     private static final Log LOG = LogFactory.getLog(TestArcLoaderPig.class);
-
     private File tempDir;
+
+    @Test
+    public void testCountLinks() throws Exception {
+
+        String arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
+        //arcTestDataFile = "/home/alan/Documents/SCAPE/hadoop-hackathon-vienna/web/172-3-20131012143440-00001-prepc2.arc.gz";
+
+        String pigFile = Resources.getResource("scripts/TestCountLinks.pig").getPath();
+        String location = tempDir.getPath().replaceAll("\\\\", "/");  // make it work on windows
+
+        PigTest test = new PigTest(pigFile, new String[]{
+                "testArcFolder=" + arcTestDataFile,
+                "experimentfolder=" + location});
+
+        Iterator<Tuple> parses = test.getAlias("a");
+
+        while (parses.hasNext()) {
+            System.out.println("date + count in arc file: " + parses.next());
+        }
+
+    }
 
     @Test
     public void testArcLoader() throws Exception {
@@ -41,7 +61,7 @@ public class TestArcLoaderPig {
         while (parses.hasNext()) {
             System.out.println("date + count in arc file: " + parses.next());
         }
-        
+
     }
 
     @Before
