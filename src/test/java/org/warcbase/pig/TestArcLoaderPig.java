@@ -1,7 +1,12 @@
 package org.warcbase.pig;
 
-import com.google.common.io.Files;
-import com.google.common.io.Resources;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
+import java.io.File;
+import java.util.Iterator;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.pig.data.Tuple;
@@ -10,71 +15,64 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
-import java.util.Iterator;
+import com.google.common.io.Files;
+import com.google.common.io.Resources;
 
-/**
- * Created with IntelliJ IDEA.
- * User: alan
- */
 public class TestArcLoaderPig {
+  private static final Log LOG = LogFactory.getLog(TestArcLoaderPig.class);
+  private File tempDir;
 
-    private static final Log LOG = LogFactory.getLog(TestArcLoaderPig.class);
-    private File tempDir;
+  @Test
+  public void testCountLinks() throws Exception {
+    String arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
 
-    @Test
-    public void testCountLinks() throws Exception {
+    String pigFile = Resources.getResource("scripts/TestCountLinks.pig").getPath();
+    String location = tempDir.getPath().replaceAll("\\\\", "/"); // make it work on windows
 
-        String arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
-        //arcTestDataFile = "/home/alan/Documents/SCAPE/hadoop-hackathon-vienna/web/172-3-20131012143440-00001-prepc2.arc.gz";
+    PigTest test = new PigTest(pigFile, new String[] { "testArcFolder=" + arcTestDataFile,
+        "experimentfolder=" + location });
 
-        String pigFile = Resources.getResource("scripts/TestCountLinks.pig").getPath();
-        String location = tempDir.getPath().replaceAll("\\\\", "/");  // make it work on windows
+    Iterator<Tuple> parses = test.getAlias("a");
 
-        PigTest test = new PigTest(pigFile, new String[]{
-                "testArcFolder=" + arcTestDataFile,
-                "experimentfolder=" + location});
-
-        Iterator<Tuple> parses = test.getAlias("a");
-
-        while (parses.hasNext()) {
-            System.out.println("date + count in arc file: " + parses.next());
-        }
-
+    int cnt = 0;
+    while (parses.hasNext()) {
+      LOG.info("link and anchor text: " + parses.next());
+      cnt++;
     }
+    assertEquals(659, cnt);
+  }
 
-    @Test
-    public void testArcLoader() throws Exception {
+  @Test
+  public void testArcLoader() throws Exception {
+    String arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
 
-        String arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
-        //arcTestDataFile = "/home/alan/Documents/SCAPE/hadoop-hackathon-vienna/web/172-3-20131012143440-00001-prepc2.arc.gz";
+    String pigFile = Resources.getResource("scripts/TestArcLoader.pig").getPath();
+    String location = tempDir.getPath().replaceAll("\\\\", "/"); // make it work on windows
 
-        String pigFile = Resources.getResource("scripts/TestArcLoader.pig").getPath();
-        String location = tempDir.getPath().replaceAll("\\\\", "/");  // make it work on windows
+    PigTest test = new PigTest(pigFile, new String[] { "testArcFolder=" + arcTestDataFile,
+        "experimentfolder=" + location });
 
-        PigTest test = new PigTest(pigFile, new String[]{
-                "testArcFolder=" + arcTestDataFile,
-                "experimentfolder=" + location});
+    Iterator<Tuple> parses = test.getAlias("c");
 
-        Iterator<Tuple> parses = test.getAlias("c");
+    Tuple tuple = parses.next();
+    assertEquals("20080430", (String) tuple.get(0));
+    assertEquals(300L, (long) (Long) tuple.get(1));
 
-        while (parses.hasNext()) {
-            System.out.println("date + count in arc file: " + parses.next());
-        }
+    // There should only be one record.
+    assertFalse(parses.hasNext());
+  }
 
-    }
+  @Before
+  public void setUp() throws Exception {
+    // create a random file location
+    tempDir = Files.createTempDir();
+    LOG.info("Output can be found in " + tempDir.getPath());
+  }
 
-    @Before
-    public void setUp() throws Exception {
-        // create a random file location
-        tempDir = Files.createTempDir();
-        LOG.info("Output can be found in " + tempDir.getPath());
-    }
-
-    @After
-    public void tearDown() throws Exception {
-        // cleanup
-        //  FileUtils.deleteRecursive(tempDir);
-    }
-
+  @After
+  public void tearDown() throws Exception {
+    // cleanup
+    FileUtils.deleteDirectory(tempDir);
+    LOG.info("Removing tmp files in " + tempDir.getPath());
+  }
 }
