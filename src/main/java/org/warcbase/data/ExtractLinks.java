@@ -1,3 +1,5 @@
+package org.warcbase.data;
+
 import java.io.IOException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
