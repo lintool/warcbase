@@ -1,6 +1,6 @@
-package org.warcbase.data;
-
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
@@ -28,6 +28,8 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -43,6 +45,7 @@ import org.jsoup.helper.Validate;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.jwat.arc.ArcRecordBase;
 
 import cern.colt.Arrays;
 
@@ -54,8 +57,9 @@ import cern.colt.Arrays;
  */
 public class ExtractLinks extends Configured implements Tool{
 	private static final Logger LOG = Logger.getLogger(ExtractLinks.class);
-
-	public static class ExtractLinksMapper extends Mapper<LongWritable, Text, IntWritable, Text>{
+	private static enum Records { TOTAL, LINK_COUNT };
+	
+	public static class ExtractLinksMapper extends Mapper<LongWritable, ArcRecordBase, IntWritable, Text>{
 		private IntWritable urlNode = new IntWritable();
 		private Text linkNode = new Text();
 		private static UriMapping fst;
@@ -74,52 +78,45 @@ public class ExtractLinks extends Configured implements Tool{
 			}
 		}
 		@Override
-		public void map(LongWritable key, Text value, Context context)
+		public void map(LongWritable key, ArcRecordBase record, Context context)
 				throws IOException, InterruptedException {
-
-			String url = value.toString();
-			Elements links = null;
-			try{
-				Document doc = Jsoup.connect(url).timeout(10000).get();
-				links = doc.select("a[href]");
-			}catch (UnknownHostException e){
-				LOG.info("UnKnown Host:"+ url);
-			}catch(UnsupportedMimeTypeException e){
-				LOG.info("UnSupported Content Type:"+url);
-			}catch(SocketTimeoutException e){
-				LOG.info("Socket Connection Timeout:"+url);
-			}catch(HttpStatusException e){
-				LOG.info("Http Status Error:"+url);
-			}catch(IllegalArgumentException e){
-				LOG.info("Input is not a url");
-			}catch(SocketException e){
-				LOG.info("Connection Reset:"+url);
-			}
 			
-			urlNode.set(fst.getID(url));
+			context.getCounter(Records.TOTAL).increment(1);
+			String url = record.getUrlStr();
+			InputStream content = record.getPayloadContent();
 			
-			Set<String> linkUrlSet = new HashSet<String>(); //use set to remove duplicate links
-			if(links != null && links.size()>0){
-				for (Element link : links) {
-					String linkUrl = link.attr("abs:href");
-					if (fst.getID(linkUrl) != -1){ //linkUrl is already indexed 
-						linkUrlSet.add(String.valueOf(fst.getID(linkUrl)));
+			Document doc = Jsoup.parse(content, null, url); //parse inputstream content in 'utf-8' charset
+			Elements links = doc.select("a[href]"); //empty if none match
+			
+			if (fst.getID(url) != -1){ //the url is already indexed in UriMapping
+				urlNode.set(fst.getID(url));
+				
+				Set<String> linkUrlSet = new HashSet<String>(); //use set to remove duplicate links
+				if(links != null){
+					for (Element link : links) {
+						String linkUrl = link.attr("abs:href");
+						if (fst.getID(linkUrl) != -1){ //linkUrl is already indexed 
+							linkUrlSet.add(String.valueOf(fst.getID(linkUrl)));
+						}
 					}
-				}
-				boolean emitFlag = false;
-				for (String linkUrl: linkUrlSet){
-					linkNode.set(linkUrl);
-					context.write(urlNode, linkNode);
-					emitFlag = true;
-				}
-				if(emitFlag==false){ //contain no links which are indexed 
+					boolean emitFlag = false;
+					for (String linkUrl: linkUrlSet){
+						linkNode.set(linkUrl);
+						context.write(urlNode, linkNode);
+						emitFlag = true;
+						context.getCounter(Records.LINK_COUNT).increment(1);
+					}
+					if(emitFlag==false){ //contain no links which are indexed in UriMapping 
+						linkNode = new Text();
+						context.write(urlNode, linkNode);
+						context.getCounter(Records.LINK_COUNT).increment(1);
+					}
+					
+				}else{ // webpage without outgoing links
 					linkNode = new Text();
 					context.write(urlNode, linkNode);
+					context.getCounter(Records.LINK_COUNT).increment(1);
 				}
-				
-			}else if(links !=null && links.size()==0){ // webpage without outgoing links
-				linkNode = new Text();
-				context.write(urlNode, linkNode);
 			}
 		}
 	}
@@ -213,7 +210,7 @@ public class ExtractLinks extends Configured implements Tool{
 		FileInputFormat.setInputPaths(job, new Path(inputPath));
 		FileOutputFormat.setOutputPath(job, new Path(outputPath));
 		
-		
+		job.setInputFormatClass(ArcInputFormat.class);
 		job.setOutputKeyClass(IntWritable.class);
 		job.setOutputValueClass(Text.class);
 
@@ -229,7 +226,13 @@ public class ExtractLinks extends Configured implements Tool{
 		job.waitForCompletion(true);
 		LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime)
 				/ 1000.0 + " seconds");
-
+		
+		Counters counters = job.getCounters();
+		int numRecords = (int) counters.findCounter(Records.TOTAL).getValue();
+		int numLinks = (int) counters.findCounter(Records.LINK_COUNT).getValue();
+		LOG.info("Read " + numRecords +" records.");
+		LOG.info("Extracts "+ numLinks +" links.");
+		
 		return 0;
 	}
 
