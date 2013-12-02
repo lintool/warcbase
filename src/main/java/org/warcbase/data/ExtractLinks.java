@@ -141,8 +141,7 @@ public class ExtractLinks extends Configured implements Tool{
 	/**
 	 * Creates an instance of this tool.
 	 */
-	public ExtractLinks() {
-	}
+	public ExtractLinks() {}
 
 	private static final String INPUT = "input";
 	private static final String OUTPUT = "output";
