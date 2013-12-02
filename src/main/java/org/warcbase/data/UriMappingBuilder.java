@@ -67,7 +67,6 @@ public class UriMappingBuilder {
 		// Be Careful about the file size
 		long size = inputValues.size();
 		List outputValues = new ArrayList<Long>(); // create the mapping id
-													// array
 
 		for (long i = 1; i <= size; i++) {
 			outputValues.add(i);
