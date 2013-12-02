@@ -1,8 +1,10 @@
 package org.warcbase.pig;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.List;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.RecordReader;
@@ -39,10 +41,20 @@ public class ArcLoader extends FileInputLoadFunc {
       }
 
       ArcRecordBase record = in.getCurrentValue();
+      String type = record.getContentTypeStr();
+
       List<String> protoTuple = Lists.newArrayList();
       protoTuple.add(record.getUrlStr());
       protoTuple.add(record.getArchiveDateStr());
-      protoTuple.add(record.getContentTypeStr());
+      protoTuple.add(type);
+
+      // Only grab content text content, ignore binary data.
+      if (type.toLowerCase().contains("text")) {
+        protoTuple.add(new String(IOUtils.toByteArray(record.getPayloadContent()), Charset.forName("UTF-8")));
+      } else {
+        // Otherwise add empty string to preserve consistent schema.
+        protoTuple.add("");
+      }
 
       return TUPLE_FACTORY.newTupleNoCopy(protoTuple);
     } catch (InterruptedException e) {
