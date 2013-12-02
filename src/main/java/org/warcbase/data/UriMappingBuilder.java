@@ -1,5 +1,3 @@
-package org.warcbase.data;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.DataOutputStream;
@@ -41,8 +39,7 @@ public class UriMappingBuilder {
 		String line;
 		while ((line = br.readLine()) != null) {
 			// This need to modify according to your input file
-			if (line != "") {
-				line = line.substring(4);
+			if (!line.equals("")) { // non-empty string 
 				url.add(line);
 			}
 		}
@@ -51,7 +48,6 @@ public class UriMappingBuilder {
 	}
 
 	public static void main(String[] args) throws IOException {
-		// TODO Auto-generated method stub
 		String inputFileName = new String();
 		String outputFileName = new String();
 		if (args.length > 0) { // read file name from main arguments
@@ -60,16 +56,18 @@ public class UriMappingBuilder {
 		}
 		List inputValues = null;
 		try {
+			//input strings must be sorted in Unicode order
 			inputValues = readURL(inputFileName); // read data
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
 		// Be Careful about the file size
 		long size = inputValues.size();
 		List outputValues = new ArrayList<Long>(); // create the mapping id
 													// array
 
-		for (long i = 0; i < size; i++) {
+		for (long i = 1; i <= size; i++) {
 			outputValues.add(i);
 		}
 
@@ -81,15 +79,16 @@ public class UriMappingBuilder {
 			scratchBytes.copyChars((String) inputValues.get(i));
 			try {
 				// Mapping!
-				builder.add(Util.toIntsRef(scratchBytes, scratchInts),
-						(Long) outputValues.get(i));
-			} catch (IOException e) {
+				builder.add(Util.toIntsRef(scratchBytes, scratchInts),(Long) outputValues.get(i));
+			}catch(UnsupportedOperationException e){
+				System.out.println("Duplicate Url:"+inputValues.get(i));
+			}catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 		FST<Long> fst = builder.finish();
-
+		
 		// Save FST to file
 		File outputFile = new File(outputFileName);
 		fst.save(outputFile);

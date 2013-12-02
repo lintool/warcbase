@@ -1,5 +1,3 @@
-package org.warcbase.data;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -27,14 +25,23 @@ import org.apache.lucene.util.fst.Util;
 public class UriMapping {
 	private FST<Long> fst;
 
-	public UriMapping(FST<Long> fst) {
-		this.fst = fst;
-	}
+	public UriMapping(){}
 	
-	public UriMapping(String outputFileName) throws IOException {
+	public UriMapping(String outputFileName) {
 		PositiveIntOutputs outputs = PositiveIntOutputs.getSingleton();
 		File outputFile = new File(outputFileName);
-		this.fst = FST.read(outputFile, outputs);
+		try {
+			this.fst = FST.read(outputFile, outputs);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			System.out.println("Build FST Failed");
+			e.printStackTrace();
+		}
+	}
+	
+	public void loadMapping(String outputFileName){
+		UriMapping tmp = new UriMapping(outputFileName);
+		this.fst = tmp.fst;
 	}
 	
 	public FST<Long> getFst(){
@@ -48,6 +55,9 @@ public class UriMapping {
 			// TODO Auto-generated catch block
 			System.out.println("url may not exist");
 			e.printStackTrace();
+		}
+		if(id == null){ //url don't exist
+			return -1;
 		}
 		return id.intValue();
 	}
