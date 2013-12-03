@@ -25,6 +25,7 @@ public class TestArcLoaderPig {
   @Test
   public void testCountLinks() throws Exception {
     String arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
+    //String arcTestDataFile = Resources.getResource("arc/sb.arc").getPath();
 
     String pigFile = Resources.getResource("scripts/TestCountLinks.pig").getPath();
     String location = tempDir.getPath().replaceAll("\\\\", "/"); // make it work on windows
@@ -45,6 +46,7 @@ public class TestArcLoaderPig {
   @Test
   public void testArcLoader() throws Exception {
     String arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
+    //String arcTestDataFile = Resources.getResource("arc/sb.arc").getPath();
 
     String pigFile = Resources.getResource("scripts/TestArcLoader.pig").getPath();
     String location = tempDir.getPath().replaceAll("\\\\", "/"); // make it work on windows
@@ -60,6 +62,49 @@ public class TestArcLoaderPig {
 
     // There should only be one record.
     assertFalse(parses.hasNext());
+  }
+
+  @Test
+  public void testDetectLanguage() throws Exception {
+    String arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
+    //String arcTestDataFile = Resources.getResource("arc/sb.arc").getPath();
+
+    String pigFile = Resources.getResource("scripts/TestDetectLanguage.pig").getPath();
+    String location = tempDir.getPath().replaceAll("\\\\", "/"); // make it work on windows
+
+    PigTest test = new PigTest(pigFile, new String[] { "testArcFolder=" + arcTestDataFile,
+            "experimentfolder=" + location });
+
+    Iterator<Tuple> parses = test.getAlias("g");
+
+      /*
+        [ca, 1]
+        [en, 68]
+        [et, 8]
+        [hu, 34]
+        [it, 3]
+        [lt, 143]
+        [no, 35]
+        [pt, 2]
+        [ro, 6]
+       */
+      while (parses.hasNext()) {
+          Tuple tuple = parses.next();
+          String lang = (String) tuple.get(0);
+          switch (lang) {
+              case "ca" : assertEquals(1L, (long) (Long) tuple.get(1)); break;
+              case "en" : assertEquals(68L, (long) (Long) tuple.get(1)); break;
+              case "et" : assertEquals(8L, (long) (Long) tuple.get(1)); break;
+              case "hu" : assertEquals(34L, (long) (Long) tuple.get(1)); break;
+              case "it" : assertEquals(3L, (long) (Long) tuple.get(1)); break;
+              case "lt" : assertEquals(143L, (long) (Long) tuple.get(1)); break;
+              case "no" : assertEquals(35L, (long) (Long) tuple.get(1)); break;
+              case "pt" : assertEquals(2L, (long) (Long) tuple.get(1)); break;
+              case "ro" : assertEquals(6L, (long) (Long) tuple.get(1)); break;
+          }
+          //System.out.println(tuple.getAll());
+      }
+
   }
 
   @Before
