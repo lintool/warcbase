@@ -107,6 +107,27 @@ public class TestArcLoaderPig {
 
   }
 
+    @Test
+    public void testDetectMimeType() throws Exception {
+        String arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
+
+        String pigFile = Resources.getResource("scripts/TestDetectMimeType.pig").getPath();
+        String location = tempDir.getPath().replaceAll("\\\\", "/"); // make it work on windows ?
+
+        PigTest test = new PigTest(pigFile, new String[] { "testArcFolder=" + arcTestDataFile, "experimentfolder=" + location});
+
+        Iterator<Tuple> parses = test.getAlias("a");
+
+        while (parses.hasNext()) {
+            Tuple t = parses.next();
+            String url = (String) t.get(0);
+            String httpMime = (String) t.get(1);
+            String magicMime = (String) t.get(2);
+
+            System.out.println(url + ", " + httpMime + ", " + magicMime);
+        }
+    }
+
   @Before
   public void setUp() throws Exception {
     // create a random file location
