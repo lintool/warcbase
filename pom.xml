@@ -52,6 +52,8 @@
         <hbase.version>0.94.6-cdh4.3.0</hbase.version>
         <zookeeper.version>3.4.5-cdh4.3.0</zookeeper.version>
         <jwat.version>1.0.0</jwat.version>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
 
 
         <cdh.version>cdh4.5.0</cdh.version>
