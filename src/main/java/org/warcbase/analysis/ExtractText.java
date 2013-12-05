@@ -79,9 +79,7 @@ public class ExtractText {
         ids.add(s);
       }
     }
-    //System.out.println(originalIds.size() + " " + ids.size());
-    //if(true) return;
-    
+
     for(int i=0;i<ids.size();i++){
       File folder = new File(path + ids.get(i));
       if(!folder.exists()){
