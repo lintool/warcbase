@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -48,7 +49,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
-
+import org.warcbase.mapreduce.ArcInputFormat;
 import cern.colt.Arrays;
 
 /**
@@ -61,9 +62,9 @@ public class ExtractLinks extends Configured implements Tool{
 	private static final Logger LOG = Logger.getLogger(ExtractLinks.class);
 	private static enum Records { TOTAL, LINK_COUNT };
 	
-	public static class ExtractLinksMapper extends Mapper<LongWritable, ArcRecordBase, IntWritable, Text>{
+	public static class ExtractLinksMapper extends Mapper<LongWritable, ArcRecordBase, IntWritable, List>{
 		private IntWritable urlNode = new IntWritable();
-		private Text linkNode = new Text();
+		private List linkNodes;
 		private static UriMapping fst;
 		
 		@Override
@@ -92,49 +93,33 @@ public class ExtractLinks extends Configured implements Tool{
 			
 			if (fst.getID(url) != -1){ //the url is already indexed in UriMapping
 				urlNode.set(fst.getID(url));
-				
-				Set<String> linkUrlSet = new HashSet<String>(); //use set to remove duplicate links
+				linkNodes = new ArrayList<IntWritable>();
+				Set<IntWritable> linkUrlSet = new HashSet<IntWritable>(); //use set to remove duplicate links
 				if(links != null){
 					for (Element link : links) {
 						String linkUrl = link.attr("abs:href");
 						if (fst.getID(linkUrl) != -1){ //linkUrl is already indexed 
-							linkUrlSet.add(String.valueOf(fst.getID(linkUrl)));
+							linkUrlSet.add(new IntWritable(fst.getID(linkUrl)));
 						}
 					}
 					boolean emitFlag = false;
-					for (String linkUrl: linkUrlSet){
-						linkNode.set(linkUrl);
-						context.write(urlNode, linkNode);
+					for (IntWritable linkID: linkUrlSet){
+						linkNodes.add(linkID);
 						emitFlag = true;
+						context.getCounter(Records.LINK_COUNT).increment(1);
 					}
 					if(emitFlag==false){ //contain no links which are indexed in UriMapping 
-						linkNode = new Text();
-						context.write(urlNode, linkNode);
+						context.getCounter(Records.LINK_COUNT).increment(1);
 					}
 					
 				}else{ // webpage without outgoing links
-					linkNode = new Text();
-					context.write(urlNode, linkNode);
+					context.getCounter(Records.LINK_COUNT).increment(1);
 				}
+				context.write(urlNode, linkNodes);
 			}
 		}
 	}
 
-	public static class ExtractLinksReducer extends Reducer<IntWritable, Text, IntWritable, Text> {
-		private Text links = new Text();
-
-		@Override
-		public void reduce(IntWritable key, Iterable<Text> values, Context context)
-				throws IOException, InterruptedException {
-			String linkIds = "";
-			for (Text link : values) {
-				linkIds += link.toString()+" ";
-				context.getCounter(Records.LINK_COUNT).increment(1);
-			}
-			links.set(linkIds);
-			context.write(key, links);
-		}
-	}
 	/**
 	 * Creates an instance of this tool.
 	 */
@@ -205,18 +190,16 @@ public class ExtractLinks extends Configured implements Tool{
 		// Put the mapping file in the distributed cache so each map worker will have it.
 		DistributedCache.addCacheFile(new URI(mappingPath), job.getConfiguration());
 		
-		job.setNumReduceTasks(reduceTasks);
+		job.setNumReduceTasks(0); // no reducers
 
 		FileInputFormat.setInputPaths(job, new Path(inputPath));
 		FileOutputFormat.setOutputPath(job, new Path(outputPath));
 		
 		job.setInputFormatClass(ArcInputFormat.class);
-		job.setOutputKeyClass(IntWritable.class);
-		job.setOutputValueClass(Text.class);
+		job.setMapOutputKeyClass(IntWritable.class);
+		job.setMapOutputValueClass(List.class);
 
 		job.setMapperClass(ExtractLinksMapper.class);
-		job.setCombinerClass(ExtractLinksReducer.class);
-		job.setReducerClass(ExtractLinksReducer.class);
 
 		// Delete the output directory if it exists already.
 		Path outputDir = new Path(outputPath);

@@ -12,6 +12,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.lucene.store.DataOutput;
@@ -37,16 +38,18 @@ import org.apache.lucene.util.fst.Util;
 public class UriMappingBuilder {
 	private static List readURL(String fileName) throws IOException {
 		BufferedReader br = new BufferedReader(new FileReader(fileName));
-		List url = new ArrayList<String>();
+		List urls = new ArrayList<String>();
 		String line;
 		while ((line = br.readLine()) != null) {
 			// This need to modify according to your input file
 			if (!line.equals("")) { // non-empty string 
-				url.add(line);
+				String url = line.split("\\s+")[0];
+				urls.add(url);
 			}
 		}
+		Collections.sort(urls); //sort String according to url alphabetical order
 		br.close();
-		return url;
+		return urls;
 	}
 
 	public static void main(String[] args) throws IOException {
