@@ -34,6 +34,11 @@
       <name>Milad Gholami</name>
       <email>mgholami@cs.umd.edu</email>
     </developer>
+    <developer>
+      <id>jeffyRao</id>
+      <name>Jinfeng Rao</name>
+      <email>jinfeng@cs.umd.edu</email>
+    </developer>
   </developers>
 
   <parent>
@@ -100,6 +105,14 @@
         <configuration>
           <programs>
             <program>
+              <mainClass>org.warcbase.data.urlMappingBuilder</mainClass>
+              <name>urlMappingBuilder</name>
+            </program>
+            <program>
+              <mainClass>org.warcbase.data.ExtractLinks</mainClass>
+              <name>ExtractLinks</name>
+            </program>
+            <program>
               <mainClass>org.warcbase.ingest.IngestFiles</mainClass>
               <name>IngestFiles</name>
             </program>
@@ -140,6 +153,10 @@
       <id>cloudera</id>
       <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
     </repository>
+    <repository>
+      <id>maven</id>
+      <url>http://repo.maven.apache.org/maven2/</url>
+    </repository>
   </repositories>
 
   <dependencies>
@@ -148,6 +165,26 @@
       <artifactId>junit</artifactId>
       <version>4.11</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jwat</groupId>
+      <artifactId>jwat-arc</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jsoup</groupId>
+      <artifactId>jsoup</artifactId>
+      <version>1.7.3</version>
+    </dependency>
+    <dependency>
+      <groupId>colt</groupId>
+      <artifactId>colt</artifactId>
+      <version>1.2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-core</artifactId>
+      <version>4.5.1</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
