@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.lucene.store.DataOutput;
 import org.apache.lucene.store.OutputStreamDataOutput;
 import org.apache.lucene.util.ArrayUtil;
@@ -36,19 +37,29 @@ import org.apache.lucene.util.fst.Util.MinResult;
 import org.apache.lucene.util.fst.Util;
 
 public class UriMappingBuilder {
-	private static List readURL(String fileName) throws IOException {
-		BufferedReader br = new BufferedReader(new FileReader(fileName));
-		List urls = new ArrayList<String>();
-		String line;
-		while ((line = br.readLine()) != null) {
+	
+	private static void readUrlFromFile(File f, List urls) throws IOException{
+		String contents = FileUtils.readFileToString(f);
+		String[] lines = contents.split("\\n");
+		for(String line: lines){
 			// This need to modify according to your input file
 			if (!line.equals("")) { // non-empty string 
 				String url = line.split("\\s+")[0];
 				urls.add(url);
 			}
 		}
+	}
+	private static List readUrlFromFolder(String folderName) throws IOException {
+		File folder = new File(folderName);
+		List urls = new ArrayList<String>();
+		if(folder.isDirectory()){
+			for(File file: folder.listFiles()){
+				readUrlFromFile(file,urls);
+			}	
+		}else{
+			readUrlFromFile(folder,urls);
+		}
 		Collections.sort(urls); //sort String according to url alphabetical order
-		br.close();
 		return urls;
 	}
 
@@ -62,7 +73,7 @@ public class UriMappingBuilder {
 		List inputValues = null;
 		try {
 			//input strings must be sorted in Unicode order
-			inputValues = readURL(inputFileName); // read data
+			inputValues = readUrlFromFolder(inputFileName); // read data
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
