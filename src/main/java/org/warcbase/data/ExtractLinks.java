@@ -49,6 +49,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
+import org.jwat.common.HttpHeader;
 import org.warcbase.mapreduce.ArcInputFormat;
 import cern.colt.Arrays;
 
@@ -86,9 +87,12 @@ public class ExtractLinks extends Configured implements Tool{
 			
 			context.getCounter(Records.TOTAL).increment(1);
 			String url = record.getUrlStr();
+			String type = record.getContentTypeStr();
 			InputStream content = record.getPayloadContent();
 			
-			Document doc = Jsoup.parse(content, null, url); //parse inputstream content in 'utf-8' charset
+			if(!type.equals("text/html"))
+				return;
+			Document doc = Jsoup.parse(content, "ISO-8859-1", url); //parse inputstream content in 'ISO-8859-1' charset
 			Elements links = doc.select("a[href]"); //empty if none match
 			
 			if (fst.getID(url) != -1){ //the url is already indexed in UriMapping
@@ -120,6 +124,21 @@ public class ExtractLinks extends Configured implements Tool{
 		}
 	}
 
+	/*public static class ExtractLinksReducer extends Reducer<IntWritable, Text, IntWritable, Text> {
+		private Text links = new Text();
+
+		@Override
+		public void reduce(IntWritable key, Iterable<Text> values, Context context)
+				throws IOException, InterruptedException {
+			String linkIds = "";
+			for (Text link : values) {
+				linkIds += link.toString()+" ";
+				context.getCounter(Records.LINK_COUNT).increment(1);
+			}
+			links.set(linkIds);
+			context.write(key, links);
+		}
+	}*/
 	/**
 	 * Creates an instance of this tool.
 	 */
@@ -196,6 +215,7 @@ public class ExtractLinks extends Configured implements Tool{
 		FileOutputFormat.setOutputPath(job, new Path(outputPath));
 		
 		job.setInputFormatClass(ArcInputFormat.class);
+		//set map (key,value) output format
 		job.setMapOutputKeyClass(IntWritable.class);
 		job.setMapOutputValueClass(List.class);
 
