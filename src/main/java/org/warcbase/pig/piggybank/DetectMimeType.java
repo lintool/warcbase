@@ -18,21 +18,23 @@ public class DetectMimeType extends EvalFunc<String> {
 
     @Override
     public String exec(Tuple input) throws IOException {
-        String engine = "file";
         String mimeType = "N/A";
 
         if (input == null || input.size() == 0 || input.get(0) == null) {
             return null;
         }
         String content = (String) input.get(0);
+        String engine = (String) input.get(1);
+        if (!engine.equals("magic") && !engine.equals("tika"))
+            return "UNKNOWN ENGINE";
 
         InputStream is = new ByteArrayInputStream(content.getBytes());
-        if (content.isEmpty()) return mimeType;
+        if (content.isEmpty()) return "EMPTY";
 
-        LibmagicJnaWrapper jnaWrapper = new LibmagicJnaWrapper();
-        jnaWrapper.load("/usr/local/Cellar/libmagic/5.15/share/misc/magic.mgc");
+        if (engine.equals("magic")) {
 
-        if (engine.equals("file")) {
+            LibmagicJnaWrapper jnaWrapper = new LibmagicJnaWrapper();
+            jnaWrapper.load("/usr/local/Cellar/libmagic/5.15/share/misc/magic.mgc");
 
             mimeType = jnaWrapper.getMimeType(is);
 
