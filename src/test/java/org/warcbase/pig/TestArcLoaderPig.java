@@ -40,7 +40,7 @@ public class TestArcLoaderPig {
       LOG.info("link and anchor text: " + parses.next());
       cnt++;
     }
-    assertEquals(659, cnt);
+    assertEquals(663, cnt);
   }
 
   @Test
@@ -110,7 +110,7 @@ public class TestArcLoaderPig {
     @Test
     public void testDetectMimeType() throws Exception {
         String arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
-        //arcTestDataFile = Resources.getResource("arc/sb.arc").getPath();
+        //String arcTestDataFile = Resources.getResource("arc/sb.arc").getPath();
 
         String pigFile = Resources.getResource("scripts/TestDetectMimeType.pig").getPath();
         String location = tempDir.getPath().replaceAll("\\\\", "/"); // make it work on windows ?

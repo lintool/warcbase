@@ -24,5 +24,11 @@ b = foreach a {
     GENERATE url, mime, magicMimeSplit.$0, tikaMime;
 }
 
+httpMimes = foreach a generate mime;
+httpMimeGroups = group httpMimes by mime;
+httpMimeBinned = foreach httpMimeGroups generate group, COUNT(httpMimes);
+dump httpMimeBinned;
+
 store b into '$experimentfolder/b';
+
 --dump a;
