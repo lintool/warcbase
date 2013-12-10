@@ -87,22 +87,30 @@ public class TestArcLoaderPig {
         [no, 35]
         [pt, 2]
         [ro, 6]
+
+language test: [en, 4]
+language test: [et, 1]
+language test: [fr, 1]
+language test: [hu, 33]
+language test: [is, 2]
+language test: [lt, 4]
+language test: [no, 1]
+language test: [sk, 25]
        */
       while (parses.hasNext()) {
           Tuple tuple = parses.next();
           String lang = (String) tuple.get(0);
           switch (lang) {
-              case "ca" : assertEquals(1L, (long) (Long) tuple.get(1)); break;
-              case "en" : assertEquals(68L, (long) (Long) tuple.get(1)); break;
-              case "et" : assertEquals(8L, (long) (Long) tuple.get(1)); break;
-              case "hu" : assertEquals(34L, (long) (Long) tuple.get(1)); break;
-              case "it" : assertEquals(3L, (long) (Long) tuple.get(1)); break;
-              case "lt" : assertEquals(143L, (long) (Long) tuple.get(1)); break;
-              case "no" : assertEquals(35L, (long) (Long) tuple.get(1)); break;
-              case "pt" : assertEquals(2L, (long) (Long) tuple.get(1)); break;
-              case "ro" : assertEquals(6L, (long) (Long) tuple.get(1)); break;
+              case "en" : assertEquals(4L, (long) (Long) tuple.get(1)); break;
+              case "et" : assertEquals(1L, (long) (Long) tuple.get(1)); break;
+              case "fr" : assertEquals(1L, (long) (Long) tuple.get(1)); break;
+              case "hu" : assertEquals(33L, (long) (Long) tuple.get(1)); break;
+              case "is" : assertEquals(2L, (long) (Long) tuple.get(1)); break;
+              case "lt" : assertEquals(4L, (long) (Long) tuple.get(1)); break;
+              case "no" : assertEquals(1L, (long) (Long) tuple.get(1)); break;
+              case "sk" : assertEquals(25L, (long) (Long) tuple.get(1)); break;
           }
-          //System.out.println(tuple.getAll());
+          System.out.println("language test: " + tuple.getAll());
       }
 
   }
