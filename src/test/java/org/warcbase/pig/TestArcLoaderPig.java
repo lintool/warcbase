@@ -78,24 +78,16 @@ public class TestArcLoaderPig {
     Iterator<Tuple> parses = test.getAlias("g");
 
       /*
-        [ca, 1]
-        [en, 68]
-        [et, 8]
-        [hu, 34]
-        [it, 3]
-        [lt, 143]
-        [no, 35]
-        [pt, 2]
-        [ro, 6]
+        language codes of all the text records in the example arc file.
 
-language test: [en, 4]
-language test: [et, 1]
-language test: [fr, 1]
-language test: [hu, 33]
-language test: [is, 2]
-language test: [lt, 4]
-language test: [no, 1]
-language test: [sk, 25]
+         [en, 4]
+         [et, 1]
+         [fr, 1]
+         [hu, 33]
+         [is, 2]
+         [lt, 4]
+         [no, 1]
+         [sk, 25]
        */
       while (parses.hasNext()) {
           Tuple tuple = parses.next();
