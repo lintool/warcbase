@@ -48,7 +48,7 @@ public class ArcLoader extends FileInputLoadFunc {
       protoTuple.add(record.getArchiveDateStr());
       protoTuple.add(type);
 
-      // don't know how robust this is but it works — for now.
+      // TODO don't know how robust this is but it works — for now.
       protoTuple.add(new String(IOUtils.toByteArray(record.getPayloadContent()), Charset.forName("UTF-8")));
 
       return TUPLE_FACTORY.newTupleNoCopy(protoTuple);
