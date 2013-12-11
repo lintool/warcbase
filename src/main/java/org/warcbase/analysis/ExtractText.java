@@ -32,8 +32,10 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 
+import tl.lin.data.SortableEntries.Order;
 import tl.lin.data.fd.Object2IntFrequencyDistribution;
 import tl.lin.data.fd.Object2IntFrequencyDistributionEntry;
+import tl.lin.data.pair.PairOfObjectInt;
 
 public class ExtractText {
   private static final Logger LOG = Logger.getLogger(ExtractText.class);
@@ -80,11 +82,15 @@ public class ExtractText {
       }
     }
 
-    for(int i=0;i<ids.size();i++){
+    /*for(int i=0;i<ids.size();i++){
       File folder = new File(path + ids.get(i));
       if(!folder.exists()){
         folder.mkdirs();
       }
+    }*/
+    Object2IntFrequencyDistribution<String>[] idsUrl = new Object2IntFrequencyDistributionEntry[ids.size()];
+    for(int i=0;i<ids.size();i++) {
+      idsUrl[i] = new Object2IntFrequencyDistributionEntry<String>();
     }
     
     HTablePool pool = new HTablePool();
@@ -100,16 +106,18 @@ public class ExtractText {
       byte[] key = rr.getRow();
       
       String id = "";
+      int idInd = 0;
       String keyStr = Bytes.toString(key);
       String uri = Util.reverseBacUri(keyStr);
       boolean ambiguous = false;
       for(int i=0;i<ids.size();i++){
-        if(keyStr.contains(ids.get(i))){
+        if(keyStr.substring(0, Math.min(40, keyStr.length())).contains(ids.get(i))){
           if(!id.equals("")){
-            System.out.println(id + " " + ids.get(i));
+            //System.out.println(id + " " + ids.get(i));
             ambiguous = true;
           }
           id = ids.get(i);
+          idInd = i;
         }
       }
       
@@ -117,6 +125,19 @@ public class ExtractText {
         continue;
       }
       
+      String[] splits = keyStr.split("\\/");
+      String base = null;
+      if(splits[0] != null) {
+        base = splits[0];
+      }
+      else {
+        System.err.println(splits.length + " " + keyStr);
+      }
+      if(splits.length > 1) {
+        base = base + "/" + splits[1];
+      }
+      idsUrl[idInd].increment(base);
+      if(true) continue;
       //String domain = Bytes.toString(key);
       //domain = Util.getDomain(domain);
       //domain = Util.reverseBacHostnamek(domain);
@@ -160,5 +181,13 @@ public class ExtractText {
     }
     
     pool.close();
+    
+    for(int i=0;i<ids.size();i++){
+      System.out.print(ids.get(i));
+      for (PairOfObjectInt<String> entry : idsUrl[i].getEntries(Order.ByRightElementDescending)) {
+        System.out.print(", " + entry.getLeftElement());
+      }
+      System.out.println();
+    }
   }
 }
