@@ -33,3 +33,8 @@ $ sh target/appassembler/bin/WarcBrowser -port 9191 -server http://myhost:9191/
 ```
 
 Navigate to `http://myhost:9191/` to browse the archive.
+
+## Development notes
+
+2013-12-11
+An ARC files with 2224 records was identified in 15 minutes on a MacBook Air.

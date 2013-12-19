@@ -9,9 +9,12 @@ DEFINE DetectLanguage org.warcbase.pig.piggybank.DetectLanguage();
 raw = load '$testArcFolder'
     using ArcLoader() as (url: chararray, date:chararray, mime:chararray, content:chararray);
 
+only_text = filter raw by (NOT(mime matches '^text.*'));
 
-b = foreach raw generate url, mime, ExtractRawText(content) as content;
+b = foreach only_text generate url, mime, ExtractRawText(content) as content;
 -- c = foreach b generate url,mime,DetectLanguage(content) as lang;
+
+--non_text = filter raw by (NOT(mime matches '^text.*'));
 
 c1 = foreach b generate DetectLanguage(content) as lang;
 

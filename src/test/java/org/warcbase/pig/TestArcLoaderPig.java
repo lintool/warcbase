@@ -9,6 +9,7 @@ import java.util.Iterator;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.pigunit.PigTest;
 import org.junit.After;
@@ -66,29 +67,16 @@ public class TestArcLoaderPig {
 
   @Test
   public void testDetectLanguage() throws Exception {
-    String arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
-    //String arcTestDataFile = Resources.getResource("arc/sb.arc").getPath();
+    String arcTestDataFile;
+    arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
 
     String pigFile = Resources.getResource("scripts/TestDetectLanguage.pig").getPath();
     String location = tempDir.getPath().replaceAll("\\\\", "/"); // make it work on windows
 
-    PigTest test = new PigTest(pigFile, new String[] { "testArcFolder=" + arcTestDataFile,
-            "experimentfolder=" + location });
+    PigTest test = new PigTest(pigFile, new String[] { "testArcFolder=" + arcTestDataFile, "experimentfolder=" + location });
 
     Iterator<Tuple> parses = test.getAlias("g");
 
-      /*
-        language codes of all the text records in the example arc file.
-
-         [en, 4]
-         [et, 1]
-         [fr, 1]
-         [hu, 33]
-         [is, 2]
-         [lt, 4]
-         [no, 1]
-         [sk, 25]
-       */
       while (parses.hasNext()) {
           Tuple tuple = parses.next();
           String lang = (String) tuple.get(0);
@@ -107,27 +95,76 @@ public class TestArcLoaderPig {
 
   }
 
-    @Test
-    public void testDetectMimeType() throws Exception {
-        String arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
-        //String arcTestDataFile = Resources.getResource("arc/sb.arc").getPath();
+    /*
+    Create a literal array of strings
+     */
+    static  String[] array(String... ss)
+    {
+        return ss;
+    }
 
-        String pigFile = Resources.getResource("scripts/TestDetectMimeType.pig").getPath();
+    /*
+     * The two tests of MIME type detection is dependent on the version of the corresponding Tika and magiclib libraries
+     */
+
+    @Test
+    public void testDetectMimeTypeMagic() throws Exception {
+        String arcTestDataFile;
+        arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
+
+        String pigFile = Resources.getResource("scripts/TestDetectMimeTypeMagic.pig").getPath();
         String location = tempDir.getPath().replaceAll("\\\\", "/"); // make it work on windows ?
 
         PigTest test = new PigTest(pigFile, new String[] { "testArcFolder=" + arcTestDataFile, "experimentfolder=" + location});
 
-        Iterator<Tuple> parses = test.getAlias("b");
+        Iterator <Tuple> ts = test.getAlias("magicMimeBinned");
+        while (ts.hasNext()) {
+            Tuple t = ts.next();
+            String mime = (String) t.get(0);
+            switch (mime) {
+                case                      "text/css": assertEquals(  4L, (long) (Long) t.get(1)); break;
+                case                      "text/dns": assertEquals( 38L, (long) (Long) t.get(1)); break;
+                case                      "text/xml": assertEquals(  9L, (long) (Long) t.get(1)); break;
+                case                     "text/html": assertEquals(140L, (long) (Long) t.get(1)); break;
+                case                    "text/plain": assertEquals( 38L, (long) (Long) t.get(1)); break;
+                case                     "image/gif": assertEquals( 29L, (long) (Long) t.get(1)); break;
+                case                     "image/png": assertEquals(  8L, (long) (Long) t.get(1)); break;
+                case                    "image/jpeg": assertEquals( 18L, (long) (Long) t.get(1)); break;
+                case      "application/x-javascript": assertEquals(  8L, (long) (Long) t.get(1)); break;
+                case "application/x-shockwave-flash": assertEquals(  8L, (long) (Long) t.get(1)); break;
 
-        while (parses.hasNext()) {
-            Tuple t = parses.next();
+            }
+        }
+    }
 
-            String url = (String) t.get(0);
-            String httpMime = (String) t.get(1);
-            String magicMime = (String) t.get(2);
-            String tikaMime = (String) t.get(3);
+    @Test
+    public void testDetectMimeTypeTika() throws Exception {
+        String arcTestDataFile;
+        arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
 
-            System.out.println(url + ", " + httpMime + ", " + magicMime + ", " + tikaMime);
+        String pigFile = Resources.getResource("scripts/TestDetectMimeTypeTika.pig").getPath();
+        String location = tempDir.getPath().replaceAll("\\\\", "/"); // make it work on windows ?
+
+        PigTest test = new PigTest(pigFile, new String[] { "testArcFolder=" + arcTestDataFile, "experimentfolder=" + location});
+
+        Iterator <Tuple> ts = test.getAlias("tikaMimeBinned");
+        while (ts.hasNext()) {
+            Tuple t = ts.next();
+
+            String mime = (String) t.get(0);
+            switch (mime) {
+                case                         "EMPTY": assertEquals(  7L, (long) (Long) t.get(1)); break;
+                case                     "image/gif": assertEquals( 29L, (long) (Long) t.get(1)); break;
+                case                     "text/html": assertEquals(132L, (long) (Long) t.get(1)); break;
+                case                    "text/plain": assertEquals( 86L, (long) (Long) t.get(1)); break;
+                case               "application/xml": assertEquals(  2L, (long) (Long) t.get(1)); break;
+                case           "application/rss+xml": assertEquals(  9L, (long) (Long) t.get(1)); break;
+                case         "applicaiton/xhtml+xml": assertEquals(  1L, (long) (Long) t.get(1)); break;
+                case      "application/octet-stream": assertEquals( 26L, (long) (Long) t.get(1)); break;
+                case "application/x-shockwave-flash": assertEquals(  8L, (long) (Long) t.get(1)); break;
+
+            }
+            System.out.println(t.get(0)+": " + t.get(1));
         }
     }
 
