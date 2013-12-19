@@ -9,7 +9,6 @@ import java.util.Iterator;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.pigunit.PigTest;
 import org.junit.After;
@@ -58,8 +57,8 @@ public class TestArcLoaderPig {
     Iterator<Tuple> parses = test.getAlias("c");
 
     Tuple tuple = parses.next();
-    assertEquals("20080430", (String) tuple.get(0));
-    assertEquals(300L, (long) (Long) tuple.get(1));
+    assertEquals("20080430", tuple.get(0));
+    assertEquals(300L, (long) tuple.get(1));
 
     // There should only be one record.
     assertFalse(parses.hasNext());
@@ -81,27 +80,19 @@ public class TestArcLoaderPig {
           Tuple tuple = parses.next();
           String lang = (String) tuple.get(0);
           switch (lang) {
-              case "en" : assertEquals(4L, (long) (Long) tuple.get(1)); break;
-              case "et" : assertEquals(1L, (long) (Long) tuple.get(1)); break;
-              case "fr" : assertEquals(1L, (long) (Long) tuple.get(1)); break;
-              case "hu" : assertEquals(33L, (long) (Long) tuple.get(1)); break;
-              case "is" : assertEquals(2L, (long) (Long) tuple.get(1)); break;
-              case "lt" : assertEquals(4L, (long) (Long) tuple.get(1)); break;
-              case "no" : assertEquals(1L, (long) (Long) tuple.get(1)); break;
-              case "sk" : assertEquals(25L, (long) (Long) tuple.get(1)); break;
+              case "en" : assertEquals( 4L, (long) tuple.get(1)); break;
+              case "et" : assertEquals( 1L, (long) tuple.get(1)); break;
+              case "fr" : assertEquals( 1L, (long) tuple.get(1)); break;
+              case "hu" : assertEquals(33L, (long) tuple.get(1)); break;
+              case "is" : assertEquals( 2L, (long) tuple.get(1)); break;
+              case "lt" : assertEquals( 4L, (long) tuple.get(1)); break;
+              case "no" : assertEquals( 1L, (long) tuple.get(1)); break;
+              case "sk" : assertEquals(25L, (long) tuple.get(1)); break;
           }
           System.out.println("language test: " + tuple.getAll());
       }
 
   }
-
-    /*
-    Create a literal array of strings
-     */
-    static  String[] array(String... ss)
-    {
-        return ss;
-    }
 
     /*
      * The two tests of MIME type detection is dependent on the version of the corresponding Tika and magiclib libraries
@@ -122,16 +113,16 @@ public class TestArcLoaderPig {
             Tuple t = ts.next();
             String mime = (String) t.get(0);
             switch (mime) {
-                case                      "text/css": assertEquals(  4L, (long) (Long) t.get(1)); break;
-                case                      "text/dns": assertEquals( 38L, (long) (Long) t.get(1)); break;
-                case                      "text/xml": assertEquals(  9L, (long) (Long) t.get(1)); break;
-                case                     "text/html": assertEquals(140L, (long) (Long) t.get(1)); break;
-                case                    "text/plain": assertEquals( 38L, (long) (Long) t.get(1)); break;
-                case                     "image/gif": assertEquals( 29L, (long) (Long) t.get(1)); break;
-                case                     "image/png": assertEquals(  8L, (long) (Long) t.get(1)); break;
-                case                    "image/jpeg": assertEquals( 18L, (long) (Long) t.get(1)); break;
-                case      "application/x-javascript": assertEquals(  8L, (long) (Long) t.get(1)); break;
-                case "application/x-shockwave-flash": assertEquals(  8L, (long) (Long) t.get(1)); break;
+                case                      "text/css": assertEquals(  4L, (long) t.get(1)); break;
+                case                      "text/dns": assertEquals( 38L, (long) t.get(1)); break;
+                case                      "text/xml": assertEquals(  9L, (long) t.get(1)); break;
+                case                     "text/html": assertEquals(140L, (long) t.get(1)); break;
+                case                    "text/plain": assertEquals( 38L, (long) t.get(1)); break;
+                case                     "image/gif": assertEquals( 29L, (long) t.get(1)); break;
+                case                     "image/png": assertEquals(  8L, (long) t.get(1)); break;
+                case                    "image/jpeg": assertEquals( 18L, (long) t.get(1)); break;
+                case      "application/x-javascript": assertEquals(  8L, (long) t.get(1)); break;
+                case "application/x-shockwave-flash": assertEquals(  8L, (long) t.get(1)); break;
 
             }
         }
@@ -153,15 +144,15 @@ public class TestArcLoaderPig {
 
             String mime = (String) t.get(0);
             switch (mime) {
-                case                         "EMPTY": assertEquals(  7L, (long) (Long) t.get(1)); break;
-                case                     "image/gif": assertEquals( 29L, (long) (Long) t.get(1)); break;
-                case                     "text/html": assertEquals(132L, (long) (Long) t.get(1)); break;
-                case                    "text/plain": assertEquals( 86L, (long) (Long) t.get(1)); break;
-                case               "application/xml": assertEquals(  2L, (long) (Long) t.get(1)); break;
-                case           "application/rss+xml": assertEquals(  9L, (long) (Long) t.get(1)); break;
-                case         "applicaiton/xhtml+xml": assertEquals(  1L, (long) (Long) t.get(1)); break;
-                case      "application/octet-stream": assertEquals( 26L, (long) (Long) t.get(1)); break;
-                case "application/x-shockwave-flash": assertEquals(  8L, (long) (Long) t.get(1)); break;
+                case                         "EMPTY": assertEquals(  7L, (long) t.get(1)); break;
+                case                     "image/gif": assertEquals( 29L, (long) t.get(1)); break;
+                case                     "text/html": assertEquals(132L, (long) t.get(1)); break;
+                case                    "text/plain": assertEquals( 86L, (long) t.get(1)); break;
+                case               "application/xml": assertEquals(  2L, (long) t.get(1)); break;
+                case           "application/rss+xml": assertEquals(  9L, (long) t.get(1)); break;
+                case         "applicaiton/xhtml+xml": assertEquals(  1L, (long) t.get(1)); break;
+                case      "application/octet-stream": assertEquals( 26L, (long) t.get(1)); break;
+                case "application/x-shockwave-flash": assertEquals(  8L, (long) t.get(1)); break;
 
             }
             System.out.println(t.get(0)+": " + t.get(1));
