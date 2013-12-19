@@ -110,18 +110,18 @@ public class TestArcLoaderPig {
 
         Iterator <Tuple> ts = test.getAlias("magicMimeBinned");
         while (ts.hasNext()) {
-            Tuple t = ts.next();
+            Tuple t = ts.next(); // t = (mime type, count)
             String mime = (String) t.get(0);
+            System.out.println(mime + ": " + t.get(1));
             switch (mime) {
-                case                      "text/css": assertEquals(  4L, (long) t.get(1)); break;
-                case                      "text/dns": assertEquals( 38L, (long) t.get(1)); break;
-                case                      "text/xml": assertEquals(  9L, (long) t.get(1)); break;
-                case                     "text/html": assertEquals(140L, (long) t.get(1)); break;
-                case                    "text/plain": assertEquals( 38L, (long) t.get(1)); break;
+                case                         "EMPTY": assertEquals(  7L, (long) t.get(1)); break;
+                case                     "text/html": assertEquals(132L, (long) t.get(1)); break;
+                case                    "text/plain": assertEquals( 86L, (long) t.get(1)); break;
                 case                     "image/gif": assertEquals( 29L, (long) t.get(1)); break;
-                case                     "image/png": assertEquals(  8L, (long) t.get(1)); break;
-                case                    "image/jpeg": assertEquals( 18L, (long) t.get(1)); break;
-                case      "application/x-javascript": assertEquals(  8L, (long) t.get(1)); break;
+                case               "application/xml": assertEquals(  2L, (long) t.get(1)); break;
+                case           "application/rss+xml": assertEquals(  2L, (long) t.get(1)); break;
+                case         "application/xhtml+xml": assertEquals(  1L, (long) t.get(1)); break;
+                case      "application/octet-stream": assertEquals( 26L, (long) t.get(1)); break;
                 case "application/x-shockwave-flash": assertEquals(  8L, (long) t.get(1)); break;
 
             }

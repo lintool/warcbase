@@ -18,18 +18,18 @@ b = foreach a {
     GENERATE url, mime, magicMimeSplit.$0 as magicMime;
 }
 
-httpMimes      = foreach b generate mime;
-httpMimeGroups = group httpMimes by mime;
-httpMimeBinned = foreach httpMimeGroups generate group, COUNT(httpMimes);
+-- httpMimes      = foreach b generate mime;
+-- httpMimeGroups = group httpMimes by mime;
+-- httpMimeBinned = foreach httpMimeGroups generate group, COUNT(httpMimes);
 
-magicMimes      = foreach b generate mime;
-magicMimeGroups = group magicMimes by mime;
+magicMimes      = foreach b generate magicMime;
+magicMimeGroups = group magicMimes by magicMime;
 magicMimeBinned = foreach magicMimeGroups generate group, COUNT(magicMimes);
 
 --dump httpMimeBinned;
 --dump tikaMimeBinned;
 --dump magicMimeBinned;
 
-store httpMimeBinned into '$experimentfolder/httpMimeBinned';
+-- store httpMimeBinned into '$experimentfolder/httpMimeBinned';
 store magicMimesBinned into '$experimentfolder/magicMimeBinned';
 
