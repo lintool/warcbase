@@ -8,8 +8,10 @@ define DetectMimeTypeMagic org.warcbase.pig.piggybank.DetectMimeTypeMagic();
 -- Load arc file properties: url, date, mime, content
 raw = load '$testArcFolder' using org.warcbase.pig.ArcLoader() as (url: chararray, date:chararray, mime:chararray, content:chararray);
 
--- Detect the mime type of the content using magic lib and Tika
-a = foreach raw generate url,mime, DetectMimeTypeMagic(content) as magicMime;
+-- Detect the mime type of the content using magic lib
+-- On CentOS the magic file is located at /usr/share/file/magic.mgc
+-- On MacOS X using Homebrew the magic file is located at /usr/local/Cellar/libmagic/5.15/share/misc/magic.mgc
+a = foreach raw generate url,mime, DetectMimeTypeMagic('/usr/local/Cellar/libmagic/5.15/share/misc/magic.mgc', content) as magicMime;
 
 
 -- magic lib includes "; <char set>" in which we are not interested
