@@ -15,7 +15,7 @@ public class DetectMimeTypeMagic extends EvalFunc<String> {
         String mimeType;
 
         if (input == null || input.size() == 0 || input.get(0) == null) {
-            return null;
+            return "N/A";
         }
         String magicFile = (String) input.get(0);
         String content = (String) input.get(1);

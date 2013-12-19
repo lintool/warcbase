@@ -113,17 +113,18 @@ public class TestArcLoaderPig {
             Tuple t = ts.next(); // t = (mime type, count)
             String mime = (String) t.get(0);
             System.out.println(mime + ": " + t.get(1));
-            switch (mime) {
-                case                         "EMPTY": assertEquals(  7L, (long) t.get(1)); break;
-                case                     "text/html": assertEquals(132L, (long) t.get(1)); break;
-                case                    "text/plain": assertEquals( 86L, (long) t.get(1)); break;
-                case                     "image/gif": assertEquals( 29L, (long) t.get(1)); break;
-                case               "application/xml": assertEquals(  2L, (long) t.get(1)); break;
-                case           "application/rss+xml": assertEquals(  2L, (long) t.get(1)); break;
-                case         "application/xhtml+xml": assertEquals(  1L, (long) t.get(1)); break;
-                case      "application/octet-stream": assertEquals( 26L, (long) t.get(1)); break;
-                case "application/x-shockwave-flash": assertEquals(  8L, (long) t.get(1)); break;
-
+            if (mime != null) {
+                switch (mime) {
+                    case                         "EMPTY": assertEquals(  7L, (long) t.get(1)); break;
+                    case                     "text/html": assertEquals(139L, (long) t.get(1)); break;
+                    case                    "text/plain": assertEquals( 80L, (long) t.get(1)); break;
+                    case                     "image/gif": assertEquals( 29L, (long) t.get(1)); break;
+                    case               "application/xml": assertEquals( 11L, (long) t.get(1)); break;
+                    case           "application/rss+xml": assertEquals(  2L, (long) t.get(1)); break;
+                    case         "application/xhtml+xml": assertEquals(  1L, (long) t.get(1)); break;
+                    case      "application/octet-stream": assertEquals( 26L, (long) t.get(1)); break;
+                    case "application/x-shockwave-flash": assertEquals(  8L, (long) t.get(1)); break;
+                }
             }
         }
     }

@@ -17,7 +17,7 @@ public class DetectMimeTypeTika extends EvalFunc<String> {
         String mimeType;
 
         if (input == null || input.size() == 0 || input.get(0) == null) {
-            return null;
+            return "N/A";
         }
         String content = (String) input.get(0);
 
