@@ -11,14 +11,9 @@ raw = load '$testArcFolder' using org.warcbase.pig.ArcLoader() as (url: chararra
 -- Detect the mime type of the content using and Tika
 a = foreach raw generate url,mime, DetectMimeTypeTika(content) as tikaMime;
 
-
 tikaMimes      = foreach a generate tikaMime;
 tikaMimeGroups = group tikaMimes by tikaMime;
 tikaMimeBinned = foreach tikaMimeGroups generate group, COUNT(tikaMimes);
 
---dump httpMimeBinned;
---dump tikaMimeBinned;
---dump magicMimeBinned;
-
-store magicMimesBinned into '$experimentfolder/magicMimeBinned';
+store tikaMimeBinned into '$experimentfolder/tikaMimeBinned';
 
