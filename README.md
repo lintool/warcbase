@@ -34,7 +34,33 @@ $ sh target/appassembler/bin/WarcBrowser -port 9191 -server http://myhost:9191/
 
 Navigate to `http://myhost:9191/` to browse the archive.
 
-## Development notes
+Implemented Pig UDFs
+---------------
 
-2013-12-11
-An ARC files with 2224 records was identified in 15 minutes on a MacBook Air.
+For examples of how to use these UDF see in `src/test/resources/scripts`
+
+### DetectLanguage
+
+This UDF uses Apache Tika to detect the language of the given text.
+
+### DetectMimeTypeTika
+
+This UDF uses Apache Tika to detect the MIME type of the provided data stream.
+
+### DetectMimeTypeMagic
+
+This UDF uses the magic-lib from the UNIX file command to detect the MIME type of the provided data stream. The function relies on the presence of the libmagic library and the dso-called magic file. As these locations are platform dependent, the path to the magic file shall be provided when calling the function and the library shall be in the LIBPATH (Not sure whether this last statement is correct).
+
+### ExtractLinks
+
+UDF for extracting links from a webpage given the HTML content (using Jsoup). Returns a bag of tuples, where each tuple consists of the URL and the anchor text.
+
+### ExtractRawText
+
+UDF for extracting raw text content from an HTML page (using Jsoup).
+
+### ArcLoader and WarcLoader
+
+UDF providing loading ARC and WARC files in Pig Latin
+
+
