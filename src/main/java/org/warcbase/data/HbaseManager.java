@@ -21,7 +21,7 @@ public class HbaseManager {
   private static final String[] FAMILIES = { "c"};
   private static final Logger LOG = Logger.getLogger(HbaseManager.class);
   private static final int MAX_KEY_VALUE_SIZE = IngestFiles.MAX_CONTENT_SIZE + 200;
-  private static final int MAX_VERSIONS = 20;
+  public static final int MAX_VERSIONS = 20;
 
   private final HTable table;
   private final HBaseAdmin admin;

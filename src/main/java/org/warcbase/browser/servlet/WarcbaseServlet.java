@@ -2,7 +2,9 @@ package org.warcbase.browser.servlet;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.Date;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -19,6 +21,7 @@ import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
+import org.warcbase.data.HbaseManager;
 import org.warcbase.data.Util;
 
 public class WarcbaseServlet extends HttpServlet {
@@ -82,31 +85,30 @@ public class WarcbaseServlet extends HttpServlet {
       return;
     }
 
+    long dLong = Long.parseLong(d);
     if (d != null && d != "") {
       for (int i = 0; i < rs.raw().length; i++) {
-        if (!(new String(rs.raw()[i].getFamily(), "UTF8").equals("content")))
-          continue;
-        String date = new String(rs.raw()[i].getQualifier());
-        if (date.equals(d)) {
-          warcbaseResponse.writeContent(resp, tableName, query, date, d);
+        long timestamp = rs.raw()[i].getTimestamp();
+        String date = new Date(timestamp).toString();
+        if (timestamp == dLong) {
+          warcbaseResponse.writeContent(resp, tableName, query, timestamp, dLong);
           table.close();
           return;
         }
       }
 
-      List<String> dates = new ArrayList<String>(10);
+      long[] dates = new long[HbaseManager.MAX_VERSIONS];
       for (int i = 0; i < rs.raw().length; i++)
-        if (new String(rs.raw()[i].getFamily(), "UTF8").equals("content"))
-          dates.add(new String(rs.raw()[i].getQualifier()));
-      Collections.sort(dates);
-      for (int i = 1; i < dates.size(); i++)
-        if (dates.get(i).compareTo(d) > 0) {// d < i
-          warcbaseResponse.writeContent(resp, tableName, query, dates.get(i), d);
+        dates[i] = rs.raw()[i].getTimestamp();
+      Arrays.sort(dates, 0, rs.raw().length);
+      for (int i = 1; i < rs.raw().length; i++)
+        if (dates[i] > dLong) {// d < i
+          warcbaseResponse.writeContent(resp, tableName, query, dates[i], dLong);
           table.close();
           return;
         }
-      int i = dates.size();
-      warcbaseResponse.writeContent(resp, tableName, query, dates.get(i - 1), d);
+      int i = rs.raw().length;
+      warcbaseResponse.writeContent(resp, tableName, query, dates[i - 1], dLong);
       table.close();
       return;
     }
