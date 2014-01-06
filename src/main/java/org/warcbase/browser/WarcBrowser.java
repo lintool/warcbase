@@ -10,9 +10,9 @@ import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.springframework.util.Log4jConfigurer;
 import org.warcbase.browser.servlet.WarcbaseServlet;
 import org.warcbase.data.TextDocument2;
 
@@ -29,8 +29,7 @@ public class WarcBrowser {
     server.setHandler(context);
     context.addServlet(new ServletHolder(new WarcbaseServlet()), "/*");
 
-    ServletHolder holder = context.addServlet(org.eclipse.jetty.servlet.DefaultServlet.class,
-        "/warcbase/*");
+    ServletHolder holder = context.addServlet(DefaultServlet.class, "/warcbase/*");
     holder.setInitParameter("resourceBase", "src/main/webapp/");
     holder.setInitParameter("pathInfoOnly", "true");
   }
@@ -85,9 +84,6 @@ public class WarcBrowser {
 
     int port = Integer.parseInt(cmdline.getOptionValue(PORT_OPTION));
     String server = cmdline.getOptionValue(SERVER_OPTION);
-
-    Log4jConfigurer.shutdownLogging();
-    org.apache.log4j.Level.toLevel(0);
 
     LOG.info("Starting server on port " + port + " with server prefix " + server);
     WarcBrowser browser = new WarcBrowser(port);
