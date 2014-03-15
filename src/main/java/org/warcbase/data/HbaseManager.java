@@ -1,6 +1,10 @@
 package org.warcbase.data;
 
 import java.lang.reflect.Field;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -14,9 +18,10 @@ import org.apache.log4j.Logger;
 import org.warcbase.ingest.IngestFiles;
 
 public class HbaseManager {
-  private static final String[] FAMILIES = { "content", "type" };
+  private static final String[] FAMILIES = { "c"};
   private static final Logger LOG = Logger.getLogger(HbaseManager.class);
   private static final int MAX_KEY_VALUE_SIZE = IngestFiles.MAX_CONTENT_SIZE + 200;
+  public static final int MAX_VERSIONS = 20;
 
   private final HTable table;
   private final HBaseAdmin admin;
@@ -38,7 +43,10 @@ public class HbaseManager {
 
       HTableDescriptor tableDesc = new HTableDescriptor(name);
       for (int i = 0; i < FAMILIES.length; i++) {
-        tableDesc.addFamily(new HColumnDescriptor(FAMILIES[i]));
+        //tableDesc.addFamily(new HColumnDescriptor(FAMILIES[i]));
+        HColumnDescriptor hColumnDesc = new HColumnDescriptor(FAMILIES[i]);
+        hColumnDesc.setMaxVersions(MAX_VERSIONS);
+        tableDesc.addFamily(hColumnDesc);
       }
       admin.createTable(tableDesc);
       LOG.info(String.format("Successfully created table '%s'", name));
@@ -57,9 +65,12 @@ public class HbaseManager {
 
   public boolean addRecord(String key, String date, byte[] data, String type) {
     try {
+      SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddhhmmss");
+      java.util.Date parsedDate = dateFormat.parse(date);
+      Timestamp timestamp = new java.sql.Timestamp(parsedDate.getTime());
       Put put = new Put(Bytes.toBytes(key));
-      put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(date), data);
-      put.add(Bytes.toBytes(FAMILIES[1]), Bytes.toBytes(date), Bytes.toBytes(type));
+      put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(type), timestamp.getTime(), data);
+      //put.add(Bytes.toBytes(FAMILIES[1]), Bytes.toBytes(date), Bytes.toBytes(type));
       table.put(put);
       return true;
     } catch (Exception e) {
@@ -69,5 +80,12 @@ public class HbaseManager {
       e.printStackTrace();
       return false;
     }
+  }
+  
+  public static void main(String[] args) throws ParseException {
+    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddhhmmss");
+    java.util.Date parsedDate = dateFormat.parse("20040124034300");
+    Timestamp timestamp = new java.sql.Timestamp(parsedDate.getTime());
+    System.out.println(timestamp.getTime());
   }
 }

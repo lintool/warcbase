@@ -2,7 +2,9 @@ package org.warcbase.browser.servlet;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.Date;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
 import javax.servlet.http.HttpServletResponse;
@@ -17,21 +19,13 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.warcbase.analysis.CountRowTypes;
+import org.warcbase.data.HbaseManager;
 import org.warcbase.data.TextDocument2;
 import org.warcbase.data.Util;
-
-import tl.lin.data.SortableEntries.Order;
-import tl.lin.data.fd.Object2IntFrequencyDistribution;
-import tl.lin.data.fd.Object2IntFrequencyDistributionEntry;
-import tl.lin.data.pair.PairOfObjectInt;
 
 public class WarcbaseResponse {
   private final Configuration hbaseConfig;
@@ -101,12 +95,13 @@ public class WarcbaseResponse {
       out.println("<br/><a href='" + TextDocument2.SERVER_PREFIX + tableName + "'>" + "back to "
           + tableName + "</a>");
     } else {
-      for (int i = 0; i < rs.raw().length; i++)
-        if (new String(rs.raw()[i].getFamily(), "UTF8").equals("content")) {
-          String date = new String(rs.raw()[i].getQualifier());
-          out.println("<br/> <a href='" + TextDocument2.SERVER_PREFIX + tableName + "/" + date
+      for (int i = 0; i < rs.raw().length; i++){
+        //if (new String(rs.raw()[i].getFamily(), "UTF8").equals("content")) {
+        String date = new Date(rs.raw()[i].getTimestamp()).toString();
+         out.println("<br/> <a href='" + TextDocument2.SERVER_PREFIX + tableName + "/" + rs.raw()[i].getTimestamp()
               + "/" + query + "'>" + date + "</a>");
-        }
+        //}
+      }
     }
     out.println("</body>");
     out.println("</html>");
@@ -114,32 +109,33 @@ public class WarcbaseResponse {
   }
 
   private void writeResponse(HttpServletResponse resp, Result rs, byte[] content, String query,
-      String d, String type, int num, String tableName) throws IOException {
+      long d, String type, int num, String tableName) throws IOException {
     if (type.startsWith("text/plain") || !type.startsWith("text")) {
       resp.setHeader("Content-Type", type);
       resp.setContentLength(content.length);
       resp.getOutputStream().write(content);
     } else {
-      ArrayList<String> dates = new ArrayList<String>(10);
+      long[] dates = new long[HbaseManager.MAX_VERSIONS];
       for (int i = 0; i < rs.raw().length; i += 2)
-        dates.add(new String(rs.raw()[i].getQualifier()));
-      Collections.sort(dates);
-      String prevDate = null, nextDate = null;
-      for (int i = 1; i < dates.size(); i++) {
-        if (dates.get(i).compareTo(d) == 0) {
-          prevDate = dates.get(i - 1);
-          if (i + 1 < dates.size())
-            nextDate = dates.get(i + 1);
+        dates[i] = rs.raw()[i].getTimestamp();
+      //Collections.sort(dates);
+      Arrays.sort(dates, 0, rs.raw().length);
+      long prevDate = 0, nextDate = 0;
+      for (int i = 1; i < rs.raw().length; i++) {
+        if (dates[i]  == d) {
+          prevDate = dates[i - 1];
+          if (i + 1 < dates.length)
+            nextDate = dates[i + 1];
           else
             nextDate = d;
           break;
         }
-        if (dates.get(i).compareTo(d) > 0) {// d < i
+        if (dates[i] > d) {// d < i
           if (i > 2)
-            prevDate = dates.get(i - 2);
+            prevDate = dates[i - 2];
           else
-            prevDate = dates.get(i - 1);
-          nextDate = dates.get(i);
+            prevDate = dates[i - 1];
+          nextDate = dates[i];
           break;
         }
       }
@@ -156,7 +152,7 @@ public class WarcbaseResponse {
         head.prepend("<base id='warcbase-base-added' href='" + query + "'>");
       }
       bodyContent = doc.html();
-      bodyContent = t2.fixURLs(bodyContent, query, d, tableName);
+      bodyContent = t2.fixURLs(bodyContent, query, String.valueOf(d), tableName);
       doc = Jsoup.parse(bodyContent);
       base = doc.select("base").first();
       if (base != null) {
@@ -170,7 +166,7 @@ public class WarcbaseResponse {
           + TextDocument2.SERVER_PREFIX
           + "warcbase/"
           + "images/wm_tb_bk_trns.png);text-align:center;-moz-box-shadow:1px 1px 3px #333;-webkit-box-shadow:1px 1px 3px #333;box-shadow:1px 1px 3px #333;font-size:11px!important;font-family:'Lucida Grande','Arial',sans-serif!important;\">    <table style=\"border-collapse:collapse;margin:0;padding:0;width:100%;\"><tbody><tr>    <td style=\"padding:10px;vertical-align:top;min-width:110px;\">    <a href=\""
-          + TextDocument2.SERVER_PREFIX 
+          + TextDocument2.SERVER_PREFIX
           + "\" title=\"Warcbase home page\" style=\"background-color:transparent;border:none;\">Warcbase</a>    </td>            <td style=\"padding:0!important;text-align:center;vertical-align:top;width:100%;\">         <table style=\"border-collapse:collapse;margin:0 auto;padding:0;width:570px;\"><tbody><tr>        <td style=\"padding:3px 0;\" colspan=\"2\">        <form target=\"_top\" method=\"get\" action=\""
           + TextDocument2.SERVER_PREFIX
           + tableName
@@ -205,9 +201,9 @@ public class WarcbaseResponse {
           + num
           + " captures"
           + "</strong>            <div style=\"margin:0!important;padding:0!important;color:#666;font-size:9px;padding-top:2px!important;white-space:nowrap;\" title=\"Timespan for captures of this URL\">"
-          + dates.get(0).substring(0, 10)
+          + new Date(dates[0]).toString()
           + "  -  "
-          + dates.get(dates.size() - 1).substring(0, 10)
+          + new Date(dates[rs.raw().length - 1]).toString()
           + "</div>        </td>                </tr></tbody></table>    </td>    <td style=\"text-align:right;padding:5px;width:65px;font-size:11px!important;\">        <a href=\"javascript:;\" onclick=\"document.getElementById('wm-ipp').style.display='none';\" style=\"display:block;padding-right:18px;background:url("
           + TextDocument2.SERVER_PREFIX
           + "warcbase/"
@@ -218,8 +214,8 @@ public class WarcbaseResponse {
     }
   }
 
-  public void writeContent(HttpServletResponse resp, String tableName, String query, String d,
-      String realDate) throws IOException {
+  public void writeContent(HttpServletResponse resp, String tableName, String query, long d,
+      long realDate) throws IOException {
     byte[] data = null;
     String type = null;
     String q = Util.reverseHostname(query);
@@ -229,44 +225,17 @@ public class WarcbaseResponse {
     rs = table.get(get);
 
     for (int i = 0; i < rs.raw().length; i++) {
-      if ((new String(rs.raw()[i].getFamily(), "UTF8").equals("content"))) {
-        String date = new String(rs.raw()[i].getQualifier());
-        if (date.equals(d)) {
-          data = rs.raw()[i].getValue();
-          break;
-        }
+      long timestamp = rs.raw()[i].getTimestamp();
+      String date = new Date(timestamp).toString();
+      if (timestamp == d) {
+        data = rs.raw()[i].getValue();
+        type = Bytes.toString(rs.raw()[i].getQualifier());
+        break;
       }
     }
 
-    for (int i = 0; i < rs.raw().length; i++) {
-      if ((new String(rs.raw()[i].getFamily(), "UTF8").equals("type"))) {
-        String date = new String(rs.raw()[i].getQualifier());
-        if (date.equals(d)) {
-          type = new String(rs.raw()[i].getValue(), "UTF8");
-          break;
-        }
-      }
-    }
-    writeResponse(resp, rs, data, query, realDate, type, rs.raw().length / 2, tableName);
+    writeResponse(resp, rs, data, query, realDate, type, rs.raw().length, tableName);
     table.close();
-  }
-
-  public void writeAllUris(HttpServletResponse resp, String tableName) throws IOException {
-    HTableInterface table = pool.getTable(tableName);
-    Scan scan = new Scan();
-    scan.setFilter(new FirstKeyOnlyFilter());
-    ResultScanner scanner = null;
-    scanner = table.getScanner(scan);
-    Object2IntFrequencyDistribution<String> domainCounter = new Object2IntFrequencyDistributionEntry<String>();
-    for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
-      byte[] key = rr.getRow();
-      String url = new String(key, "UTF8");
-      String domain = CountRowTypes.getDomain(url);
-      domainCounter.increment(domain);
-    }
-    for (PairOfObjectInt<String> entry : domainCounter.getEntries(Order.ByRightElementDescending)) {
-      System.out.println(entry.getLeftElement());
-    }
   }
 
 }

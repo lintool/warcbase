@@ -1,6 +1,7 @@
 package org.warcbase.analysis;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -9,14 +10,15 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
+import org.warcbase.browser.WarcBrowser;
 import org.warcbase.data.Util;
 
 import tl.lin.data.SortableEntries.Order;
@@ -24,22 +26,21 @@ import tl.lin.data.fd.Object2IntFrequencyDistribution;
 import tl.lin.data.fd.Object2IntFrequencyDistributionEntry;
 import tl.lin.data.pair.PairOfObjectInt;
 
-public class CountRowTypes {
-  private static final Logger LOG = Logger.getLogger(CountRowTypes.class);
-
-
-
-  
-
+public class PrintAllUris {
+  private static final Logger LOG = Logger.getLogger(PrintAllUris.class);
   private static final String NAME_OPTION = "name";
+  private static final String PORT_OPTION = "port";
+  private static final String SERVER_OPTION = "server";
 
   @SuppressWarnings("static-access")
   public static void main(String[] args) throws IOException {
     Options options = new Options();
     options.addOption(OptionBuilder.withArgName("name").hasArg()
         .withDescription("name of the archive").create(NAME_OPTION));
-
-    Configuration hbaseConfig = HBaseConfiguration.create();
+    options.addOption(OptionBuilder.withArgName("num").hasArg().withDescription("port to serve on")
+        .create(PORT_OPTION));
+    options.addOption(OptionBuilder.withArgName("url").hasArg().withDescription("server prefix")
+        .create(SERVER_OPTION));
 
     CommandLine cmdline = null;
     CommandLineParser parser = new GnuParser();
@@ -57,47 +58,42 @@ public class CountRowTypes {
     }
     String name = cmdline.getOptionValue(NAME_OPTION);
 
-    int count = 0;
-    HTable table = new HTable(hbaseConfig, name);
+    if (!cmdline.hasOption(PORT_OPTION) || !cmdline.hasOption(SERVER_OPTION)) {
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.printHelp(WarcBrowser.class.getClass().getName(), options);
+      ToolRunner.printGenericCommandUsage(System.out);
+      System.exit(-1);
+    }
+    int port = Integer.parseInt(cmdline.getOptionValue(PORT_OPTION));
+    String server = cmdline.getOptionValue(SERVER_OPTION);
 
-    LOG.info("Scanning full table...");
+    HTablePool pool = new HTablePool();
+
+    HTableInterface table = pool.getTable(name);
     Scan scan = new Scan();
     scan.setFilter(new FirstKeyOnlyFilter());
     ResultScanner scanner = null;
     scanner = table.getScanner(scan);
-
-    Object2IntFrequencyDistribution<String> fileTypeCounter = new Object2IntFrequencyDistributionEntry<String>();
     Object2IntFrequencyDistribution<String> domainCounter = new Object2IntFrequencyDistributionEntry<String>();
-
-    int cnt = 0;
+    String url = null;
     for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
       byte[] key = rr.getRow();
-      String url = new String(key, "UTF8");
-      count++;
-      domainCounter.increment(Util.getDomain(url));
-
-      String fileType = Util.getFileType(url);
-      if (fileType.equals("")) {
-        fileType = "unknown";
-      }
-      fileTypeCounter.increment(fileType);
-
-      cnt++;
-      if (cnt % 10000 == 0) {
-        LOG.info(cnt + " rows scanned");
-      }
+      url = new String(key, "UTF8");
+      url = Util.getDomain(url);
+      url = Util.reverseBacHostnamek(url);
+      domainCounter.increment(url);
     }
-    LOG.info("Done!");
-    table.close();
 
-    System.out.println("Number of rows in the table overall: " + count);
-    System.out.println("\nBreakdown by file type:");
-    for (PairOfObjectInt<String> entry : fileTypeCounter.getEntries(Order.ByRightElementDescending)) {
-      System.out.println(entry.getLeftElement() + " " + entry.getRightElement());
-    }
-    System.out.println("\nBreakdown by domain:");
+    PrintWriter writer = new PrintWriter("urls.html", "UTF-8");
+    writer.println("<html>");
+    writer.println("<body>");
     for (PairOfObjectInt<String> entry : domainCounter.getEntries(Order.ByRightElementDescending)) {
-      System.out.println(entry.getLeftElement() + " " + entry.getRightElement());
+      writer.println("<a href=\"" + server + name + "?query=" + entry.getLeftElement() + "/"
+          + "\">" + entry.getLeftElement() + "</a><br/>");
     }
+    writer.println("</body>");
+    writer.println("</html>");
+    writer.close();
+    pool.close();
   }
 }
