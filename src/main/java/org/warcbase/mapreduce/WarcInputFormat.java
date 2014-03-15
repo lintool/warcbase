@@ -41,7 +41,7 @@ public class WarcInputFormat extends FileInputFormat<LongWritable, WarcRecord> {
   protected boolean isSplitable(JobContext context, Path filename) {
     return false;
   }
-  
+
   public class WarcRecordReader extends RecordReader<LongWritable, WarcRecord> {
     private CompressionCodecFactory compressionCodecs = null;
     private WarcReader reader;

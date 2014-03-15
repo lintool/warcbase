@@ -34,7 +34,7 @@ public class ArcInputFormat extends FileInputFormat<LongWritable, ArcRecordBase>
   protected boolean isSplitable(JobContext context, Path filename) {
     return false;
   }
-  
+
   public class ArcRecordReader extends RecordReader<LongWritable, ArcRecordBase> {
     private CompressionCodecFactory compressionCodecs = null;
     private ArcReader reader;

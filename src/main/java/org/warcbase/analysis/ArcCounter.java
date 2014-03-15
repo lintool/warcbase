@@ -55,7 +55,7 @@ public class ArcCounter extends Configured implements Tool {
 
   public static final String INPUT_OPTION = "input";
   public static final String OUTPUT_OPTION = "output";
-  
+
   /**
    * Runs this tool.
    */
