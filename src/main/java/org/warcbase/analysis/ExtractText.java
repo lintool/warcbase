@@ -49,7 +49,7 @@ public class ExtractText {
         .withDescription("name of the archive").create(NAME_OPTION));
     options.addOption(OptionBuilder.withArgName("dir").hasArg()
         .withDescription("WARC files location").create(DIR_OPTION));
-    
+
     CommandLine cmdline = null;
     CommandLineParser parser = new GnuParser();
     try {
@@ -75,7 +75,7 @@ public class ExtractText {
       originalIds.add(line);
     }
     reader.close();
-    
+
     for (String s : originalIds) {
       if (!ids.contains(s) && !s.equals("go")) {
         ids.add(s);
@@ -92,7 +92,7 @@ public class ExtractText {
     for(int i=0;i<ids.size();i++) {
       idsUrl[i] = new Object2IntFrequencyDistributionEntry<String>();
     }
-    
+
     HTablePool pool = new HTablePool();
     HTableInterface table = pool.getTable(name);
     Scan scan = new Scan();
@@ -104,7 +104,7 @@ public class ExtractText {
     String content = "";
     for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
       byte[] key = rr.getRow();
-      
+
       String id = "";
       int idInd = 0;
       String keyStr = Bytes.toString(key);
@@ -120,7 +120,7 @@ public class ExtractText {
           idInd = i;
         }
       }
-      
+
       if(id.equals("") || ambiguous){
         continue;
       }
@@ -148,7 +148,7 @@ public class ExtractText {
         folder.mkdirs();
         //folder.createNewFile();
       }*/
-      
+
       Get get = new Get(key);
       Result rs = table.get(get);
         
@@ -156,7 +156,6 @@ public class ExtractText {
         if((new String(rs.raw()[i].getFamily(), "UTF8").equals("type"))){
           type = Bytes.toString(rs.raw()[i].getValue());
         }
-      
       }
       if (!(type.contains("html"))){
         continue;
@@ -179,9 +178,9 @@ public class ExtractText {
         out.close();
       }
     }
-    
+
     pool.close();
-    
+
     for(int i=0;i<ids.size();i++){
       System.out.print(ids.get(i));
       for (PairOfObjectInt<String> entry : idsUrl[i].getEntries(Order.ByRightElementDescending)) {

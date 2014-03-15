@@ -81,7 +81,7 @@ public class HbaseManager {
       return false;
     }
   }
-  
+
   public static void main(String[] args) throws ParseException {
     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddhhmmss");
     java.util.Date parsedDate = dateFormat.parse("20040124034300");

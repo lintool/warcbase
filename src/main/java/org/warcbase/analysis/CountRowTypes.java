@@ -27,10 +27,6 @@ import tl.lin.data.pair.PairOfObjectInt;
 public class CountRowTypes {
   private static final Logger LOG = Logger.getLogger(CountRowTypes.class);
 
-
-
-  
-
   private static final String NAME_OPTION = "name";
 
   @SuppressWarnings("static-access")

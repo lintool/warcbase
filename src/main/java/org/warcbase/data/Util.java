@@ -45,7 +45,7 @@ public class Util {
       newhost.append(":" + port);
     return newhost.toString();
   }
-  
+
   public static String reverseBacUri(String reverse) {
     String domain = Util.getDomain(reverse);
     domain = Util.reverseBacHostnamek(domain);
