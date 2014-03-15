@@ -52,8 +52,8 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jettyVersion>8.1.12.v20130726</jettyVersion>
     <hadoop.version2>2.0.0-cdh4.4.0</hadoop.version2>
-    <hbase.version>0.94.6-cdh4.3.0</hbase.version>
-    <zookeeper.version>3.4.5-cdh4.3.0</zookeeper.version>
+    <hbase.version>0.94.6-cdh4.4.0</hbase.version>
+    <zookeeper.version>3.4.5-cdh4.4.0</zookeeper.version>
     <jwat.version>1.0.0</jwat.version>
   </properties>
 
