@@ -84,7 +84,7 @@ public class IngestFiles {
         skipped++;
       } else {
         if (cnt % 10000 == 0 && cnt > 0) {
-          LOG.info("Ingested " + cnt + "records to Hbase.");
+          LOG.info("Ingested " + cnt + " records into Hbase.");
         }
         if (hbaseManager.addRecord(key, date, content, type)) {
           cnt++;
@@ -171,7 +171,7 @@ public class IngestFiles {
           continue;
         }
         if (cnt % 10000 == 0 && cnt > 0) {
-          LOG.info("Ingested " + cnt + "records to Hbase.");
+          LOG.info("Ingested " + cnt + " records into Hbase.");
         }
         if (hbaseManager.addRecord(key, date, content, type)) {
           cnt++;
