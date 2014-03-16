@@ -194,6 +194,11 @@ public class IngestFiles {
 
     for (; i < inputFolder.listFiles().length; i++) {
       File inputFile = inputFolder.listFiles()[i];
+      if (!(inputFile.getName().endsWith(".warc.gz") || inputFile.getName().endsWith(".arc.gz")
+          || inputFile.getName().endsWith(".warc") || inputFile.getName().endsWith(".arc"))) {
+        continue;
+      }
+
       LOG.info("processing file " + i + ": " + inputFile.getName());
 
       if (inputFile.toString().toLowerCase().endsWith(".gz")) {
