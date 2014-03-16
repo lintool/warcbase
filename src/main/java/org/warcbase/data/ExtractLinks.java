@@ -51,7 +51,7 @@ import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
 import org.jwat.common.HttpHeader;
 import org.warcbase.mapreduce.ArcInputFormat;
-import cern.colt.Arrays;
+import java.util.Arrays;
 
 /**
  * Extract Links demo.

@@ -200,15 +200,20 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <version>1.8</version>
+    </dependency>
+    <dependency>
       <groupId>org.jsoup</groupId>
       <artifactId>jsoup</artifactId>
       <version>1.7.3</version>
     </dependency>
-    <dependency>
+    <!--dependency>
       <groupId>colt</groupId>
       <artifactId>colt</artifactId>
       <version>1.2.0</version>
-    </dependency>
+    </dependency-->
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-core</artifactId>
@@ -224,6 +229,8 @@
       <artifactId>lintools-datatypes</artifactId>
       <version>0.9.2</version>
     </dependency>
+
+    <!-- Begin: Hadoop-related dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase</artifactId>
@@ -330,7 +337,15 @@
       <artifactId>zookeeper</artifactId>
       <version>${zookeeper.version}</version>
     </dependency>
+    <!-- End: Hadoop-related dependencies -->
+
     <dependency>
+      <groupId>org.netpreserve.openwayback</groupId>
+      <artifactId>openwayback-core</artifactId>
+      <version>2.0.0.BETA.1</version>
+    </dependency>
+
+    <!--dependency>
       <groupId>org.archive.heritrix</groupId>
       <artifactId>heritrix-commons</artifactId>
       <version>3.1.2-SNAPSHOT</version>
@@ -345,7 +360,8 @@
           <artifactId>hadoop-core</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
+    </dependency-->
+
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
@@ -362,35 +378,34 @@
       <artifactId>slf4j-log4j12</artifactId>
       <version>1.6.4</version>                        
     </dependency>
-     <dependency>
-    <groupId>org.jwat</groupId>
-    <artifactId>jwat-common</artifactId>
-    <version>${jwat.version}</version>
-  </dependency>
-  <dependency>
-    <groupId>org.jwat</groupId>
-    <artifactId>jwat-gzip</artifactId>
-    <version>${jwat.version}</version>
-  </dependency>
-  <dependency>
-    <groupId>org.jwat</groupId>
-    <artifactId>jwat-arc</artifactId>
-    <version>${jwat.version}</version>
-  </dependency>
-  <dependency>
-    <groupId>org.jwat</groupId>
-    <artifactId>jwat-warc</artifactId>
-    <version>${jwat.version}</version>
-  </dependency>
-  <dependency>
-    <groupId>org.jwat</groupId>
-    <artifactId>jwat-tools</artifactId>
-    <version>0.5.6-SNAPSHOT</version>
-  </dependency>
-  <dependency>
-	<groupId>commons-codec</groupId>
-	<artifactId>commons-codec</artifactId>
-	<version>1.8</version>
-</dependency>
+
+    <!-- Begin: jwat dependencies -->
+    <dependency>
+      <groupId>org.jwat</groupId>
+      <artifactId>jwat-common</artifactId>
+      <version>${jwat.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jwat</groupId>
+      <artifactId>jwat-gzip</artifactId>
+      <version>${jwat.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jwat</groupId>
+      <artifactId>jwat-arc</artifactId>
+      <version>${jwat.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jwat</groupId>
+      <artifactId>jwat-warc</artifactId>
+      <version>${jwat.version}</version>
+    </dependency>
+    <!--dependency>
+      <groupId>org.jwat</groupId>
+      <artifactId>jwat-tools</artifactId>
+      <version>0.5.6-SNAPSHOT</version>
+    </dependency-->
+    <!-- End: jwat dependencies -->
+
   </dependencies>
 </project>
