@@ -50,73 +50,80 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
 import org.jwat.common.HttpHeader;
-import org.warcbase.mapreduce.ArcInputFormat;
+
 import cern.colt.Arrays;
+import org.warcbase.mapreduce.ArcInputFormat;
 
 /**
  * Extract Links demo.
  * 
- * @author Jinfeng Rao
- * modified code based on CountTrecDocuments.java by Jimmy Lin
+ * @author Jinfeng Rao modified code based on CountTrecDocuments.java by Jimmy
+ *         Lin
  */
-public class ExtractLinks extends Configured implements Tool{
+public class ExtractLinks extends Configured implements Tool {
 	private static final Logger LOG = Logger.getLogger(ExtractLinks.class);
-	private static enum Records { TOTAL, LINK_COUNT };
-	
-	public static class ExtractLinksMapper extends Mapper<LongWritable, ArcRecordBase, IntWritable, List>{
+
+	private static enum Records {
+		TOTAL, LINK_COUNT
+	};
+
+	public static class ExtractLinksMapper extends
+			Mapper<LongWritable, ArcRecordBase, IntWritable, List> {
 		private IntWritable urlNode = new IntWritable();
 		private List linkNodes;
 		private static UriMapping fst;
-		
+
 		@Override
-		public void setup(Context context){
-			try{
+		public void setup(Context context) {
+			try {
 				Configuration conf = context.getConfiguration();
 				Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
 				
+				// load FST UriMapping from file
 				fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
 				fst.loadMapping(localFiles[0].toString());// simply assume only one file in distributed cache
-			}catch(Exception e){
+			} catch (Exception e) {
 				e.printStackTrace();
 				throw new RuntimeException("Error Initializing UriMapping");
 			}
 		}
+
 		@Override
 		public void map(LongWritable key, ArcRecordBase record, Context context)
 				throws IOException, InterruptedException {
-			
+
 			context.getCounter(Records.TOTAL).increment(1);
 			String url = record.getUrlStr();
 			String type = record.getContentTypeStr();
 			InputStream content = record.getPayloadContent();
-			
-			if(!type.equals("text/html"))
+
+			if (!type.equals("text/html"))
 				return;
-			Document doc = Jsoup.parse(content, "ISO-8859-1", url); //parse inputstream content in 'ISO-8859-1' charset
-			Elements links = doc.select("a[href]"); //empty if none match
-			
-			if (fst.getID(url) != -1){ //the url is already indexed in UriMapping
+			Document doc = Jsoup.parse(content, "ISO-8859-1", url); //parse in ISO-8859-1 format
+			Elements links = doc.select("a[href]"); // empty if none match
+
+			if (fst.getID(url) != -1) { // the url is already indexed in UriMapping
 				urlNode.set(fst.getID(url));
 				linkNodes = new ArrayList<IntWritable>();
-				Set<IntWritable> linkUrlSet = new HashSet<IntWritable>(); //use set to remove duplicate links
-				if(links != null){
+				Set<IntWritable> linkUrlSet = new HashSet<IntWritable>(); 
+				if (links != null) {
 					for (Element link : links) {
 						String linkUrl = link.attr("abs:href");
-						if (fst.getID(linkUrl) != -1){ //linkUrl is already indexed 
+						if (fst.getID(linkUrl) != -1) { // linkUrl is already indexed
 							linkUrlSet.add(new IntWritable(fst.getID(linkUrl)));
 						}
 					}
 					boolean emitFlag = false;
-					for (IntWritable linkID: linkUrlSet){
+					for (IntWritable linkID : linkUrlSet) {
 						linkNodes.add(linkID);
 						emitFlag = true;
 						context.getCounter(Records.LINK_COUNT).increment(1);
 					}
-					if(emitFlag==false){ //contain no links which are indexed in UriMapping 
+					if (emitFlag == false) { // contain no links which are indexed in UriMapping
 						context.getCounter(Records.LINK_COUNT).increment(1);
 					}
-					
-				}else{ // webpage without outgoing links
+
+				} else { // webpage without outgoing links
 					context.getCounter(Records.LINK_COUNT).increment(1);
 				}
 				context.write(urlNode, linkNodes);
@@ -124,25 +131,11 @@ public class ExtractLinks extends Configured implements Tool{
 		}
 	}
 
-	/*public static class ExtractLinksReducer extends Reducer<IntWritable, Text, IntWritable, Text> {
-		private Text links = new Text();
-
-		@Override
-		public void reduce(IntWritable key, Iterable<Text> values, Context context)
-				throws IOException, InterruptedException {
-			String linkIds = "";
-			for (Text link : values) {
-				linkIds += link.toString()+" ";
-				context.getCounter(Records.LINK_COUNT).increment(1);
-			}
-			links.set(linkIds);
-			context.write(key, links);
-		}
-	}*/
 	/**
 	 * Creates an instance of this tool.
 	 */
-	public ExtractLinks() {}
+	public ExtractLinks() {
+	}
 
 	private static final String INPUT = "input";
 	private static final String OUTPUT = "output";
@@ -176,8 +169,8 @@ public class ExtractLinks extends Configured implements Tool{
 			return -1;
 		}
 
-		if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT) 
-			|| !cmdline.hasOption(URI_MAPPING)) {
+		if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT)
+				|| !cmdline.hasOption(URI_MAPPING)) {
 			System.out.println("args: " + Arrays.toString(args));
 			HelpFormatter formatter = new HelpFormatter();
 			formatter.setWidth(120);
@@ -198,24 +191,26 @@ public class ExtractLinks extends Configured implements Tool{
 		LOG.info(" - mapping file path:" + mappingPath);
 		LOG.info(" - number of reducers: " + reduceTasks);
 
-		
-		Job job = new Job(getConf(),ExtractLinks.class.getSimpleName());
+		Job job = new Job(getConf(), ExtractLinks.class.getSimpleName());
 		job.setJarByClass(ExtractLinks.class);
-		
-		// Pass in the class name as a String; this is makes the mapper general in being able to load
-	    // any collection of Indexable objects that has url_id/url mapping specified by a UriMapping
-	    // object.
-		job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
-		// Put the mapping file in the distributed cache so each map worker will have it.
-		DistributedCache.addCacheFile(new URI(mappingPath), job.getConfiguration());
-		
+
+		// Pass in the class name as a String; this is makes the mapper general
+		// in being able to load any collection of Indexable objects that has 
+		// url_id/url mapping specified by a UriMapping object.
+		job.getConfiguration().set("UriMappingClass",
+				UriMapping.class.getCanonicalName());
+		// Put the mapping file in the distributed cache so each map worker will
+		// have it.
+		DistributedCache.addCacheFile(new URI(mappingPath),
+				job.getConfiguration());
+
 		job.setNumReduceTasks(0); // no reducers
 
 		FileInputFormat.setInputPaths(job, new Path(inputPath));
 		FileOutputFormat.setOutputPath(job, new Path(outputPath));
-		
+
 		job.setInputFormatClass(ArcInputFormat.class);
-		//set map (key,value) output format
+		// set map (key,value) output format
 		job.setMapOutputKeyClass(IntWritable.class);
 		job.setMapOutputValueClass(List.class);
 
@@ -229,13 +224,14 @@ public class ExtractLinks extends Configured implements Tool{
 		job.waitForCompletion(true);
 		LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime)
 				/ 1000.0 + " seconds");
-		
+
 		Counters counters = job.getCounters();
 		int numRecords = (int) counters.findCounter(Records.TOTAL).getValue();
-		int numLinks = (int) counters.findCounter(Records.LINK_COUNT).getValue();
-		LOG.info("Read " + numRecords +" records.");
-		LOG.info("Extracts "+ numLinks +" links.");
-		
+		int numLinks = (int) counters.findCounter(Records.LINK_COUNT)
+				.getValue();
+		LOG.info("Read " + numRecords + " records.");
+		LOG.info("Extracts " + numLinks + " links.");
+
 		return 0;
 	}
 

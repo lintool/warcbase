@@ -37,29 +37,30 @@ import org.apache.lucene.util.fst.Util.MinResult;
 import org.apache.lucene.util.fst.Util;
 
 public class UriMappingBuilder {
-	
-	private static void readUrlFromFile(File f, List urls) throws IOException{
+
+	private static void readUrlFromFile(File f, List urls) throws IOException {
 		String contents = FileUtils.readFileToString(f);
 		String[] lines = contents.split("\\n");
-		for(String line: lines){
+		for (String line : lines) {
 			// This need to modify according to your input file
-			if (!line.equals("")) { // non-empty string 
+			if (!line.equals("")) { // non-empty string
 				String url = line.split("\\s+")[0];
 				urls.add(url);
 			}
 		}
 	}
+
 	private static List readUrlFromFolder(String folderName) throws IOException {
 		File folder = new File(folderName);
 		List urls = new ArrayList<String>();
-		if(folder.isDirectory()){
-			for(File file: folder.listFiles()){
-				readUrlFromFile(file,urls);
-			}	
-		}else{
-			readUrlFromFile(folder,urls);
+		if (folder.isDirectory()) {
+			for (File file : folder.listFiles()) {
+				readUrlFromFile(file, urls);
+			}
+		} else {
+			readUrlFromFile(folder, urls);
 		}
-		Collections.sort(urls); //sort String according to url alphabetical order
+		Collections.sort(urls); // sort String according to url alphabetical order
 		return urls;
 	}
 
@@ -72,12 +73,12 @@ public class UriMappingBuilder {
 		}
 		List inputValues = null;
 		try {
-			//input strings must be sorted in Unicode order
+			// input strings must be sorted in Unicode order
 			inputValues = readUrlFromFolder(inputFileName); // read data
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
 		// Be Careful about the file size
 		long size = inputValues.size();
 		List outputValues = new ArrayList<Long>(); // create the mapping id
@@ -94,16 +95,17 @@ public class UriMappingBuilder {
 			scratchBytes.copyChars((String) inputValues.get(i));
 			try {
 				// Mapping!
-				builder.add(Util.toIntsRef(scratchBytes, scratchInts),(Long) outputValues.get(i));
-			}catch(UnsupportedOperationException e){
-				System.out.println("Duplicate Url:"+inputValues.get(i));
-			}catch (IOException e) {
+				builder.add(Util.toIntsRef(scratchBytes, scratchInts),
+						(Long) outputValues.get(i));
+			} catch (UnsupportedOperationException e) {
+				System.out.println("Duplicate Url:" + inputValues.get(i));
+			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 		FST<Long> fst = builder.finish();
-		
+
 		// Save FST to file
 		File outputFile = new File(outputFileName);
 		fst.save(outputFile);
