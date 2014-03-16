@@ -94,7 +94,7 @@ public class ArcCounter extends Configured implements Tool {
     LOG.info(" - input: " + input);
     LOG.info(" - output: " + output);
 
-    Job job = new Job(getConf(), CountArcContentTypes.class.getSimpleName() + ":" + input);
+    Job job = Job.getInstance(getConf(), CountArcContentTypes.class.getSimpleName() + ":" + input);
     job.setJarByClass(CountArcContentTypes.class);
     job.setNumReduceTasks(1);
 
