@@ -66,38 +66,38 @@ public class IngestFiles {
     InputStream in = new FileInputStream(inputArcFile);
     ArcReader reader = ArcReaderFactory.getReader(in);
     while ((record = reader.getNextRecord()) != null) {
-try {
-      url = record.getUrlStr();
-      date = record.getArchiveDateStr();
-      content = IOUtils.toByteArray(record.getPayloadContent());
-      key = Util.reverseHostname(url);
-      type = record.getContentTypeStr();
+      try {
+        url = record.getUrlStr();
+        date = record.getArchiveDateStr();
+        content = IOUtils.toByteArray(record.getPayloadContent());
+        key = Util.reverseHostname(url);
+        type = record.getContentTypeStr();
 
-      if (key != null && type == null) {
-        type = "text/plain";
-      }
-
-      if (key == null) {
-        continue;
-      }
-
-      if (content.length > MAX_CONTENT_SIZE) {
-        skipped++;
-      } else {
-        if (cnt % 10000 == 0 && cnt > 0) {
-          LOG.info("Ingested " + cnt + " records into Hbase.");
+        if (key != null && type == null) {
+          type = "text/plain";
         }
-        if (hbaseManager.addRecord(key, date, content, type)) {
-          cnt++;
-        } else {
+
+        if (key == null) {
+          continue;
+        }
+
+        if (content.length > MAX_CONTENT_SIZE) {
           skipped++;
+        } else {
+          if (cnt % 10000 == 0 && cnt > 0) {
+            LOG.info("Ingested " + cnt + " records into Hbase.");
+          }
+          if (hbaseManager.addRecord(key, date, content, type)) {
+            cnt++;
+          } else {
+            skipped++;
+          }
         }
+      } catch (Exception e) {
+        LOG.error("Error ingesting record: " + e);
       }
-} catch (Exception e) {
-    LOG.error("Error ingesting record: " + e);
-}
     }
-    // TODO: properly close streams.
+
     reader.close();
     in.close();
   }
@@ -116,7 +116,6 @@ try {
     WarcReader warcReader = WarcReaderFactory.getReaderUncompressed(pbin);
 
     if (warcReader == null) {
-      // TODO: LOG?
       LOG.info("Can't read warc file " + inputWarcFile.getName());
       return;
     }
@@ -134,7 +133,6 @@ try {
       HttpHeader httpHeader = null;
       InputStream payloadStream = null;
 
-      // TODO: change int this:
       if (payload == null) {
         continue;
       }
@@ -184,7 +182,7 @@ try {
         }
       }
     }
-    // TODO: properly close streams.
+
     warcReader.close();
     pbin.close();
     gzInputStream.close();
