@@ -66,6 +66,7 @@ public class IngestFiles {
     InputStream in = new FileInputStream(inputArcFile);
     ArcReader reader = ArcReaderFactory.getReader(in);
     while ((record = reader.getNextRecord()) != null) {
+try {
       url = record.getUrlStr();
       date = record.getArchiveDateStr();
       content = IOUtils.toByteArray(record.getPayloadContent());
@@ -92,6 +93,9 @@ public class IngestFiles {
           skipped++;
         }
       }
+} catch (Exception e) {
+    LOG.error("Error ingesting record: " + e);
+}
     }
     // TODO: properly close streams.
     reader.close();
