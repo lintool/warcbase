@@ -319,6 +319,12 @@
       <groupId>org.netpreserve.openwayback</groupId>
       <artifactId>openwayback-core</artifactId>
       <version>2.0.0.BETA.1</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!--dependency>
