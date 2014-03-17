@@ -56,193 +56,182 @@ import java.util.Arrays;
 /**
  * Extract Links demo.
  * 
- * @author Jinfeng Rao
- * modified code based on CountTrecDocuments.java by Jimmy Lin
+ * @author Jinfeng Rao modified code based on CountTrecDocuments.java by Jimmy Lin
  */
-public class ExtractLinks extends Configured implements Tool{
-	private static final Logger LOG = Logger.getLogger(ExtractLinks.class);
-	private static enum Records { TOTAL, LINK_COUNT };
-	
-	public static class ExtractLinksMapper extends Mapper<LongWritable, ArcRecordBase, IntWritable, List>{
-		private IntWritable urlNode = new IntWritable();
-		private List linkNodes;
-		private static UriMapping fst;
-		
-		@Override
-		public void setup(Context context){
-			try{
-				Configuration conf = context.getConfiguration();
-				Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
-				
-				fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
-				fst.loadMapping(localFiles[0].toString());// simply assume only one file in distributed cache
-			}catch(Exception e){
-				e.printStackTrace();
-				throw new RuntimeException("Error Initializing UriMapping");
-			}
-		}
-		@Override
-		public void map(LongWritable key, ArcRecordBase record, Context context)
-				throws IOException, InterruptedException {
-			
-			context.getCounter(Records.TOTAL).increment(1);
-			String url = record.getUrlStr();
-			String type = record.getContentTypeStr();
-			InputStream content = record.getPayloadContent();
-			
-			if(!type.equals("text/html"))
-				return;
-			Document doc = Jsoup.parse(content, "ISO-8859-1", url); //parse inputstream content in 'ISO-8859-1' charset
-			Elements links = doc.select("a[href]"); //empty if none match
-			
-			if (fst.getID(url) != -1){ //the url is already indexed in UriMapping
-				urlNode.set(fst.getID(url));
-				linkNodes = new ArrayList<IntWritable>();
-				Set<IntWritable> linkUrlSet = new HashSet<IntWritable>(); //use set to remove duplicate links
-				if(links != null){
-					for (Element link : links) {
-						String linkUrl = link.attr("abs:href");
-						if (fst.getID(linkUrl) != -1){ //linkUrl is already indexed 
-							linkUrlSet.add(new IntWritable(fst.getID(linkUrl)));
-						}
-					}
-					boolean emitFlag = false;
-					for (IntWritable linkID: linkUrlSet){
-						linkNodes.add(linkID);
-						emitFlag = true;
-						context.getCounter(Records.LINK_COUNT).increment(1);
-					}
-					if(emitFlag==false){ //contain no links which are indexed in UriMapping 
-						context.getCounter(Records.LINK_COUNT).increment(1);
-					}
-					
-				}else{ // webpage without outgoing links
-					context.getCounter(Records.LINK_COUNT).increment(1);
-				}
-				context.write(urlNode, linkNodes);
-			}
-		}
-	}
+public class ExtractLinks extends Configured implements Tool {
+  private static final Logger LOG = Logger.getLogger(ExtractLinks.class);
 
-	/*public static class ExtractLinksReducer extends Reducer<IntWritable, Text, IntWritable, Text> {
-		private Text links = new Text();
+  private static enum Records {
+    TOTAL, LINK_COUNT
+  };
 
-		@Override
-		public void reduce(IntWritable key, Iterable<Text> values, Context context)
-				throws IOException, InterruptedException {
-			String linkIds = "";
-			for (Text link : values) {
-				linkIds += link.toString()+" ";
-				context.getCounter(Records.LINK_COUNT).increment(1);
-			}
-			links.set(linkIds);
-			context.write(key, links);
-		}
-	}*/
-	/**
-	 * Creates an instance of this tool.
-	 */
-	public ExtractLinks() {}
+  public static class ExtractLinksMapper extends
+      Mapper<LongWritable, ArcRecordBase, IntWritable, List> {
+    private IntWritable urlNode = new IntWritable();
+    private List linkNodes;
+    private static UriMapping fst;
 
-	private static final String INPUT = "input";
-	private static final String OUTPUT = "output";
-	private static final String URI_MAPPING = "uriMapping";
-	private static final String NUM_REDUCERS = "numReducers";
+    @Override
+    public void setup(Context context) {
+      try {
+        Configuration conf = context.getConfiguration();
+        Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
 
-	/**
-	 * Runs this tool.
-	 */
-	@SuppressWarnings({ "static-access" })
-	public int run(String[] args) throws Exception {
-		Options options = new Options();
+        // load FST UriMapping from file
+        fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        fst.loadMapping(localFiles[0].toString());// simply assume only one file in distributed
+                                                  // cache
+      } catch (Exception e) {
+        e.printStackTrace();
+        throw new RuntimeException("Error Initializing UriMapping");
+      }
+    }
 
-		options.addOption(OptionBuilder.withArgName("path").hasArg()
-				.withDescription("input path").create(INPUT));
-		options.addOption(OptionBuilder.withArgName("path").hasArg()
-				.withDescription("output path").create(OUTPUT));
-		options.addOption(OptionBuilder.withArgName("path").hasArg()
-				.withDescription("uri mapping file path").create(URI_MAPPING));
-		options.addOption(OptionBuilder.withArgName("num").hasArg()
-				.withDescription("number of reducers").create(NUM_REDUCERS));
+    @Override
+    public void map(LongWritable key, ArcRecordBase record, Context context) throws IOException,
+        InterruptedException {
 
-		CommandLine cmdline;
-		CommandLineParser parser = new GnuParser();
+      context.getCounter(Records.TOTAL).increment(1);
+      String url = record.getUrlStr();
+      String type = record.getContentTypeStr();
+      InputStream content = record.getPayloadContent();
 
-		try {
-			cmdline = parser.parse(options, args);
-		} catch (ParseException exp) {
-			System.err.println("Error parsing command line: "
-					+ exp.getMessage());
-			return -1;
-		}
+      if (!type.equals("text/html"))
+        return;
+      Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
+      Elements links = doc.select("a[href]"); // empty if none match
 
-		if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT) 
-			|| !cmdline.hasOption(URI_MAPPING)) {
-			System.out.println("args: " + Arrays.toString(args));
-			HelpFormatter formatter = new HelpFormatter();
-			formatter.setWidth(120);
-			formatter.printHelp(this.getClass().getName(), options);
-			ToolRunner.printGenericCommandUsage(System.out);
-			return -1;
-		}
+      if (fst.getID(url) != -1) { // the url is already indexed in UriMapping
+        urlNode.set(fst.getID(url));
+        linkNodes = new ArrayList<IntWritable>();
+        Set<IntWritable> linkUrlSet = new HashSet<IntWritable>();
+        if (links != null) {
+          for (Element link : links) {
+            String linkUrl = link.attr("abs:href");
+            if (fst.getID(linkUrl) != -1) { // linkUrl is already indexed
+              linkUrlSet.add(new IntWritable(fst.getID(linkUrl)));
+            }
+          }
+          boolean emitFlag = false;
+          for (IntWritable linkID : linkUrlSet) {
+            linkNodes.add(linkID);
+            emitFlag = true;
+            context.getCounter(Records.LINK_COUNT).increment(1);
+          }
+          if (emitFlag == false) { // contain no links which are indexed in UriMapping
+            context.getCounter(Records.LINK_COUNT).increment(1);
+          }
 
-		String inputPath = cmdline.getOptionValue(INPUT);
-		String outputPath = cmdline.getOptionValue(OUTPUT);
-		String mappingPath = cmdline.getOptionValue(URI_MAPPING);
-		int reduceTasks = cmdline.hasOption(NUM_REDUCERS) ? Integer
-				.parseInt(cmdline.getOptionValue(NUM_REDUCERS)) : 1;
+        } else { // webpage without outgoing links
+          context.getCounter(Records.LINK_COUNT).increment(1);
+        }
+        context.write(urlNode, linkNodes);
+      }
+    }
+  }
 
-		LOG.info("Tool: " + ExtractLinks.class.getSimpleName());
-		LOG.info(" - input path: " + inputPath);
-		LOG.info(" - output path: " + outputPath);
-		LOG.info(" - mapping file path:" + mappingPath);
-		LOG.info(" - number of reducers: " + reduceTasks);
+  /**
+   * Creates an instance of this tool.
+   */
+  public ExtractLinks() {
+  }
 
-		
-		Job job = new Job(getConf(),ExtractLinks.class.getSimpleName());
-		job.setJarByClass(ExtractLinks.class);
-		
-		// Pass in the class name as a String; this is makes the mapper general in being able to load
-	    // any collection of Indexable objects that has url_id/url mapping specified by a UriMapping
-	    // object.
-		job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
-		// Put the mapping file in the distributed cache so each map worker will have it.
-		DistributedCache.addCacheFile(new URI(mappingPath), job.getConfiguration());
-		
-		job.setNumReduceTasks(0); // no reducers
+  private static final String INPUT = "input";
+  private static final String OUTPUT = "output";
+  private static final String URI_MAPPING = "uriMapping";
+  private static final String NUM_REDUCERS = "numReducers";
 
-		FileInputFormat.setInputPaths(job, new Path(inputPath));
-		FileOutputFormat.setOutputPath(job, new Path(outputPath));
-		
-		job.setInputFormatClass(ArcInputFormat.class);
-		//set map (key,value) output format
-		job.setMapOutputKeyClass(IntWritable.class);
-		job.setMapOutputValueClass(List.class);
+  /**
+   * Runs this tool.
+   */
+  @SuppressWarnings({ "static-access" })
+  public int run(String[] args) throws Exception {
+    Options options = new Options();
 
-		job.setMapperClass(ExtractLinksMapper.class);
+    options.addOption(OptionBuilder.withArgName("path").hasArg().withDescription("input path")
+        .create(INPUT));
+    options.addOption(OptionBuilder.withArgName("path").hasArg().withDescription("output path")
+        .create(OUTPUT));
+    options.addOption(OptionBuilder.withArgName("path").hasArg()
+        .withDescription("uri mapping file path").create(URI_MAPPING));
+    options.addOption(OptionBuilder.withArgName("num").hasArg()
+        .withDescription("number of reducers").create(NUM_REDUCERS));
 
-		// Delete the output directory if it exists already.
-		Path outputDir = new Path(outputPath);
-		FileSystem.get(job.getConfiguration()).delete(outputDir, true);
+    CommandLine cmdline;
+    CommandLineParser parser = new GnuParser();
 
-		long startTime = System.currentTimeMillis();
-		job.waitForCompletion(true);
-		LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime)
-				/ 1000.0 + " seconds");
-		
-		Counters counters = job.getCounters();
-		int numRecords = (int) counters.findCounter(Records.TOTAL).getValue();
-		int numLinks = (int) counters.findCounter(Records.LINK_COUNT).getValue();
-		LOG.info("Read " + numRecords +" records.");
-		LOG.info("Extracts "+ numLinks +" links.");
-		
-		return 0;
-	}
+    try {
+      cmdline = parser.parse(options, args);
+    } catch (ParseException exp) {
+      System.err.println("Error parsing command line: " + exp.getMessage());
+      return -1;
+    }
 
-	/**
-	 * Dispatches command-line arguments to the tool via the {@code ToolRunner}.
-	 */
-	public static void main(String[] args) throws Exception {
-		ToolRunner.run(new ExtractLinks(), args);
-	}
+    if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT) || !cmdline.hasOption(URI_MAPPING)) {
+      System.out.println("args: " + Arrays.toString(args));
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.setWidth(120);
+      formatter.printHelp(this.getClass().getName(), options);
+      ToolRunner.printGenericCommandUsage(System.out);
+      return -1;
+    }
+
+    String inputPath = cmdline.getOptionValue(INPUT);
+    String outputPath = cmdline.getOptionValue(OUTPUT);
+    String mappingPath = cmdline.getOptionValue(URI_MAPPING);
+    int reduceTasks = cmdline.hasOption(NUM_REDUCERS) ? Integer.parseInt(cmdline
+        .getOptionValue(NUM_REDUCERS)) : 1;
+
+    LOG.info("Tool: " + ExtractLinks.class.getSimpleName());
+    LOG.info(" - input path: " + inputPath);
+    LOG.info(" - output path: " + outputPath);
+    LOG.info(" - mapping file path:" + mappingPath);
+    LOG.info(" - number of reducers: " + reduceTasks);
+
+    Job job = new Job(getConf(), ExtractLinks.class.getSimpleName());
+    job.setJarByClass(ExtractLinks.class);
+
+    // Pass in the class name as a String; this is makes the mapper general
+    // in being able to load any collection of Indexable objects that has
+    // url_id/url mapping specified by a UriMapping object.
+    job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
+    // Put the mapping file in the distributed cache so each map worker will
+    // have it.
+    DistributedCache.addCacheFile(new URI(mappingPath), job.getConfiguration());
+
+    job.setNumReduceTasks(0); // no reducers
+
+    FileInputFormat.setInputPaths(job, new Path(inputPath));
+    FileOutputFormat.setOutputPath(job, new Path(outputPath));
+
+    job.setInputFormatClass(ArcInputFormat.class);
+    // set map (key,value) output format
+    job.setMapOutputKeyClass(IntWritable.class);
+    job.setMapOutputValueClass(List.class);
+
+    job.setMapperClass(ExtractLinksMapper.class);
+
+    // Delete the output directory if it exists already.
+    Path outputDir = new Path(outputPath);
+    FileSystem.get(job.getConfiguration()).delete(outputDir, true);
+
+    long startTime = System.currentTimeMillis();
+    job.waitForCompletion(true);
+    LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
+
+    Counters counters = job.getCounters();
+    int numRecords = (int) counters.findCounter(Records.TOTAL).getValue();
+    int numLinks = (int) counters.findCounter(Records.LINK_COUNT).getValue();
+    LOG.info("Read " + numRecords + " records.");
+    LOG.info("Extracts " + numLinks + " links.");
+
+    return 0;
+  }
+
+  /**
+   * Dispatches command-line arguments to the tool via the {@code ToolRunner}.
+   */
+  public static void main(String[] args) throws Exception {
+    ToolRunner.run(new ExtractLinks(), args);
+  }
 }
