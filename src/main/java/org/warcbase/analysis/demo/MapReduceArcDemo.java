@@ -90,7 +90,7 @@ public class MapReduceArcDemo extends Configured implements Tool {
     LOG.info(" - input: " + input);
     LOG.info(" - output: " + output);
 
-    Job job = new Job(getConf(), MapReduceArcDemo.class.getSimpleName() + ":" + input);
+    Job job = Job.getInstance(getConf(), MapReduceArcDemo.class.getSimpleName() + ":" + input);
     job.setJarByClass(MapReduceArcDemo.class);
     job.setNumReduceTasks(0);
 

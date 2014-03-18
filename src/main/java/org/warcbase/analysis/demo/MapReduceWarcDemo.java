@@ -91,7 +91,7 @@ public class MapReduceWarcDemo extends Configured implements Tool {
     LOG.info(" - input: " + input);
     LOG.info(" - output: " + output);
 
-    Job job = new Job(getConf(), MapReduceWarcDemo.class.getSimpleName() + ":" + input);
+    Job job = Job.getInstance(getConf(), MapReduceWarcDemo.class.getSimpleName() + ":" + input);
     job.setJarByClass(MapReduceWarcDemo.class);
     job.setNumReduceTasks(0);
 
