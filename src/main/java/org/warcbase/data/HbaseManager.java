@@ -13,6 +13,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
 import org.warcbase.ingest.IngestFiles;
@@ -46,6 +47,8 @@ public class HbaseManager {
         //tableDesc.addFamily(new HColumnDescriptor(FAMILIES[i]));
         HColumnDescriptor hColumnDesc = new HColumnDescriptor(FAMILIES[i]);
         hColumnDesc.setMaxVersions(MAX_VERSIONS);
+        hColumnDesc.setCompressionType(Algorithm.SNAPPY);
+        hColumnDesc.setCompactionCompressionType(Algorithm.SNAPPY);
         tableDesc.addFamily(hColumnDesc);
       }
       admin.createTable(tableDesc);
