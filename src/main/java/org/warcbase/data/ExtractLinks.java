@@ -148,7 +148,7 @@ public class ExtractLinks extends Configured implements Tool {
   @SuppressWarnings({ "static-access" })
   public int run(String[] args) throws Exception {
     Options options = new Options();
-    
+
     options.addOption(OptionBuilder.withArgName("path").hasArg().withDescription("input path")
         .create(INPUT));
     options.addOption(OptionBuilder.withArgName("path").hasArg().withDescription("output path")
