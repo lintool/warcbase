@@ -46,7 +46,8 @@ Getting URLs:
 To run it:
 
 ```
-$ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar org.warcbase.analysis.demo.MapReduceArcDemo -input inputDir -output outputDir
+$ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar org.warcbase.analysis.demo.MapReduceArcDemo 
+  -input inputDir -output outputDir
 ```
 
 Building an FST for URLs
@@ -75,5 +76,6 @@ Similar like Get URLs step, we extracted links between urls from raw webpage rec
 To run it:
 
 ```
-$ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar org.warcbase.data.ExtractLinks -input inputDir -output outputDir -FSTMappingFile fileAddr -numReducers 1
+$ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar org.warcbase.data.ExtractLinks 
+  -input inputDir -output outputDir -FSTMappingFile fileAddr -numReducers 1
 ```
