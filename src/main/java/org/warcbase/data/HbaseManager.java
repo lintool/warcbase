@@ -70,7 +70,7 @@ public class HbaseManager {
       Timestamp timestamp = new java.sql.Timestamp(parsedDate.getTime());
       Put put = new Put(Bytes.toBytes(key));
       put.setWriteToWAL(false);
-      put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(type), timestamp.getTime(), data);
+      put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(type + " " + timestamp.getTime()), timestamp.getTime(), data);
       //put.add(Bytes.toBytes(FAMILIES[1]), Bytes.toBytes(date), Bytes.toBytes(type));
       table.put(put);
       return true;
