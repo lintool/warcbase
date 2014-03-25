@@ -1,7 +1,6 @@
 package org.warcbase.data;
 
 import java.lang.reflect.Field;
-import java.sql.Date;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -49,6 +48,7 @@ public class HbaseManager {
         hColumnDesc.setMaxVersions(MAX_VERSIONS);
         hColumnDesc.setCompressionType(Algorithm.SNAPPY);
         hColumnDesc.setCompactionCompressionType(Algorithm.SNAPPY);
+        hColumnDesc.setTimeToLive(Integer.MAX_VALUE);
         tableDesc.addFamily(hColumnDesc);
       }
       admin.createTable(tableDesc);
@@ -74,7 +74,6 @@ public class HbaseManager {
       Put put = new Put(Bytes.toBytes(key));
       put.setWriteToWAL(false);
       put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(type), timestamp.getTime(), data);
-      //put.add(Bytes.toBytes(FAMILIES[1]), Bytes.toBytes(date), Bytes.toBytes(type));
       table.put(put);
       return true;
     } catch (Exception e) {
