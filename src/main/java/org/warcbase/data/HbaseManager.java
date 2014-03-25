@@ -8,6 +8,7 @@ import java.text.SimpleDateFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -21,7 +22,7 @@ public class HbaseManager {
   private static final String[] FAMILIES = { "c"};
   private static final Logger LOG = Logger.getLogger(HbaseManager.class);
   private static final int MAX_KEY_VALUE_SIZE = IngestFiles.MAX_CONTENT_SIZE + 200;
-  public static final int MAX_VERSIONS = 20;
+  public static final int MAX_VERSIONS = Integer.MAX_VALUE;
 
   private final HTable table;
   private final HBaseAdmin admin;
@@ -48,7 +49,7 @@ public class HbaseManager {
         hColumnDesc.setMaxVersions(MAX_VERSIONS);
         hColumnDesc.setCompressionType(Algorithm.SNAPPY);
         hColumnDesc.setCompactionCompressionType(Algorithm.SNAPPY);
-        hColumnDesc.setTimeToLive(Integer.MAX_VALUE);
+        hColumnDesc.setTimeToLive(HConstants.FOREVER);
         tableDesc.addFamily(hColumnDesc);
       }
       admin.createTable(tableDesc);

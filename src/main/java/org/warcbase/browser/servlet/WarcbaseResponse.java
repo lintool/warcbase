@@ -84,7 +84,7 @@ public class WarcbaseResponse {
     Result rs = null;
     rs = table.get(get);
     
-    long[] dates = new long[HbaseManager.MAX_VERSIONS];
+    long[] dates = new long[rs.size()];
     for (int i = 0; i < rs.raw().length; i++)
       dates[i] = rs.raw()[i].getTimestamp();
     Arrays.sort(dates, 0, rs.raw().length);
@@ -121,7 +121,7 @@ public class WarcbaseResponse {
       resp.setContentLength(content.length);
       resp.getOutputStream().write(content);
     } else {
-      long[] dates = new long[HbaseManager.MAX_VERSIONS];
+      long[] dates = new long[rs.size()];
       for (int i = 0; i < rs.raw().length; i++)
         dates[i] = rs.raw()[i].getTimestamp();
       //Collections.sort(dates);
