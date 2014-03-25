@@ -1,7 +1,6 @@
 package org.warcbase.data;
 
 import java.lang.reflect.Field;
-import java.sql.Date;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -12,6 +11,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
@@ -46,6 +46,7 @@ public class HbaseManager {
         //tableDesc.addFamily(new HColumnDescriptor(FAMILIES[i]));
         HColumnDescriptor hColumnDesc = new HColumnDescriptor(FAMILIES[i]);
         hColumnDesc.setMaxVersions(MAX_VERSIONS);
+        hColumnDesc.setTimeToLive(Integer.MAX_VALUE);
         tableDesc.addFamily(hColumnDesc);
       }
       admin.createTable(tableDesc);
@@ -70,8 +71,7 @@ public class HbaseManager {
       Timestamp timestamp = new java.sql.Timestamp(parsedDate.getTime());
       Put put = new Put(Bytes.toBytes(key));
       put.setWriteToWAL(false);
-      put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(type + " " + timestamp.getTime()), timestamp.getTime(), data);
-      //put.add(Bytes.toBytes(FAMILIES[1]), Bytes.toBytes(date), Bytes.toBytes(type));
+      put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(type), timestamp.getTime(), data);
       table.put(put);
       return true;
     } catch (Exception e) {

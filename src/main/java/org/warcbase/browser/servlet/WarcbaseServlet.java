@@ -76,6 +76,7 @@ public class WarcbaseServlet extends HttpServlet {
     String q = Util.reverseHostname(query);
     HTableInterface table = pool.getTable(tableName);
     Get get = new Get(Bytes.toBytes(q));
+    get.setMaxVersions(HbaseManager.MAX_VERSIONS);
     Result rs = table.get(get);
 
     if (rs.raw().length == 0) {
