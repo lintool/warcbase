@@ -98,9 +98,6 @@ public class WarcbaseServlet extends HttpServlet {
         }
       }
 
-      System.out.println("dLong = " + dLong);
-      System.out.println("q = " + q);
-      System.out.println("rs.raw().length = " + rs.raw().length);
       long[] dates = new long[rs.size()];
       for (int i = 0; i < rs.raw().length; i++)
         dates[i] = rs.raw()[i].getTimestamp();
