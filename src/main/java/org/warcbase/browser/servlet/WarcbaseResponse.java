@@ -80,9 +80,15 @@ public class WarcbaseResponse {
     HTableInterface table = pool.getTable(tableName);
 
     Get get = new Get(Bytes.toBytes(q));
+    get.setMaxVersions(HbaseManager.MAX_VERSIONS);
     Result rs = null;
     rs = table.get(get);
-
+    
+    long[] dates = new long[rs.size()];
+    for (int i = 0; i < rs.raw().length; i++)
+      dates[i] = rs.raw()[i].getTimestamp();
+    Arrays.sort(dates, 0, rs.raw().length);
+    
     resp.setContentType("text/html");
     resp.setStatus(HttpServletResponse.SC_OK);
     PrintWriter out = null;
@@ -97,8 +103,8 @@ public class WarcbaseResponse {
     } else {
       for (int i = 0; i < rs.raw().length; i++){
         //if (new String(rs.raw()[i].getFamily(), "UTF8").equals("content")) {
-        String date = new Date(rs.raw()[i].getTimestamp()).toString();
-         out.println("<br/> <a href='" + TextDocument2.SERVER_PREFIX + tableName + "/" + rs.raw()[i].getTimestamp()
+        String date = new Date(dates[i]).toString();
+         out.println("<br/> <a href='" + TextDocument2.SERVER_PREFIX + tableName + "/" + dates[i]
               + "/" + query + "'>" + date + "</a>");
         //}
       }
@@ -115,8 +121,8 @@ public class WarcbaseResponse {
       resp.setContentLength(content.length);
       resp.getOutputStream().write(content);
     } else {
-      long[] dates = new long[HbaseManager.MAX_VERSIONS];
-      for (int i = 0; i < rs.raw().length; i += 2)
+      long[] dates = new long[rs.size()];
+      for (int i = 0; i < rs.raw().length; i++)
         dates[i] = rs.raw()[i].getTimestamp();
       //Collections.sort(dates);
       Arrays.sort(dates, 0, rs.raw().length);
@@ -221,6 +227,7 @@ public class WarcbaseResponse {
     String q = Util.reverseHostname(query);
     HTableInterface table = pool.getTable(tableName);
     Get get = new Get(Bytes.toBytes(q));
+    get.setMaxVersions(HbaseManager.MAX_VERSIONS);
     Result rs = null;
     rs = table.get(get);
 
