@@ -178,7 +178,10 @@ public class WarcbaseResponse {
           + tableName
           + "\" name=\"wmtb\" id=\"wmtb\" style=\"margin:0!important;padding:0!important;\"><input name=\"query\" id=\"wmtbURL\" value=\""
           + query
-          + "\" style=\"width:400px;font-size:11px;font-family:'Lucida Grande','Arial',sans-serif;\" onfocus=\"javascript:this.focus();this.select();\" type=\"text\"><input name=\"date\" value=\"\" type=\"hidden\"><input name=\"type\" value=\"replay\" type=\"hidden\"><input name=\"date\" value=\"20120201185436\" type=\"hidden\"><input value=\"Go\" style=\"font-size:11px;font-family:'Lucida Grande','Arial',sans-serif;margin-left:5px;\" type=\"submit\"><span id=\"wm_tb_options\" style=\"display:block;\"></span></form>        </td>        <td style=\"vertical-align:bottom;padding:5px 0 0 0!important;\" rowspan=\"2\">            <table style=\"border-collapse:collapse;width:110px;color:#99a;font-family:'Helvetica','Lucida Grande','Arial',sans-serif;\"><tbody>                  <!-- NEXT/PREV MONTH NAV AND MONTH INDICATOR -->            <tr style=\"width:110px;height:16px;font-size:10px!important;\">              <td style=\"padding-right:9px;font-size:11px!important;font-weight:bold;text-transform:uppercase;text-align:right;white-space:nowrap;overflow:visible;\" nowrap=\"nowrap\">                                     <strong>PREV</strong>                                     </td>         <td style=\"padding-left:9px;font-size:11px!important;font-weight:bold;text-transform:uppercase;white-space:nowrap;overflow:visible;\" nowrap=\"nowrap\">                <strong>NEXT</strong>                                    </td>            </tr>             <!-- NEXT/PREV CAPTURE NAV AND DAY OF MONTH INDICATOR -->            <tr>                <td style=\"padding-right:9px;white-space:nowrap;overflow:visible;text-align:right!important;vertical-align:middle!important;\" nowrap=\"nowrap\">                                    <a href=\""
+          + "\" style=\"width:400px;font-size:11px;font-family:'Lucida Grande','Arial',sans-serif;\" onfocus=\"javascript:this.focus();this.select();\" type=\"text\"><input name=\"date\" value=\"\" type=\"hidden\"><input name=\"type\" value=\"replay\" type=\"hidden\"><input name=\"date\" value=\"20120201185436\" type=\"hidden\"><input value=\"Go\" style=\"font-size:11px;font-family:'Lucida Grande','Arial',sans-serif;margin-left:5px;\" type=\"submit\"><span id=\"wm_tb_options\" style=\"display:block;\"></span></form>        </td>        <td style=\"vertical-align:bottom;padding:5px 0 0 0!important;\" rowspan=\"2\">            <table style=\"border-collapse:collapse;width:110px;color:#99a;font-family:'Helvetica','Lucida Grande','Arial',sans-serif;\"><tbody>                  <!-- NEXT/PREV MONTH NAV AND MONTH INDICATOR -->            <tr style=\"width:110px;height:16px;font-size:10px!important;\">              <td style=\"padding-right:9px;font-size:11px!important;font-weight:bold;text-transform:uppercase;text-align:right;white-space:nowrap;overflow:visible;\" nowrap=\"nowrap\">                                     <strong>PREV</strong>                                     </td>         <td style=\"padding-left:9px;font-size:11px!important;font-weight:bold;text-transform:uppercase;white-space:nowrap;overflow:visible;\" nowrap=\"nowrap\">                <strong>NEXT</strong>                                    </td>            </tr>             <!-- NEXT/PREV CAPTURE NAV AND DAY OF MONTH INDICATOR -->            <tr>                <td style=\"padding-right:9px;white-space:nowrap;overflow:visible;text-align:right!important;vertical-align:middle!important;\" nowrap=\"nowrap\">                                    "
+          + "<a"
+          + (prevDate == d? "style=\"display:none;\" ":"")
+          +" href=\""
           + TextDocument2.SERVER_PREFIX
           + tableName
           + "/"
@@ -187,10 +190,15 @@ public class WarcbaseResponse {
           + query
           + "\" title=\""
           + prevDate
-          + "\" style=\"background-color:transparent;border:none;\"><img src=\""
+          + "\" style=\"background-color:transparent;border:none;\"><img "
+          + (prevDate == d? "style=\"display:none;\" ":"")
+          + "src=\""
           + TextDocument2.SERVER_PREFIX
           + "warcbase/"
-          + "images/wm_tb_prv_on.png\" alt=\"Previous capture\" border=\"0\" height=\"16\" width=\"14\"></a>                                    </td>         <td style=\"padding-left:9px;white-space:nowrap;overflow:visible;text-align:left!important;vertical-align:middle!important;\" nowrap=\"nowrap\">                                    <a href=\""
+          + "images/wm_tb_prv_on.png\" alt=\"Previous capture\" border=\"0\" height=\"16\" width=\"14\"><a /"
+          +">                                    </td>         <td style=\"padding-left:9px;white-space:nowrap;overflow:visible;text-align:left!important;vertical-align:middle!important;\" nowrap=\"nowrap\">                                    <a"
+          + (nextDate == d? "style=\"display:none;\" ":"")
+          + " href=\""
           + TextDocument2.SERVER_PREFIX
           + tableName
           + "/"
@@ -199,10 +207,13 @@ public class WarcbaseResponse {
           + query
           + "\" title=\""
           + nextDate
-          + "\" style=\"background-color:transparent;border:none;\"><img src=\""
+          + "\" style=\"background-color:transparent;border:none;\"><img "
+          + (nextDate == d? "style=\"display:none;\" ":" ")
+          +"src=\""
           + TextDocument2.SERVER_PREFIX
           + "warcbase/"
-          + "images/wm_tb_nxt_on.png\" alt=\"Next capture\" border=\"0\" height=\"16\" width=\"14\"></a>                              </td>            </tr>             </tbody></table>        </td>         </tr>        <tr>        <td style=\"vertical-align:middle;padding:0!important;\">            <strong>"
+          + "images/wm_tb_nxt_on.png\" alt=\"Next capture\" border=\"0\" height=\"16\" width=\"14\"><a/"
+          + ">                              </td>            </tr>             </tbody></table>        </td>         </tr>        <tr>        <td style=\"vertical-align:middle;padding:0!important;\">            <strong>"
           + " "
           + num
           + " captures | Current Version: "
