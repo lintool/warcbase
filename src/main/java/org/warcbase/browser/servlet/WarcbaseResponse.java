@@ -199,7 +199,8 @@ public class WarcbaseResponse {
           + "images/wm_tb_nxt_on.png\" alt=\"Next capture\" border=\"0\" height=\"16\" width=\"14\"></a>                              </td>            </tr>             </tbody></table>        </td>         </tr>        <tr>        <td style=\"vertical-align:middle;padding:0!important;\">            <strong>"
           + " "
           + num
-          + " captures"
+          + " captures | Current Version: "
+          + new Date(d).toString()
           + "</strong>            <div style=\"margin:0!important;padding:0!important;color:#666;font-size:9px;padding-top:2px!important;white-space:nowrap;\" title=\"Timespan for captures of this URL\">"
           + new Date(dates[0]).toString()
           + "  -  "
