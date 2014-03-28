@@ -76,6 +76,7 @@ public class WarcbaseServlet extends HttpServlet {
     String q = Util.reverseHostname(query);
     HTableInterface table = pool.getTable(tableName);
     Get get = new Get(Bytes.toBytes(q));
+    get.setMaxVersions(HbaseManager.MAX_VERSIONS);
     Result rs = table.get(get);
 
     if (rs.raw().length == 0) {
@@ -97,7 +98,7 @@ public class WarcbaseServlet extends HttpServlet {
         }
       }
 
-      long[] dates = new long[HbaseManager.MAX_VERSIONS];
+      long[] dates = new long[rs.size()];
       for (int i = 0; i < rs.raw().length; i++)
         dates[i] = rs.raw()[i].getTimestamp();
       Arrays.sort(dates, 0, rs.raw().length);
