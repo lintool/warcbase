@@ -1,9 +1,9 @@
 package org.warcbase.data;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.List;
 
 import org.apache.lucene.util.BytesRef;
@@ -20,8 +20,8 @@ import org.junit.Test;
 // This class aims to test the PrefixSearch functionality.
 
 public class UriMappingTest {
-  
   private UriMapping map;
+
   @Before
   public void setUp() throws Exception {
     String inputValues[] = {"cat", "catch","cut", "doga","dogb","dogs"};
@@ -55,5 +55,4 @@ public class UriMappingTest {
     assertTrue(range[0] == 4);
     assertTrue(range[1] == 6);
   }
-
 }

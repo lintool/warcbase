@@ -2,7 +2,6 @@ package org.warcbase.data;
 
 import java.io.File;
 import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -10,6 +9,7 @@ import java.util.List;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
@@ -17,10 +17,11 @@ import org.apache.lucene.util.ArrayUtil;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.IntsRef;
 import org.apache.lucene.util.fst.FST;
+import org.apache.lucene.util.fst.FST.Arc;
+import org.apache.lucene.util.fst.FST.BytesReader;
 import org.apache.lucene.util.fst.PositiveIntOutputs;
 import org.apache.lucene.util.fst.Util;
-
-import cern.colt.Arrays;
+import org.warcbase.ingest.IngestFiles;
 
 public class UriMapping {
   private FST<Long> fst;
@@ -82,8 +83,7 @@ public class UriMapping {
 
   }
   
-public List<String> prefixSearch(String prefix) throws IOException{
-    
+  public List<String> prefixSearch(String prefix) throws IOException{
     // descend to the arc of the prefix string
     Arc<Long> arc = fst.getFirstArc(new Arc<Long>());
     BytesReader fstReader = fst.getBytesReader();
@@ -132,8 +132,7 @@ public List<String> prefixSearch(String prefix) throws IOException{
     fst.readFirstTargetArc(arc, arc, fstReader);
     while (true) {
       if (arc.label == FST.END_LABEL) {
-        res.add(new BytesRef().deepCopyOf(output));
-        //if (res.size() >= num) return true;
+        res.add(BytesRef.deepCopyOf(output));
       } else {
         int save = output.length;
         if (collect(res, fstReader, output, new Arc<Long>().copyFrom(arc))) {
@@ -150,6 +149,7 @@ public List<String> prefixSearch(String prefix) throws IOException{
     return false;
   }
   
+  @SuppressWarnings("static-access")
   public static void main(String[] args) throws Exception {
     final String DATA = "data";
     final String ID = "getId";
@@ -172,14 +172,14 @@ public List<String> prefixSearch(String prefix) throws IOException{
     } catch (ParseException exp) {
       System.err.println("Error parsing command line: "
           + exp.getMessage());
-      System.exit(0);
+      System.exit(-1);
     }
     
     if (!cmdline.hasOption(DATA) || (!cmdline.hasOption(ID)
         && !cmdline.hasOption(URL))) {
-      System.out.println("Error format of input arguments.");
-      System.out.println("args: " + Arrays.toString(args));
-      System.exit(0);
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.printHelp(IngestFiles.class.getCanonicalName(), options);
+      System.exit(-1);
     }
     
     String filePath = cmdline.getOptionValue(DATA);
