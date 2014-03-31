@@ -154,6 +154,7 @@ public class UriMapping {
     final String DATA = "data";
     final String ID = "getId";
     final String URL = "getUrl";
+    final String PREFIX = "getPrefix";
     
     Options options = new Options();
 
@@ -163,6 +164,8 @@ public class UriMapping {
         .withDescription("get id").create(ID));
     options.addOption(OptionBuilder.withArgName("path").hasArg()
         .withDescription("get url").create(URL));
+    options.addOption(OptionBuilder.withArgName("path").hasArg()
+        .withDescription("get prefix").create(PREFIX));
     
     CommandLine cmdline = null;
     CommandLineParser parser = new GnuParser();
@@ -176,7 +179,7 @@ public class UriMapping {
     }
     
     if (!cmdline.hasOption(DATA) || (!cmdline.hasOption(ID)
-        && !cmdline.hasOption(URL))) {
+        && !cmdline.hasOption(URL) && !cmdline.hasOption(PREFIX))) {
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp(IngestFiles.class.getCanonicalName(), options);
       System.exit(-1);
@@ -186,14 +189,22 @@ public class UriMapping {
     UriMapping map = new UriMapping(filePath);
     map.loadMapping(filePath);
     
-    if(cmdline.hasOption(ID)){
+    if (cmdline.hasOption(ID)) {
       String url = cmdline.getOptionValue(ID);
       System.out.println(map.getID(url));
     }
-    
-    if(cmdline.hasOption(URL)){
+
+    if (cmdline.hasOption(URL)) {
       int id = Integer.parseInt(cmdline.getOptionValue(URL));
       System.out.println(map.getUrl(id));
+    }
+
+    if (cmdline.hasOption(PREFIX)) {
+      String prefix = cmdline.getOptionValue(PREFIX);
+      List<String> urls = map.prefixSearch(prefix);
+      for (String s : urls) {
+        System.out.println(s);
+      }
     }
   }
 }
