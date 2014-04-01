@@ -110,6 +110,10 @@
               <name>UriMappingBuilder</name>
             </program>
             <program>
+              <mainClass>org.warcbase.data.UriMapping</mainClass>
+              <name>UriMapping</name>
+            </program>
+            <program>
               <mainClass>org.warcbase.data.ExtractLinks</mainClass>
               <name>ExtractLinks</name>
             </program>
