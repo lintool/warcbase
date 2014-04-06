@@ -382,6 +382,17 @@
       <artifactId>jwat-warc</artifactId>
       <version>${jwat.version}</version>
     </dependency>
+    <dependency>
+	<groupId>com.googlecode.juniversalchardet</groupId>
+	<artifactId>juniversalchardet</artifactId>
+	<version>1.0.3</version>
+</dependency>
+<dependency>
+	<groupId>org.apache.commons</groupId>
+	<artifactId>commons-lang3</artifactId>
+	<version>3.0</version>
+</dependency>
+            
     <!--dependency>
       <groupId>org.jwat</groupId>
       <artifactId>jwat-tools</artifactId>

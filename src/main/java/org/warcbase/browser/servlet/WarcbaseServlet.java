@@ -72,7 +72,7 @@ public class WarcbaseServlet extends HttpServlet {
     if (query == null) {
       query = pathInfo.substring(3 + splits[1].length() + splits[2].length(), pathInfo.length());
     }
-
+    
     String q = Util.reverseHostname(query);
     HTableInterface table = pool.getTable(tableName);
     Get get = new Get(Bytes.toBytes(q));

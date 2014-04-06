@@ -23,9 +23,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.mozilla.universalchardet.UniversalDetector;
 import org.warcbase.data.HbaseManager;
 import org.warcbase.data.TextDocument2;
 import org.warcbase.data.Util;
+import org.apache.commons.lang3.*;
 
 public class WarcbaseResponse {
   private final Configuration hbaseConfig;
@@ -145,6 +147,7 @@ public class WarcbaseResponse {
           break;
         }
       }
+      
       System.setProperty("file.encoding", "UTF8");
       resp.setHeader("Content-Type", type);
       resp.setCharacterEncoding("UTF-8");
@@ -157,8 +160,11 @@ public class WarcbaseResponse {
       if (base == null) {
         head.prepend("<base id='warcbase-base-added' href='" + query + "'>");
       }
-      bodyContent = doc.html();
+      //bodyContent = doc.html();
+      bodyContent = new String(Bytes.toBytes(doc.html()), "UTF8");
+      bodyContent = StringEscapeUtils.unescapeHtml4(bodyContent);
       bodyContent = t2.fixURLs(bodyContent, query, String.valueOf(d), tableName);
+      bodyContent = StringEscapeUtils.unescapeHtml4(bodyContent);
       doc = Jsoup.parse(bodyContent);
       base = doc.select("base").first();
       if (base != null) {
@@ -168,6 +174,11 @@ public class WarcbaseResponse {
       head = doc.select("head").first();
       head.prepend("<script type=\"text/javascript\"> function initYTVideo(id) {  _wmVideos_.init('/web/', id); } </script>  <script> function $(a){return document.getElementById(a)};     function addLoadEvent(a){if(window.addEventListener)addEventListener('load',a,false);else if(window.attachEvent)attachEvent('onload',a)} </script>");
       Element body = doc.select("body").first();
+      if(body == null){
+        Element noframes = doc.select("noframes").first();
+        Document docBody = Jsoup.parse(StringEscapeUtils.unescapeHtml4(noframes.html()));
+        body = docBody.select("body").first();
+      }
       body.prepend("<div id=\"wm-ipp\" style=\"display: block; position: relative; padding: 0px 5px; min-height: 70px; min-width: 800px; z-index: 9000;\"><div id=\"wm-ipp-inside\" style=\"position:fixed;padding:0!important;margin:0!important;width:97%;min-width:780px;border:5px solid #000;border-top:none;background-image:url("
           + TextDocument2.SERVER_PREFIX
           + "warcbase/"
@@ -227,6 +238,10 @@ public class WarcbaseResponse {
           + "warcbase/"
           + "images/wm_tb_close.png) no-repeat 100% 0;color:#33f;font-family:'Lucida Grande','Arial',sans-serif;margin-bottom:23px;background-color:transparent;border:none;\" title=\"Close the toolbar\">Close</a>            </td>    </tr></tbody></table>  </div> </div>      <style type=\"text/css\">body{margin-top:0!important;padding-top:0!important;min-width:800px!important;}#wm-ipp a:hover{text-decoration:underline!important;}</style>");
 
+      if(doc.select("body").first() == null){
+        Element noframes = doc.select("noframes").first();
+        noframes.html(body.html());
+      }
       bodyContent = doc.html();
       out.println(bodyContent);
     }
