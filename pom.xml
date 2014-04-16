@@ -118,6 +118,10 @@
               <name>ExtractLinks</name>
             </program>
             <program>
+              <mainClass>org.warcbase.data.ExtractSiteLinks</mainClass>
+              <name>ExtractSiteLinks</name>
+            </program>
+            <program>
               <mainClass>org.warcbase.ingest.IngestFiles</mainClass>
               <name>IngestFiles</name>
             </program>
