@@ -81,7 +81,13 @@ $ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar org.warcbase.data.Extract
   -input inputDir -output outputDir -uriMapping fstData -numReducers 1
 ```
 
-Finally, instead of extracting links between specific urls, we can extract site-level links by merging all urls with common prefix into a supernode. Link counts between supernodes is the total number of links between their sub-urls. In order to do this, following input files are required: a prefix file providing prefix urls for each supernode; a fst mapping file to map URLs to unique integer ids; a directory containing links between all suburls which can be extracted from previous step. To run this program:
+Finally, instead of extracting links between individual URLs, we can extract the site-level webgraph by merging all URLs with common prefix into a "supernode". Link counts between supernodes represent the total number of links between their sub-URLs. In order to do this, following input files are required:
+
++ a prefix file providing URL prefixes for each supernode (comma-delimited: id, URL prefix);
++ an FST mapping file to map individual URLs to unique integer ids (from above);
++ a directory containing the original link graph (which can be extracted from the previous step).
+
+Then run this program:
 
 ```
 $ sh target/appassembler/bin/ExtractSiteLinks -prefixfile prefix.data 
