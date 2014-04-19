@@ -176,8 +176,14 @@ public class WarcbaseResponse {
       Element body = doc.select("body").first();
       if(body == null){
         Element noframes = doc.select("noframes").first();
-        Document docBody = Jsoup.parse(StringEscapeUtils.unescapeHtml4(noframes.html()));
-        body = docBody.select("body").first();
+        if(noframes != null){
+          Document docBody = Jsoup.parse(StringEscapeUtils.unescapeHtml4(noframes.html()));
+          body = docBody.select("body").first();
+        }
+      }
+      if(body == null) {
+        out.println(bodyContent);
+        return;
       }
       body.prepend("<div id=\"wm-ipp\" style=\"display: block; position: relative; padding: 0px 5px; min-height: 70px; min-width: 800px; z-index: 9000;\"><div id=\"wm-ipp-inside\" style=\"position:fixed;padding:0!important;margin:0!important;width:97%;min-width:780px;border:5px solid #000;border-top:none;background-image:url("
           + TextDocument2.SERVER_PREFIX
