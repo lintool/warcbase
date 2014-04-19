@@ -3,9 +3,7 @@ package org.warcbase.browser.servlet;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Date;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -23,7 +21,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.mozilla.universalchardet.UniversalDetector;
 import org.warcbase.data.HbaseManager;
 import org.warcbase.data.TextDocument2;
 import org.warcbase.data.Util;
@@ -154,6 +151,7 @@ public class WarcbaseResponse {
       PrintWriter out = resp.getWriter();
       TextDocument2 t2 = new TextDocument2(null, null, null);
       String bodyContent = new String(content, "UTF8");
+      System.out.println(bodyContent);
       Document doc = Jsoup.parse(bodyContent);
       Element head = doc.select("head").first();
       Element base = doc.select("base").first();
