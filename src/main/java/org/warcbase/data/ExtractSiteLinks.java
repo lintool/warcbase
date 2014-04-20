@@ -26,6 +26,8 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
 import org.warcbase.ingest.IngestFiles;
 
+import com.csvreader.CsvReader;
+
 
 public class ExtractSiteLinks {
   
@@ -73,11 +75,12 @@ public class ExtractSiteLinks {
       }
     };
     prefixes = new ArrayList<PrefixNode>();
-    BufferedReader reader = new BufferedReader(new FileReader(prefixFile));
+    CsvReader reader = new CsvReader(prefixFile);
+    reader.readHeaders();
     String line;
-    while((line=reader.readLine())!=null){
-      int id = Integer.valueOf(line.split(",")[0]);
-      String url = line.split(",")[1];
+    while(reader.readRecord()){
+      int id = Integer.valueOf(reader.get("id"));
+      String url = reader.get("url");
       List<String> results = map.prefixSearch(url);
       Long[] boundary = map.getIdRange(results);
       PrefixNode node = instance.new PrefixNode(id, url, boundary[0], boundary[1]);
@@ -137,7 +140,7 @@ public class ExtractSiteLinks {
     writer.write("Source,Target,Weight\n");
     for(int src=1; src<=prefixes.size();src++){
       for(int dest=1; dest<=prefixes.size();dest++){
-        if(prefixLinks[src][dest]!=0){
+        if(prefixLinks[src][dest]!=0 && src!=dest){
           writer.write(src+","+dest+","+prefixLinks[src][dest]+"\n");
         }
       }
