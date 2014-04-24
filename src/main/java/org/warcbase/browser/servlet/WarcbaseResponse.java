@@ -151,7 +151,7 @@ public class WarcbaseResponse {
       PrintWriter out = resp.getWriter();
       TextDocument2 t2 = new TextDocument2(null, null, null);
       String bodyContent = new String(content, "UTF8");
-      System.out.println(bodyContent);
+      bodyContent = bodyContent.replaceAll("�", "");
       Document doc = Jsoup.parse(bodyContent);
       Element head = doc.select("head").first();
       Element base = doc.select("base").first();

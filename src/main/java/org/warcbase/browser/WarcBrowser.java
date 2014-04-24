@@ -8,6 +8,7 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.DefaultServlet;
@@ -86,6 +87,7 @@ public class WarcBrowser {
     String server = cmdline.getOptionValue(SERVER_OPTION);
 
     LOG.info("Starting server on port " + port + " with server prefix " + server);
+    LOG.setLevel(Level.OFF);
     WarcBrowser browser = new WarcBrowser(port);
     TextDocument2.SERVER_PREFIX = server;
 
