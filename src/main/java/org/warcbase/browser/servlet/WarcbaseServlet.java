@@ -65,12 +65,23 @@ public class WarcbaseServlet extends HttpServlet {
       warcbaseResponse.writeDates(resp, tableName, query);
       return;
     }
+    
+    int nobanner = 0;
+    if (splits[2].equals("nobanner")) {
+      nobanner++;
+    }
 
     if (d == null) {
-      d = splits[2];
+      d = splits[2 + nobanner];
     }
+    
     if (query == null) {
-      query = pathInfo.substring(3 + splits[1].length() + splits[2].length(), pathInfo.length());
+      if (nobanner == 0) {
+        query = pathInfo.substring(3 + splits[1].length() + splits[2].length(), pathInfo.length());
+      }
+      else {
+        query = pathInfo.substring(4 + splits[1].length() + splits[2].length() + splits[3].length(), pathInfo.length());
+      }
     }
     
     String q = Util.reverseHostname(query);
@@ -92,7 +103,7 @@ public class WarcbaseServlet extends HttpServlet {
         long timestamp = rs.raw()[i].getTimestamp();
         String date = new Date(timestamp).toString();
         if (timestamp == dLong) {
-          warcbaseResponse.writeContent(resp, tableName, query, timestamp, dLong);
+          warcbaseResponse.writeContent(resp, tableName, query, timestamp, dLong, nobanner);
           table.close();
           return;
         }
@@ -104,12 +115,12 @@ public class WarcbaseServlet extends HttpServlet {
       Arrays.sort(dates, 0, rs.raw().length);
       for (int i = 1; i < rs.raw().length; i++)
         if (dates[i] > dLong) {// d < i
-          warcbaseResponse.writeContent(resp, tableName, query, dates[i], dLong);
+          warcbaseResponse.writeContent(resp, tableName, query, dates[i], dLong, nobanner);
           table.close();
           return;
         }
       int i = rs.raw().length;
-      warcbaseResponse.writeContent(resp, tableName, query, dates[i - 1], dLong);
+      warcbaseResponse.writeContent(resp, tableName, query, dates[i - 1], dLong, nobanner);
       table.close();
       return;
     }
