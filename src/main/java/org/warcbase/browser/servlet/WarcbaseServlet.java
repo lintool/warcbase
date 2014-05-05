@@ -66,17 +66,22 @@ public class WarcbaseServlet extends HttpServlet {
       return;
     }
     
-    int nobanner = 0;
+    boolean nobanner = false;
     if (splits[2].equals("nobanner")) {
-      nobanner++;
+      nobanner = true;
     }
 
     if (d == null) {
-      d = splits[2 + nobanner];
+      if (nobanner) {
+        d = splits[2 + 1];
+      }
+      else {
+        d = splits[2];
+      }
     }
     
     if (query == null) {
-      if (nobanner == 0) {
+      if (!nobanner) {
         query = pathInfo.substring(3 + splits[1].length() + splits[2].length(), pathInfo.length());
       }
       else {

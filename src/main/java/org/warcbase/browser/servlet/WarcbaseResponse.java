@@ -114,7 +114,7 @@ public class WarcbaseResponse {
   }
 
   private void writeResponse(HttpServletResponse resp, Result rs, byte[] content, String query,
-      long d, String type, int num, String tableName, int nobanner) throws IOException {
+      long d, String type, int num, String tableName, boolean nobanner) throws IOException {
     if (type.startsWith("text/plain") || !type.startsWith("text")) {
       resp.setHeader("Content-Type", type);
       resp.setContentLength(content.length);
@@ -183,7 +183,7 @@ public class WarcbaseResponse {
         out.println(bodyContent);
         return;
       }
-      if (nobanner == 0) {
+      if (!nobanner) {
         body.prepend("<div id=\"wm-ipp\" style=\"display: block; position: relative; padding: 0px 5px; min-height: 70px; min-width: 800px; z-index: 9000;\"><div id=\"wm-ipp-inside\" style=\"position:fixed;padding:0!important;margin:0!important;width:97%;min-width:780px;border:5px solid #000;border-top:none;background-image:url("
           + TextDocument2.SERVER_PREFIX
           + "warcbase/"
@@ -254,7 +254,7 @@ public class WarcbaseResponse {
   }
 
   public void writeContent(HttpServletResponse resp, String tableName, String query, long d,
-      long realDate, int nobanner) throws IOException {
+      long realDate, boolean nobanner) throws IOException {
     byte[] data = null;
     String type = null;
     String q = Util.reverseHostname(query);
