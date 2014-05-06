@@ -367,6 +367,7 @@ public class TextDocument2 {
       if (replayURIPrefix == null) {
         sb = new StringBuilder(url.length() + datespec.length());
         sb.append(SERVER_PREFIX + tableName + "/");
+        sb.append("nobanner" + "/");
         sb.append(datespec);
         sb.append("/");
         sb.append(url);
@@ -407,6 +408,7 @@ public class TextDocument2 {
       if (replayURIPrefix == null) {
         sb = new StringBuilder(url.length() + datespec.length());
         sb.append(SERVER_PREFIX + tableName + "/");
+        sb.append("nobanner" + "/");
         sb.append(datespec);
         sb.append("/");
         sb.append(url);
