@@ -144,14 +144,17 @@ public class WarcbaseResponse {
           break;
         }
       }
-      
+
       System.setProperty("file.encoding", "UTF8");
       resp.setHeader("Content-Type", type);
       resp.setCharacterEncoding("UTF-8");
       PrintWriter out = resp.getWriter();
       TextDocument2 t2 = new TextDocument2(null, null, null);
       String bodyContent = new String(content, "UTF8");
+
+      // Fixes https://github.com/lintool/warcbase/issues/25
       bodyContent = bodyContent.replaceAll("�", "");
+
       Document doc = Jsoup.parse(bodyContent);
       Element head = doc.select("head").first();
       Element base = doc.select("base").first();
@@ -243,8 +246,8 @@ public class WarcbaseResponse {
           + "warcbase/"
           + "images/wm_tb_close.png) no-repeat 100% 0;color:#33f;font-family:'Lucida Grande','Arial',sans-serif;margin-bottom:23px;background-color:transparent;border:none;\" title=\"Close the toolbar\">Close</a>            </td>    </tr></tbody></table>  </div> </div>      <style type=\"text/css\">body{margin-top:0!important;padding-top:0!important;min-width:800px!important;}#wm-ipp a:hover{text-decoration:underline!important;}</style>");
       }
-        
-      if(doc.select("body").first() == null){
+
+      if (doc.select("body").first() == null) {
         Element noframes = doc.select("noframes").first();
         noframes.html(body.html());
       }

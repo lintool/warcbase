@@ -65,7 +65,7 @@ public class WarcbaseServlet extends HttpServlet {
       warcbaseResponse.writeDates(resp, tableName, query);
       return;
     }
-    
+
     boolean nobanner = false;
     if (splits[2].equals("nobanner")) {
       nobanner = true;
@@ -74,8 +74,7 @@ public class WarcbaseServlet extends HttpServlet {
     if (d == null) {
       if (nobanner) {
         d = splits[2 + 1];
-      }
-      else {
+      } else {
         d = splits[2];
       }
     }
@@ -83,12 +82,11 @@ public class WarcbaseServlet extends HttpServlet {
     if (query == null) {
       if (!nobanner) {
         query = pathInfo.substring(3 + splits[1].length() + splits[2].length(), pathInfo.length());
-      }
-      else {
+      } else {
         query = pathInfo.substring(4 + splits[1].length() + splits[2].length() + splits[3].length(), pathInfo.length());
       }
     }
-    
+
     String q = Util.reverseHostname(query);
     HTableInterface table = pool.getTable(tableName);
     Get get = new Get(Bytes.toBytes(q));
