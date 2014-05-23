@@ -86,7 +86,8 @@ public class WarcbaseServlet extends HttpServlet {
         query = pathInfo.substring(4 + splits[1].length() + splits[2].length() + splits[3].length(), pathInfo.length());
       }
     }
-
+    query = query.replace(" ", "%20");
+    
     String q = Util.reverseHostname(query);
     HTableInterface table = pool.getTable(tableName);
     Get get = new Get(Bytes.toBytes(q));
@@ -154,4 +155,5 @@ public class WarcbaseServlet extends HttpServlet {
     out.println("</body>");
     out.println("</html>");
   }
+  
 }

@@ -151,7 +151,7 @@ public class WarcbaseResponse {
       PrintWriter out = resp.getWriter();
       TextDocument2 t2 = new TextDocument2(null, null, null);
       String bodyContent = new String(content, "UTF8");
-
+      
       // Fixes https://github.com/lintool/warcbase/issues/25
       bodyContent = bodyContent.replaceAll("�", "");
 
@@ -281,4 +281,5 @@ public class WarcbaseResponse {
     table.close();
   }
 
+  
 }

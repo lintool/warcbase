@@ -78,8 +78,14 @@ public class Util {
     String[] splits = url.split("\\/");
     return splits[0];
   }
+  
+  public static void main(String[] args) {
+    String query = "http://brownback.senate.gov/graphics/slice images/slice images/microphone2.gif";
+    query.replace(" ", "%20");
+    System.out.println(query);
+  }
 
-  public static void main(String[] args) throws MalformedURLException {
+  /*public static void main(String[] args) throws MalformedURLException {
     String uri = "http://www.house.gov/mthompson/the_1st_district.htm";
     System.out.println(Util.reverseHostname(uri));// http://www.ayotte.senate.gov/
     String reverse = Util.reverseHostname("http://www.house.gov/mthompson/the_1st_district.htm");
@@ -90,7 +96,7 @@ public class Util {
     domain = Util.reverseBacHostnamek(domain);
     System.out.println(domain);
     System.out.println(Util.reverseBacUri(reverse));
-  }
+  }*/
 
   public static String getUriExtension(String thisTargetURI) {
     if (thisTargetURI.length() > 3) {
