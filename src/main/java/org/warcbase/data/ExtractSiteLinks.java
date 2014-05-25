@@ -74,7 +74,7 @@ public class ExtractSiteLinks {
       }
     };
     prefixes = new ArrayList<PrefixNode>();
-    CSVReader reader = new CSVReader(prefixFile);
+    CSVReader reader = new CSVReader(new FileReader(prefixFile),',');
     reader.readNext();
     String line;
     String[] record = null;
