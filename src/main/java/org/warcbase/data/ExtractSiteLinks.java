@@ -26,8 +26,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
 import org.warcbase.ingest.IngestFiles;
 
-import com.csvreader.CsvReader;
-
+import au.com.bytecode.opencsv.CSVReader;
 
 public class ExtractSiteLinks {
   
@@ -75,12 +74,13 @@ public class ExtractSiteLinks {
       }
     };
     prefixes = new ArrayList<PrefixNode>();
-    CsvReader reader = new CsvReader(prefixFile);
-    reader.readHeaders();
+    CSVReader reader = new CSVReader(prefixFile);
+    reader.readNext();
     String line;
-    while(reader.readRecord()){
-      int id = Integer.valueOf(reader.get("id"));
-      String url = reader.get("url");
+    String[] record = null;
+    while((record = reader.readNext())!=null){
+      int id = Integer.valueOf(record[0]);
+      String url = record[1];
       List<String> results = map.prefixSearch(url);
       Long[] boundary = map.getIdRange(results);
       PrefixNode node = instance.new PrefixNode(id, url, boundary[0], boundary[1]);
