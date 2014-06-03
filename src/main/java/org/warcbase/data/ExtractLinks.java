@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
+import org.eclipse.jetty.util.log.Log;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.UnsupportedMimeTypeException;
@@ -103,7 +104,6 @@ public class ExtractLinks extends Configured implements Tool {
       String time = df.format(date);
       InputStream content = record.getPayloadContent();
       
-      
       if(beginDate != null && endDate != null){
         if(time.compareTo(beginDate)<0 || time.compareTo(endDate)>0)
           return;
@@ -111,8 +111,9 @@ public class ExtractLinks extends Configured implements Tool {
         if(time.compareTo(endDate)>0)
           return;
       }else if(beginDate != null && endDate == null){
-        if(time.compareTo(beginDate)<0)
+        if(time.compareTo(beginDate)<0){
           return;
+        }
       }
       
       if (!type.equals("text/html"))
@@ -229,6 +230,8 @@ public class ExtractLinks extends Configured implements Tool {
     // Pass in the class name as a String; this is makes the mapper general
     // in being able to load any collection of Indexable objects that has
     // url_id/url mapping specified by a UriMapping object.
+    //job.getConfiguration().set("mapred.job.tracker", "local");
+    //job.getConfiguration().set("fs.default.name", "local");
     job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
     // Put the mapping file in the distributed cache so each map worker will
     // have it.

@@ -93,7 +93,6 @@ public class ExtractSiteLinks extends Configured implements Tool{
       String time = df.format(date);
       InputStream content = record.getPayloadContent();
       
-      System.out.println(time);
       if(beginDate != null && endDate != null){
         if(time.compareTo(beginDate)<0 || time.compareTo(endDate)>0)
           return;
@@ -113,17 +112,17 @@ public class ExtractSiteLinks extends Configured implements Tool{
       if (fst.getID(url) != -1 && prefixMap.getPrefixId(fst.getID(url), prefix)!=-1) { // the url is already indexed in UriMapping
         int prefixSourceId = prefixMap.getPrefixId(fst.getID(url), prefix);
         urlNode.set(prefixSourceId);
-        Set<Integer> linkUrlSet = new HashSet<Integer>();
+        List<Integer> linkUrlList = new ArrayList<Integer>();
         if (links != null) {
           for (Element link : links) {
             String linkUrl = link.attr("abs:href");
             if (fst.getID(linkUrl) != -1 && prefixMap.getPrefixId(fst.getID(linkUrl), prefix)!=-1) { // linkUrl is already indexed
               int prefixTargetId = prefixMap.getPrefixId(fst.getID(linkUrl), prefix);
-              linkUrlSet.add(prefixTargetId);
+              linkUrlList.add(prefixTargetId);
             }
           }
           boolean emitFlag = false;
-          for (Integer linkID : linkUrlSet) {
+          for (Integer linkID : linkUrlList) {
             context.write(urlNode,new IntWritable(linkID));
           }
       
