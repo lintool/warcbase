@@ -1,18 +1,19 @@
-package org.warcbase.data;
+package org.warcbase.analysis.graph;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringWriter;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
 import java.net.URI;
-import java.net.UnknownHostException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
-import java.util.StringTokenizer;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -23,53 +24,44 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
-import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
-import org.jsoup.UnsupportedMimeTypeException;
-import org.jsoup.helper.Validate;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
-import org.jwat.common.HttpHeader;
+import org.warcbase.analysis.graph.PrefixMapping.PrefixNode;
+import org.warcbase.data.UriMapping;
 import org.warcbase.mapreduce.ArcInputFormat;
-import java.util.Arrays;
 
-/**
- * Extract Links demo.
- * 
- * @author Jinfeng Rao modified code based on CountTrecDocuments.java by Jimmy Lin
- */
-public class ExtractLinks extends Configured implements Tool {
-  private static final Logger LOG = Logger.getLogger(ExtractLinks.class);
+public class ExtractSiteLinks extends Configured implements Tool{
+  private static final Logger LOG = Logger.getLogger(ExtractSiteLinks.class);
 
   private static enum Records {
     TOTAL, LINK_COUNT
   };
 
-  public static class ExtractLinksMapper extends
-      Mapper<LongWritable, ArcRecordBase, IntWritable, List> {
+  public static class ExtractSiteLinksMapper extends
+      Mapper<LongWritable, ArcRecordBase, IntWritable, IntWritable> {
     private IntWritable urlNode = new IntWritable();
-    private List linkNodes;
     private static UriMapping fst;
+    private static PrefixMapping prefixMap;
+    private static ArrayList<PrefixNode> prefix;
 
     @Override
     public void setup(Context context) {
@@ -81,6 +73,9 @@ public class ExtractLinks extends Configured implements Tool {
         fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());// simply assume only one file in distributed
                                                   // cache
+        prefixMap = (PrefixMapping) Class.forName(conf.get("PrefixMappingClass")).newInstance();
+        prefix = prefixMap.loadPrefix(localFiles[1].toString(), fst);
+      
       } catch (Exception e) {
         e.printStackTrace();
         throw new RuntimeException("Error Initializing UriMapping");
@@ -94,52 +89,85 @@ public class ExtractLinks extends Configured implements Tool {
       context.getCounter(Records.TOTAL).increment(1);
       String url = record.getUrlStr();
       String type = record.getContentTypeStr();
+      Date date = record.getArchiveDate();
+      DateFormat df = new SimpleDateFormat("yyyyMMdd");
+      String time = df.format(date);
       InputStream content = record.getPayloadContent();
-
+      
+      if(beginDate != null && endDate != null){
+        if(time.compareTo(beginDate)<0 || time.compareTo(endDate)>0)
+          return;
+      }else if(beginDate == null && endDate != null){
+        if(time.compareTo(endDate)>0)
+          return;
+      }else if(beginDate != null && endDate == null){
+        if(time.compareTo(beginDate)<0)
+          return;
+      }
+      
       if (!type.equals("text/html"))
         return;
       Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
       Elements links = doc.select("a[href]"); // empty if none match
 
-      if (fst.getID(url) != -1) { // the url is already indexed in UriMapping
-        urlNode.set(fst.getID(url));
-        linkNodes = new ArrayList<IntWritable>();
-        Set<IntWritable> linkUrlSet = new HashSet<IntWritable>();
+      if (fst.getID(url) != -1 && prefixMap.getPrefixId(fst.getID(url), prefix)!=-1) { // the url is already indexed in UriMapping
+        int prefixSourceId = prefixMap.getPrefixId(fst.getID(url), prefix);
+        urlNode.set(prefixSourceId);
+        List<Integer> linkUrlList = new ArrayList<Integer>();
         if (links != null) {
           for (Element link : links) {
             String linkUrl = link.attr("abs:href");
-            if (fst.getID(linkUrl) != -1) { // linkUrl is already indexed
-              linkUrlSet.add(new IntWritable(fst.getID(linkUrl)));
+            if (fst.getID(linkUrl) != -1 && prefixMap.getPrefixId(fst.getID(linkUrl), prefix)!=-1) { // linkUrl is already indexed
+              int prefixTargetId = prefixMap.getPrefixId(fst.getID(linkUrl), prefix);
+              linkUrlList.add(prefixTargetId);
             }
           }
           boolean emitFlag = false;
-          for (IntWritable linkID : linkUrlSet) {
-            linkNodes.add(linkID);
-            emitFlag = true;
-            context.getCounter(Records.LINK_COUNT).increment(1);
+          for (Integer linkID : linkUrlList) {
+            context.write(urlNode,new IntWritable(linkID));
           }
-          if (emitFlag == false) { // contain no links which are indexed in UriMapping
-            context.getCounter(Records.LINK_COUNT).increment(1);
-          }
-
-        } else { // webpage without outgoing links
-          context.getCounter(Records.LINK_COUNT).increment(1);
-        }
-        context.write(urlNode, linkNodes);
+      
+        } 
       }
     }
   }
-
+  
+  private static class ExtractSiteLinksReducer extends
+  Reducer<IntWritable, IntWritable, IntWritable, Text> {
+  @Override
+  public void reduce(IntWritable key, Iterable<IntWritable> values, Context context)
+      throws IOException, InterruptedException{
+    Map<Integer,Integer> links = new HashMap<Integer,Integer>();
+    //remove duplicate links
+    for(IntWritable value : values){
+      if(links.containsKey(value.get())){
+        //increment 1 link count
+        links.put(value.get(),links.get(value.get())+1);
+      }else{
+        links.put(value.get(), 1);
+      }
+    }
+    for(Entry<Integer,Integer> link: links.entrySet()){
+      context.getCounter(Records.LINK_COUNT).increment(1);
+      String outputValue = String.valueOf(link.getKey()) +"   "+ String.valueOf(link.getValue());
+      context.write(key, new Text(outputValue));
+    }
+  }
+}
+  
   /**
    * Creates an instance of this tool.
    */
-  public ExtractLinks() {
-  }
+  public ExtractSiteLinks() {}
 
   private static final String INPUT = "input";
   private static final String OUTPUT = "output";
   private static final String URI_MAPPING = "uriMapping";
+  private static final String PREFIX_FILE = "prefixFile";
   private static final String NUM_REDUCERS = "numReducers";
+  private static final String BEGIN="begin";
+  private static final String END="end";
+  private static String beginDate=null, endDate=null;
 
   /**
    * Runs this tool.
@@ -154,8 +182,14 @@ public class ExtractLinks extends Configured implements Tool {
         .create(OUTPUT));
     options.addOption(OptionBuilder.withArgName("path").hasArg()
         .withDescription("uri mapping file path").create(URI_MAPPING));
+    options.addOption(OptionBuilder.withArgName("path").hasArg()
+        .withDescription("prefix mapping file path").create(PREFIX_FILE));
     options.addOption(OptionBuilder.withArgName("num").hasArg()
         .withDescription("number of reducers").create(NUM_REDUCERS));
+    options.addOption(OptionBuilder.withArgName("path").hasArg().withDescription("begin date (optional)")
+        .create(BEGIN));
+    options.addOption(OptionBuilder.withArgName("path").hasArg().withDescription("end date (optional)")
+        .create(END));
 
     CommandLine cmdline;
     CommandLineParser parser = new GnuParser();
@@ -167,7 +201,8 @@ public class ExtractLinks extends Configured implements Tool {
       return -1;
     }
 
-    if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT) || !cmdline.hasOption(URI_MAPPING)) {
+    if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT) 
+        || !cmdline.hasOption(URI_MAPPING) || !cmdline.hasOption(PREFIX_FILE)) {
       System.out.println("args: " + Arrays.toString(args));
       HelpFormatter formatter = new HelpFormatter();
       formatter.setWidth(120);
@@ -179,27 +214,40 @@ public class ExtractLinks extends Configured implements Tool {
     String inputPath = cmdline.getOptionValue(INPUT);
     String outputPath = cmdline.getOptionValue(OUTPUT);
     String mappingPath = cmdline.getOptionValue(URI_MAPPING);
+    String prefixFile = cmdline.getOptionValue(PREFIX_FILE);
     int reduceTasks = cmdline.hasOption(NUM_REDUCERS) ? Integer.parseInt(cmdline
         .getOptionValue(NUM_REDUCERS)) : 1;
 
-    LOG.info("Tool: " + ExtractLinks.class.getSimpleName());
+    LOG.info("Tool: " + ExtractSiteLinks.class.getSimpleName());
     LOG.info(" - input path: " + inputPath);
     LOG.info(" - output path: " + outputPath);
     LOG.info(" - mapping file path:" + mappingPath);
+    LOG.info(" - prefix file path:" + prefixFile);
     LOG.info(" - number of reducers: " + reduceTasks);
-
-    Job job = new Job(getConf(), ExtractLinks.class.getSimpleName());
-    job.setJarByClass(ExtractLinks.class);
+    if(cmdline.hasOption(BEGIN)){
+      beginDate = cmdline.getOptionValue(BEGIN);
+      LOG.info(" - begin date: " + beginDate);
+    }
+    if(cmdline.hasOption(END)){
+      endDate = cmdline.getOptionValue(END);
+      LOG.info(" - end date: " + endDate);
+    }
+    
+    
+    Job job = new Job(getConf(), ExtractSiteLinks.class.getSimpleName());
+    job.setJarByClass(ExtractSiteLinks.class);
 
     // Pass in the class name as a String; this is makes the mapper general
     // in being able to load any collection of Indexable objects that has
     // url_id/url mapping specified by a UriMapping object.
     job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
+    job.getConfiguration().set("PrefixMappingClass",PrefixMapping.class.getCanonicalName());
     // Put the mapping file in the distributed cache so each map worker will
     // have it.
     DistributedCache.addCacheFile(new URI(mappingPath), job.getConfiguration());
+    DistributedCache.addCacheFile(new URI(prefixFile), job.getConfiguration());
 
-    job.setNumReduceTasks(0); // no reducers
+    job.setNumReduceTasks(reduceTasks); // no reducers
 
     FileInputFormat.setInputPaths(job, new Path(inputPath));
     FileOutputFormat.setOutputPath(job, new Path(outputPath));
@@ -207,9 +255,12 @@ public class ExtractLinks extends Configured implements Tool {
     job.setInputFormatClass(ArcInputFormat.class);
     // set map (key,value) output format
     job.setMapOutputKeyClass(IntWritable.class);
-    job.setMapOutputValueClass(List.class);
+    job.setMapOutputValueClass(IntWritable.class);
+    job.setOutputKeyClass(IntWritable.class);
+    job.setOutputValueClass(Text.class);
 
-    job.setMapperClass(ExtractLinksMapper.class);
+    job.setMapperClass(ExtractSiteLinksMapper.class);
+    job.setReducerClass(ExtractSiteLinksReducer.class);
 
     // Delete the output directory if it exists already.
     Path outputDir = new Path(outputPath);
@@ -232,6 +283,6 @@ public class ExtractLinks extends Configured implements Tool {
    * Dispatches command-line arguments to the tool via the {@code ToolRunner}.
    */
   public static void main(String[] args) throws Exception {
-    ToolRunner.run(new ExtractLinks(), args);
+    ToolRunner.run(new ExtractSiteLinks(), args);
   }
 }

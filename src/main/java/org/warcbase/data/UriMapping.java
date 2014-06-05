@@ -13,6 +13,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.log4j.Logger;
 import org.apache.lucene.util.ArrayUtil;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.IntsRef;
@@ -24,6 +25,8 @@ import org.apache.lucene.util.fst.Util;
 import org.warcbase.ingest.IngestFiles;
 
 public class UriMapping {
+  private static final Logger LOG = Logger.getLogger(UriMapping.class);
+
   private FST<Long> fst;
 
   public UriMapping(FST<Long> fst) {
@@ -39,8 +42,7 @@ public class UriMapping {
     try {
       this.fst = FST.read(outputFile, outputs);
     } catch (IOException e) {
-      // TODO Auto-generated catch block
-      System.out.println("Build FST Failed");
+      LOG.error("Build FST Failed!");
       e.printStackTrace();
     }
   }
@@ -59,66 +61,91 @@ public class UriMapping {
     try {
       id = Util.get(fst, new BytesRef(url));
     } catch (IOException e) {
-      // TODO Auto-generated catch block
-      System.out.println("url may not exist");
+      // Log error, but assume that URL doesn't exist.
+      LOG.error("Error fetching " + url);
       e.printStackTrace();
-    }
-    if (id == null) { // url don't exist
       return -1;
     }
-    return id.intValue();
+
+    return id == null ? -1 : id.intValue();
   }
 
   public String getUrl(int id) {
     BytesRef scratchBytes = new BytesRef();
     IntsRef key = null;
+
     try {
       key = Util.getByOutput(fst, id);
     } catch (IOException e) {
-      // TODO Auto-generated catch block
-      System.out.println("id may not exist");
+      LOG.error("Error id " + id);
       e.printStackTrace();
+      return null;
+    }
+
+    if (key == null) {
+      return null;
     }
     return Util.toBytesRef(key, scratchBytes).utf8ToString();
-
   }
   
-  public List<String> prefixSearch(String prefix) throws IOException{
-    // descend to the arc of the prefix string
-    Arc<Long> arc = fst.getFirstArc(new Arc<Long>());
-    BytesReader fstReader = fst.getBytesReader();
-    BytesRef bref = new BytesRef(prefix);    
-    for(int i=0; i<bref.length; i++){
-      fst.findTargetArc(bref.bytes[i+bref.offset] & 0xFF, arc, arc, fstReader);
+  public List<String> prefixSearch(String prefix) {
+    if (prefix == null || prefix.length() == 0 ) {
+      return new ArrayList<String>();
     }
-    
-    // collect all substrings started from the arc of prefix string.
-    List<BytesRef> result = new ArrayList<BytesRef>();
-    BytesRef newPrefixBref = new BytesRef(prefix.substring(0, prefix.length()-1));
-    collect(result, fstReader, newPrefixBref, arc);
-    
-    // convert BytesRef results to String results
-    List<String> strResults = new ArrayList<String>();
-    Iterator<BytesRef> iter = result.iterator();
-    while(iter.hasNext()){
-      strResults.add(iter.next().utf8ToString());
+
+    List<String> strResults = null;
+    try {
+      // descend to the arc of the prefix string
+      Arc<Long> arc = fst.getFirstArc(new Arc<Long>());
+      BytesReader fstReader = fst.getBytesReader();
+      BytesRef bref = new BytesRef(prefix);
+      for (int i = 0; i < bref.length; i++) {
+        Arc<Long> retArc = fst.findTargetArc(bref.bytes[i + bref.offset] & 0xFF, arc, arc, fstReader);
+        if (retArc == null) { // no matched prefix
+          return new ArrayList<String>();
+        }
+      }
+
+      // collect all substrings started from the arc of prefix string.
+      List<BytesRef> result = new ArrayList<BytesRef>();
+      BytesRef newPrefixBref = new BytesRef(prefix.substring(0, prefix.length() - 1));
+      collect(result, fstReader, newPrefixBref, arc);
+
+      // convert BytesRef results to String results
+      strResults = new ArrayList<String>();
+      Iterator<BytesRef> iter = result.iterator();
+      while (iter.hasNext()) {
+        strResults.add(iter.next().utf8ToString());
+      }
+    } catch (IOException e) {
+      LOG.error("Error: " + e);
+      e.printStackTrace();
+      return new ArrayList<String>();
     }
-    
+
     return strResults;
   }
   
-  public Long[] getIdRange(List<String> results){
-    Long startId=null, endId=null;
-    String firstRes = results.get(0);
-    String lastRes = results.get(results.size()-1);
-    try {
-      startId = Util.get(fst, new BytesRef(firstRes));
-      endId = Util.get(fst, new BytesRef(lastRes));
-    } catch (IOException e) {
-      e.printStackTrace();
+  public int[] getIdRange(String first, String last){
+    if (first == null || last == null) {
+      return null;
     }
-    Long[] idrange = {startId, endId};
-    return idrange;
+
+    Long startId = null, endId = null;
+    try {
+      startId = Util.get(fst, new BytesRef(first));
+      endId = Util.get(fst, new BytesRef(last));
+
+      if (startId == null || endId == null) {
+        return null;
+      }
+    } catch (IOException e) {
+      LOG.error("Error: " + e);
+      e.printStackTrace();
+      return null;
+    }
+
+    return new int[] { (int) startId.longValue(), (int) endId.longValue() };
   }
   
   private boolean collect(List<BytesRef> res, BytesReader fstReader, 
