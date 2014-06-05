@@ -1,4 +1,4 @@
-package org.warcbase.data;
+package org.warcbase.analysis.graph;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -54,6 +54,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
 import org.jwat.common.HttpHeader;
+import org.warcbase.data.UriMapping;
 import org.warcbase.mapreduce.ArcInputFormat;
 
 import java.util.Arrays;

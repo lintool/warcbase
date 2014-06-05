@@ -1,4 +1,4 @@
-package org.warcbase.data;
+package org.warcbase.analysis.graph;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,7 +45,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
-import org.warcbase.data.PrefixMapping.PrefixNode;
+import org.warcbase.analysis.graph.PrefixMapping.PrefixNode;
+import org.warcbase.data.UriMapping;
 import org.warcbase.mapreduce.ArcInputFormat;
 
 public class ExtractSiteLinks extends Configured implements Tool{
