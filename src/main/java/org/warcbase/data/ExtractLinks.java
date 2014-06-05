@@ -7,7 +7,10 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -41,6 +44,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
+import org.eclipse.jetty.util.log.Log;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.UnsupportedMimeTypeException;
@@ -51,6 +55,7 @@ import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
 import org.jwat.common.HttpHeader;
 import org.warcbase.mapreduce.ArcInputFormat;
+
 import java.util.Arrays;
 
 /**
@@ -94,8 +99,23 @@ public class ExtractLinks extends Configured implements Tool {
       context.getCounter(Records.TOTAL).increment(1);
       String url = record.getUrlStr();
       String type = record.getContentTypeStr();
+      Date date = record.getArchiveDate();
+      DateFormat df = new SimpleDateFormat("yyyyMMdd");
+      String time = df.format(date);
       InputStream content = record.getPayloadContent();
-
+      
+      if(beginDate != null && endDate != null){
+        if(time.compareTo(beginDate)<0 || time.compareTo(endDate)>0)
+          return;
+      }else if(beginDate == null && endDate != null){
+        if(time.compareTo(endDate)>0)
+          return;
+      }else if(beginDate != null && endDate == null){
+        if(time.compareTo(beginDate)<0){
+          return;
+        }
+      }
+      
       if (!type.equals("text/html"))
         return;
       Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
@@ -140,6 +160,9 @@ public class ExtractLinks extends Configured implements Tool {
   private static final String OUTPUT = "output";
   private static final String URI_MAPPING = "uriMapping";
   private static final String NUM_REDUCERS = "numReducers";
+  private static final String BEGIN="begin";
+  private static final String END="end";
+  private static String beginDate=null, endDate=null;
 
   /**
    * Runs this tool.
@@ -156,6 +179,10 @@ public class ExtractLinks extends Configured implements Tool {
         .withDescription("uri mapping file path").create(URI_MAPPING));
     options.addOption(OptionBuilder.withArgName("num").hasArg()
         .withDescription("number of reducers").create(NUM_REDUCERS));
+    options.addOption(OptionBuilder.withArgName("path").hasArg().withDescription("begin date (optional)")
+        .create(BEGIN));
+    options.addOption(OptionBuilder.withArgName("path").hasArg().withDescription("end date (optional)")
+        .create(END));
 
     CommandLine cmdline;
     CommandLineParser parser = new GnuParser();
@@ -187,13 +214,24 @@ public class ExtractLinks extends Configured implements Tool {
     LOG.info(" - output path: " + outputPath);
     LOG.info(" - mapping file path:" + mappingPath);
     LOG.info(" - number of reducers: " + reduceTasks);
-
+    if(cmdline.hasOption(BEGIN)){
+      beginDate = cmdline.getOptionValue(BEGIN);
+      LOG.info(" - begin date: " + beginDate);
+    }
+    if(cmdline.hasOption(END)){
+      endDate = cmdline.getOptionValue(END);
+      LOG.info(" - end date: " + endDate);
+    }
+    
+    
     Job job = new Job(getConf(), ExtractLinks.class.getSimpleName());
     job.setJarByClass(ExtractLinks.class);
 
     // Pass in the class name as a String; this is makes the mapper general
     // in being able to load any collection of Indexable objects that has
     // url_id/url mapping specified by a UriMapping object.
+    //job.getConfiguration().set("mapred.job.tracker", "local");
+    //job.getConfiguration().set("fs.default.name", "local");
     job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
     // Put the mapping file in the distributed cache so each map worker will
     // have it.
