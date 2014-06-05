@@ -100,7 +100,11 @@ public class UriMapping {
       BytesReader fstReader = fst.getBytesReader();
       BytesRef bref = new BytesRef(prefix);
       for (int i = 0; i < bref.length; i++) {
-        fst.findTargetArc(bref.bytes[i + bref.offset] & 0xFF, arc, arc, fstReader);
+        Arc<Long> retArc = fst.findTargetArc(bref.bytes[i + bref.offset] & 0xFF, arc, arc, fstReader);
+        if(retArc == null){ // no matched prefix
+          LOG.info("No matched string of input prefix "+prefix);
+          return new ArrayList<String>();
+        }
       }
 
       // collect all substrings started from the arc of prefix string.

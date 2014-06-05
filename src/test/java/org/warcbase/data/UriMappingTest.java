@@ -84,9 +84,8 @@ public class UriMappingTest {
     results = map.prefixSearch(null);
     assertEquals(0, results.size());
 
-    // Broken test case.
     results = map.prefixSearch("dad");
-    assertEquals(1, results.size());
+    assertEquals(0, results.size());
   }
 
   @Test
