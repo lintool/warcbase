@@ -3,6 +3,7 @@ package org.warcbase.analysis.demo;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.NavigableMap;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -43,8 +44,14 @@ public class MapReduceHBaseDemo extends Configured implements Tool {
         throws IOException, InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
 
-      for (Map.Entry<byte[], byte[]> entry : value.getFamilyMap(CF).entrySet()) {
-        context.write(new Text(row.get()), new Text(entry.getKey()));
+      for (Map.Entry<byte[], NavigableMap<Long, byte[]>> entry : value.getMap().get(CF).entrySet()) {
+        String qualifier = new String(entry.getKey());
+        for (Map.Entry<Long, byte[]> cell : entry.getValue().entrySet()) {
+          // Key = row (inverse URL)
+          // Value = qualifier, timestamp, size
+          context.write(new Text(row.get()),
+              new Text(qualifier + "\t" + cell.getKey() + "\t" + cell.getValue().length));
+        }
       }
     }
   }
