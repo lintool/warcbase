@@ -12,10 +12,10 @@ public class PrefixMapping{
   public class PrefixNode {
     int id;
     String url;
-    Long startPos;
-    Long endPos;
+    int startPos;
+    int endPos;
     
-    public PrefixNode(int id, String url, Long startPos, Long endPos){
+    public PrefixNode(int id, String url, int startPos, int endPos){
       this.id = id;
       this.url = url;
       this.startPos = startPos;
@@ -24,8 +24,8 @@ public class PrefixMapping{
     
     public int getId(){ return id; }
     public String getUrl(){ return url; }
-    public Long getStartPos(){ return startPos; }
-    public Long getEndPos(){ return endPos; }
+    public int getStartPos(){ return startPos; }
+    public int getEndPos(){ return endPos; }
   }
   
   public static ArrayList<PrefixNode> loadPrefix(String prefixFile, UriMapping map) throws IOException{
@@ -51,7 +51,7 @@ public class PrefixMapping{
       int id = Integer.valueOf(record[0]);
       String url = record[1];
       List<String> results = map.prefixSearch(url);
-      Long[] boundary = map.getIdRange(results);
+      int[] boundary = map.getIdRange(results.get(0), results.get(results.size()-1));
       PrefixNode node = instance.new PrefixNode(id, url, boundary[0], boundary[1]);
       prefixes.add(node);
     }

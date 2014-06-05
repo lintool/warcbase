@@ -1,7 +1,6 @@
 package org.warcbase.data;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -10,10 +9,9 @@ import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.IntsRef;
 import org.apache.lucene.util.fst.Builder;
 import org.apache.lucene.util.fst.FST;
+import org.apache.lucene.util.fst.FST.INPUT_TYPE;
 import org.apache.lucene.util.fst.PositiveIntOutputs;
 import org.apache.lucene.util.fst.Util;
-import org.apache.lucene.util.fst.FST.INPUT_TYPE;
-import org.warcbase.data.UriMapping;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -90,12 +88,49 @@ public class UriMappingTest {
 
   @Test
   public void testGetIdRange() throws IOException{
-    List<String> results;
-    Long[] range;
+    int[] range;
 
-    results = map.prefixSearch("dog");
-    range = map.getIdRange(results);
-    assertTrue(range[0] == 4);
-    assertTrue(range[1] == 6);
+    range = map.getIdRange("doga", "dogs");
+    assertEquals(4, range[0]);
+    assertEquals(6, range[1]);
+    assertEquals("doga", map.getUrl(range[0]));
+    assertEquals("dogs", map.getUrl(range[1]));
+
+    range = map.getIdRange("doga", "dogb");
+    assertEquals(4, range[0]);
+    assertEquals(5, range[1]);
+    assertEquals("doga", map.getUrl(range[0]));
+    assertEquals("dogb", map.getUrl(range[1]));
+
+    range = map.getIdRange("dogs", "dogs");
+    assertEquals(6, range[0]);
+    assertEquals(6, range[1]);
+    assertEquals("dogs", map.getUrl(range[0]));
+    assertEquals("dogs", map.getUrl(range[1]));
+
+    // If either one of the bounds is invalid, expect null
+    range = map.getIdRange("dog", "dogx");
+    assertEquals(null, range);
+
+    range = map.getIdRange("doga", "dogx");
+    assertEquals(null, range);
+
+    range = map.getIdRange("dog", "dogs");
+    assertEquals(null, range);
+
+    range = map.getIdRange("", "dogs");
+    assertEquals(null, range);
+
+    range = map.getIdRange("", "");
+    assertEquals(null, range);
+
+    range = map.getIdRange(null, "");
+    assertEquals(null, range);
+
+    range = map.getIdRange(null, null);
+    assertEquals(null, range);
+
+    range = map.getIdRange(null, null);
+    assertEquals(null, range);
   }
 }

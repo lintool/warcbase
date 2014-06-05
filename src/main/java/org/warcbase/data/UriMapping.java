@@ -101,8 +101,7 @@ public class UriMapping {
       BytesRef bref = new BytesRef(prefix);
       for (int i = 0; i < bref.length; i++) {
         Arc<Long> retArc = fst.findTargetArc(bref.bytes[i + bref.offset] & 0xFF, arc, arc, fstReader);
-        if(retArc == null){ // no matched prefix
-          LOG.info("No matched string of input prefix "+prefix);
+        if (retArc == null) { // no matched prefix
           return new ArrayList<String>();
         }
       }
@@ -127,19 +126,26 @@ public class UriMapping {
     return strResults;
   }
   
-  public Long[] getIdRange(List<String> results){
-    Long startId=null, endId=null;
-    String firstRes = results.get(0);
-    String lastRes = results.get(results.size()-1);
-    try {
-      startId = Util.get(fst, new BytesRef(firstRes));
-      endId = Util.get(fst, new BytesRef(lastRes));
-    } catch (IOException e) {
-      e.printStackTrace();
+  public int[] getIdRange(String first, String last){
+    if (first == null || last == null) {
+      return null;
     }
-    Long[] idrange = {startId, endId};
 
-    return idrange;
+    Long startId = null, endId = null;
+    try {
+      startId = Util.get(fst, new BytesRef(first));
+      endId = Util.get(fst, new BytesRef(last));
+
+      if (startId == null || endId == null) {
+        return null;
+      }
+    } catch (IOException e) {
+      LOG.error("Error: " + e);
+      e.printStackTrace();
+      return null;
+    }
+
+    return new int[] { (int) startId.longValue(), (int) endId.longValue() };
   }
   
   private boolean collect(List<BytesRef> res, BytesReader fstReader, 
