@@ -152,6 +152,8 @@ public class WarcbaseResponse {
       TextDocument2 t2 = new TextDocument2(null, null, null);
       String bodyContent = new String(content, "UTF8");
       
+      System.out.println(content.length);
+      System.out.println(bodyContent);
       // Fixes https://github.com/lintool/warcbase/issues/25
       bodyContent = bodyContent.replaceAll("�", "");
 
@@ -179,7 +181,7 @@ public class WarcbaseResponse {
         Element noframes = doc.select("noframes").first();
         if(noframes != null){
           Document docBody = Jsoup.parse(StringEscapeUtils.unescapeHtml4(noframes.html()));
-          body = docBody.select("body").first();
+          //body = docBody.select("body").first();
         }
       }
       if(body == null) {
