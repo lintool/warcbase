@@ -2,6 +2,8 @@ package org.warcbase.analysis.demo;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.NavigableMap;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -15,13 +17,11 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
@@ -37,19 +37,30 @@ public class MapReduceHBaseDemo extends Configured implements Tool {
   private static enum Records { TOTAL };
 
   private static class MyMapper extends TableMapper<Text, Text> {
-    public static final byte[] CF = "c".getBytes();
+    private static final byte[] CF = "c".getBytes();
+    private static final Text KEY = new Text();
+    private static final Text VALUE = new Text();
 
     @Override
     public void map(ImmutableBytesWritable row, Result result, Context context)
         throws IOException, InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
 
-      for (KeyValue kv : result.list() ) {
-        if (Bytes.equals(kv.getFamily(), CF)) {
-          // Key = row (inverse URL)
-          // Value = qualifier, timestamp, size
-          context.write(new Text(row.get()),
-              new Text(new String(kv.getQualifier()) + "\t" + kv.getTimestamp() + "\t" + kv.getValueLength()));
+//      for (KeyValue kv : result.list() ) {
+//        if (Bytes.equals(kv.getFamily(), CF)) {
+//          // Key = row (inverse URL)
+//          // Value = qualifier, timestamp, size
+//          context.write(new Text(row.get()),
+//              new Text(new String(kv.getQualifier()) + "\t" + kv.getTimestamp() + "\t" + kv.getValueLength()));
+//        }
+
+      KEY.set(row.get());
+      NavigableMap<byte[], NavigableMap<Long, byte[]>> qualifiers = result.getMap().get(CF);
+      for (Map.Entry<byte[], NavigableMap<Long, byte[]>> entry : qualifiers.entrySet()) {
+        String qualifier = new String(entry.getKey());
+        for (Map.Entry<Long, byte[]> versions : entry.getValue().entrySet()) {
+          VALUE.set(qualifier + "\t" + versions.getKey() + "\t" + versions.getValue().length);
+          context.write(KEY, VALUE);
         }
       }
     }
