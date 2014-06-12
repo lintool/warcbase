@@ -6,9 +6,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.NavigableMap;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -19,16 +21,27 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
+import org.apache.hadoop.hbase.mapreduce.TableMapper;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
@@ -37,6 +50,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
+import org.warcbase.analysis.graph.PrefixMapping.PrefixNode;
 import org.warcbase.data.UriMapping;
 import org.warcbase.mapreduce.ArcInputFormat;
 
@@ -52,7 +66,7 @@ public class ExtractLinks extends Configured implements Tool {
     TOTAL, LINK_COUNT
   };
 
-  public static class ExtractLinksMapper extends
+  public static class ExtractLinksHDFSMapper extends
       Mapper<LongWritable, ArcRecordBase, IntWritable, Text> {
     private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
     private static UriMapping fst;
@@ -139,13 +153,86 @@ public class ExtractLinks extends Configured implements Tool {
       }
     }
   }
+  
+  public static class ExtractLinksHBaseMapper extends TableMapper<IntWritable, Text>{
+    public static final byte[] COLUMN_FAMILY = Bytes.toBytes("links");
+    
+    private static final Joiner JOINER = Joiner.on(",");
+    public static final IntWritable KEY = new IntWritable();
+    private static final Text VALUE = new Text();
+    
+    private static UriMapping fst;
+    private static PrefixMapping prefixMap;
+    private static ArrayList<PrefixNode> prefix;
 
+    @Override
+    public void setup(Context context) {
+      try {
+        Configuration conf = context.getConfiguration();
+        @SuppressWarnings("deprecation")
+        Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
+
+        // load FST UriMapping from file
+        fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        fst.loadMapping(localFiles[0].toString());
+        // load Prefix Mapping from file
+        prefixMap = (PrefixMapping) Class.forName(conf.get("PrefixMappingClass")).newInstance();
+        prefix = prefixMap.loadPrefix(localFiles[1].toString(), fst);
+
+      } catch (Exception e) {
+        e.printStackTrace();
+        throw new RuntimeException("Error Initializing UriMapping");
+      }
+    }
+    
+    @Override
+    public void map(ImmutableBytesWritable row, Result result, Context context)
+        throws IOException, InterruptedException {
+      context.getCounter(Records.TOTAL).increment(1);
+      
+      int sourceFstId = fst.getID(new String(row.get()));
+      // rowkey(url) is not indexed in FST
+      if ( sourceFstId == -1) {
+        return; 
+      }
+      
+      KEY.set(sourceFstId);
+      IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
+      
+      // Assume HBase Table Format
+      // Row : sourceUrl
+      // Column Family : links
+      // Column Qualifier: targetUrl
+      // Value: 1 (1 denotes the existence of this link)
+      NavigableMap<byte[],byte[]> familyMap = result.getFamilyMap(COLUMN_FAMILY);
+      for(byte[] column: familyMap.keySet()){
+        //byte[] value = familyMap.get(column);
+        int targetFstId = fst.getID(new String(column));
+        if (targetFstId != -1){
+          linkUrlSet.add(targetFstId);
+        }
+      }
+      
+      if (linkUrlSet.size() == 0) {
+        // Emit empty entry even if there aren't any outgoing links
+        VALUE.set("");
+        context.write(KEY, VALUE);
+        return;
+      }
+
+      VALUE.set(JOINER.join(linkUrlSet));
+      context.getCounter(Records.LINK_COUNT).increment(linkUrlSet.size());
+      context.write(KEY, VALUE);
+    }
+  }
+  
   /**
    * Creates an instance of this tool.
    */
   public ExtractLinks() {}
 
-  private static final String INPUT = "input";
+  private static final String HDFS = "hdfs";
+  private static final String HBASE = "hbase";
   private static final String OUTPUT = "output";
   private static final String URI_MAPPING = "uriMapping";
   private static final String BEGIN = "begin";
@@ -160,7 +247,9 @@ public class ExtractLinks extends Configured implements Tool {
     Options options = new Options();
 
     options.addOption(OptionBuilder.withArgName("path").hasArg()
-        .withDescription("input path").create(INPUT));
+        .withDescription("HDFS input path").create(HDFS));
+    options.addOption(OptionBuilder.withArgName("path").hasArg()
+        .withDescription("HBASE table name").create(HBASE));
     options.addOption(OptionBuilder.withArgName("path").hasArg()
         .withDescription("output path").create(OUTPUT));
     options.addOption(OptionBuilder.withArgName("path").hasArg()
@@ -180,7 +269,8 @@ public class ExtractLinks extends Configured implements Tool {
       return -1;
     }
 
-    if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT) || !cmdline.hasOption(URI_MAPPING)) {
+    if ( (!cmdline.hasOption(HDFS) && !cmdline.hasOption(HBASE)) // No HDFS and HBase input
+        || !cmdline.hasOption(OUTPUT) || !cmdline.hasOption(URI_MAPPING)) {
       System.out.println("args: " + Arrays.toString(args));
       HelpFormatter formatter = new HelpFormatter();
       formatter.setWidth(120);
@@ -190,13 +280,23 @@ public class ExtractLinks extends Configured implements Tool {
     }
 
     FileSystem fs = FileSystem.get(getConf());
-
-    String inputPath = cmdline.getOptionValue(INPUT);
+    String HDFSPath = null, HBaseTableName = null;
+    boolean isHDFSInput = true; // set default as HDFS input
+    if (cmdline.hasOption(HDFSPath)) {
+      HDFSPath = cmdline.getOptionValue(HDFS);
+    } else {
+      HBaseTableName = cmdline.getOptionValue(HBASE);
+      isHDFSInput = false;
+    }
     String outputPath = cmdline.getOptionValue(OUTPUT);
     Path mappingPath = new Path(cmdline.getOptionValue(URI_MAPPING));
 
     LOG.info("Tool: " + ExtractLinks.class.getSimpleName());
-    LOG.info(" - input path: " + inputPath);
+    if (isHDFSInput) {
+      LOG.info(" - HDFS input path: " + HDFSPath);
+    } else {
+      LOG.info(" - HBase table name: " + HBaseTableName);
+    }
     LOG.info(" - output path: " + outputPath);
     LOG.info(" - mapping file path: " + mappingPath);
 
@@ -212,8 +312,16 @@ public class ExtractLinks extends Configured implements Tool {
     if (!fs.exists(mappingPath)) {
       throw new Exception("mappingPath doesn't exist: " + mappingPath);
     }
-
-    Job job = Job.getInstance(getConf(), ExtractLinks.class.getSimpleName());
+    
+    Configuration conf;
+    if (isHDFSInput) {
+      conf = getConf();
+    } else {
+      conf = HBaseConfiguration.create(getConf());
+      conf.set("hbase.zookeeper.quorum", "bespinrm.umiacs.umd.edu");
+    }
+      
+    Job job = Job.getInstance(conf, ExtractLinks.class.getSimpleName());
     job.setJarByClass(ExtractLinks.class);
 
     job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
@@ -221,17 +329,36 @@ public class ExtractLinks extends Configured implements Tool {
     job.addCacheFile(mappingPath.toUri());
 
     job.setNumReduceTasks(0); // no reducers
+    
+    if (isHDFSInput) { // HDFS input
+      FileInputFormat.setInputPaths(job, new Path(HDFSPath));
+  
+      job.setInputFormatClass(ArcInputFormat.class);
+      // set map (key,value) output format
+      job.setMapOutputKeyClass(IntWritable.class);
+      job.setMapOutputValueClass(Text.class);
+  
+      job.setMapperClass(ExtractLinksHDFSMapper.class);
+    } else { // HBase input
+      Scan scan = new Scan();
+      // Very conservative settings because a single row might not fit in memory
+      // if we have many captured version of a URL.
+      scan.setCaching(1);            // Controls the number of rows to pre-fetch
+      scan.setBatch(10);             // Controls the number of columns to fetch on a per row basis
+      scan.setCacheBlocks(false);    // Don't set to true for MR jobs
+      scan.setMaxVersions();         // We want all versions
 
-    FileInputFormat.setInputPaths(job, new Path(inputPath));
+      TableMapReduceUtil.initTableMapperJob(
+        HBaseTableName,                  // input HBase table name
+        scan,                            // Scan instance to control CF and attribute selection
+        ExtractLinksHBaseMapper.class,   // mapper 
+        IntWritable.class,               // mapper output key
+        Text.class,                      // mapper output value
+        job);
+      job.setOutputFormatClass(TextOutputFormat.class); // set output format
+    }
+    
     FileOutputFormat.setOutputPath(job, new Path(outputPath));
-
-    job.setInputFormatClass(ArcInputFormat.class);
-    // set map (key,value) output format
-    job.setMapOutputKeyClass(IntWritable.class);
-    job.setMapOutputValueClass(List.class);
-
-    job.setMapperClass(ExtractLinksMapper.class);
-
     // Delete the output directory if it exists already.
     Path outputDir = new Path(outputPath);
     fs.delete(outputDir, true);
