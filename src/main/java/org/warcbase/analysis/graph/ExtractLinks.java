@@ -1,14 +1,15 @@
 package org.warcbase.analysis.graph;
 
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.NavigableMap;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -23,12 +24,12 @@ import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -57,18 +58,36 @@ import com.google.common.base.Joiner;
 public class ExtractLinks extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ExtractLinks.class);
 
-  private static enum Records {
-    TOTAL, LINK_COUNT
+  private static enum MyCounters {
+    RECORDS, HTML_PAGES, LINKS
   };
+
+  private static IntSortedSet extractLinks(InputStream content, String url, UriMapping fst)
+      throws IOException {
+    Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
+    Elements links = doc.select("a[href]");
+
+    IntSortedSet linkDestinations = new IntAVLTreeSet();
+    if (links != null) {
+      for (Element link : links) {
+        String linkUrl = link.attr("abs:href");
+        if (fst.getID(linkUrl) != -1) {
+          linkDestinations.add(fst.getID(linkUrl));
+        }
+      }
+    }
+
+    return linkDestinations;
+  }
 
   public static class ExtractLinksHdfsMapper extends
       Mapper<LongWritable, ArcRecordBase, IntWritable, Text> {
-    private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
-    private static UriMapping fst;
+    private final DateFormat df = new SimpleDateFormat("yyyyMMdd");
+    private final Joiner joiner = Joiner.on(",");
+    private final IntWritable key = new IntWritable();
+    private final Text value = new Text();
 
-    private static final Joiner JOINER = Joiner.on(",");
-    private static final IntWritable KEY = new IntWritable();
-    private static final Text VALUE = new Text();
+    private UriMapping fst;
 
     @Override
     public void setup(Context context) {
@@ -93,9 +112,10 @@ public class ExtractLinks extends Configured implements Tool {
     }
 
     @Override
-    public void map(LongWritable key, ArcRecordBase record, Context context)
+    public void map(LongWritable k, ArcRecordBase record, Context context)
         throws IOException, InterruptedException {
-      context.getCounter(Records.TOTAL).increment(1);
+      context.getCounter(MyCounters.RECORDS).increment(1);
+
       String url = record.getUrlStr();
       String type = record.getContentTypeStr();
       Date date = record.getArchiveDate();
@@ -116,42 +136,29 @@ public class ExtractLinks extends Configured implements Tool {
         }
       }
 
-      if (!type.equals("text/html")) {
+      int id = fst.getID(url);
+      if (!type.equals("text/html") || id == -1) {
         return;
       }
 
-      Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
-      Elements links = doc.select("a[href]"); // empty if none match
+      context.getCounter(MyCounters.HTML_PAGES).increment(1);
 
-      if (fst.getID(url) != -1) { // the url is already indexed in UriMapping
-        KEY.set(fst.getID(url));
-        IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
-        if (links != null) {
-          for (Element link : links) {
-            String linkUrl = link.attr("abs:href");
-            if (fst.getID(linkUrl) != -1) { // link already exists
-              linkUrlSet.add(fst.getID(linkUrl));
-            }
-          }
+      IntSortedSet linkDestinations = ExtractLinks.extractLinks(content, url, fst);
 
-          if (linkUrlSet.size() == 0) {
-            // Emit empty entry even if there aren't any outgoing links
-            VALUE.set("");
-            context.write(KEY, VALUE);
-            return;
-          }
-
-          VALUE.set(JOINER.join(linkUrlSet));
-          context.getCounter(Records.LINK_COUNT).increment(linkUrlSet.size());
-          context.write(KEY, VALUE);
-        }
+      key.set(id);
+      if (linkDestinations.size() == 0) {
+        // Emit empty entry even if there aren't any outgoing links
+        value.set("");
+        context.write(key, value);
+      } else {
+        value.set(joiner.join(linkDestinations));
+        context.write(key, value);
+        context.getCounter(MyCounters.LINKS).increment(linkDestinations.size());
       }
     }
   }
   
   public static class ExtractLinksHBaseMapper extends TableMapper<IntWritable, Text>{
-    public static final byte[] COLUMN_FAMILY = Bytes.toBytes("links");
-    
     private static final Joiner JOINER = Joiner.on(",");
     private static final IntWritable KEY = new IntWritable();
     private static final Text VALUE = new Text();
@@ -177,41 +184,51 @@ public class ExtractLinks extends Configured implements Tool {
     @Override
     public void map(ImmutableBytesWritable row, Result result, Context context)
         throws IOException, InterruptedException {
-      context.getCounter(Records.TOTAL).increment(1);
-      
-      int sourceFstId = fst.getID(new String(row.get()));
-      // rowkey(url) is not indexed in FST
-      if ( sourceFstId == -1) {
-        return; 
-      }
+
+      String url = new String(row.get());
+
+      int sourceFstId = fst.getID(url);
+//      // rowkey(url) is not indexed in FST
+//      if ( sourceFstId == -1) {
+//        return;
+//      }
       
       KEY.set(sourceFstId);
-      IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
-      
-      // Assume HBase Table Format
-      // Row : sourceUrl
-      // Column Family : links
-      // Column Qualifier: targetUrl
-      // Value: 1 (1 denotes the existence of this link)
-      NavigableMap<byte[],byte[]> familyMap = result.getFamilyMap(COLUMN_FAMILY);
-      for(byte[] column: familyMap.keySet()){
-        //byte[] value = familyMap.get(column);
-        int targetFstId = fst.getID(new String(column));
-        if (targetFstId != -1){
-          linkUrlSet.add(targetFstId);
+      for (KeyValue kv : result.list()) {
+        String type = new String(kv.getQualifier());
+
+        if (!type.equals("text/html")) {
+          continue;
+        }
+
+        context.getCounter(MyCounters.RECORDS).increment(1);
+
+        InputStream content = new ByteArrayInputStream(kv.getValue());
+        Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
+        Elements links = doc.select("a[href]"); // empty if none match
+
+        KEY.set(fst.getID(url));
+        IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
+        if (links != null) {
+          for (Element link : links) {
+            String linkUrl = link.attr("abs:href");
+            if (fst.getID(linkUrl) != -1) { // link already exists
+              linkUrlSet.add(fst.getID(linkUrl));
+            }
+          }
+
+          if (linkUrlSet.size() == 0) {
+            // Emit empty entry even if there aren't any outgoing links
+            VALUE.set("");
+            context.write(KEY, VALUE);
+            return;
+          }
+
+          VALUE.set(JOINER.join(linkUrlSet));
+          context.getCounter(MyCounters.LINKS).increment(linkUrlSet.size());
+          context.write(KEY, VALUE);
         }
       }
-      
-      if (linkUrlSet.size() == 0) {
-        // Emit empty entry even if there aren't any outgoing links
-        VALUE.set("");
-        context.write(KEY, VALUE);
-        return;
-      }
-
-      VALUE.set(JOINER.join(linkUrlSet));
-      context.getCounter(Records.LINK_COUNT).increment(linkUrlSet.size());
-      context.write(KEY, VALUE);
     }
   }
   
@@ -269,22 +286,23 @@ public class ExtractLinks extends Configured implements Tool {
     }
 
     FileSystem fs = FileSystem.get(getConf());
-    String HDFSPath = null, HBaseTableName = null;
-    boolean isHDFSInput = true; // set default as HDFS input
-    if (cmdline.hasOption(HDFSPath)) {
-      HDFSPath = cmdline.getOptionValue(HDFS);
+    String path = null, table = null;
+    boolean isHdfs;
+    if (cmdline.hasOption(HDFS)) {
+      path = cmdline.getOptionValue(HDFS);
+      isHdfs = true;
     } else {
-      HBaseTableName = cmdline.getOptionValue(HBASE);
-      isHDFSInput = false;
+      table = cmdline.getOptionValue(HBASE);
+      isHdfs = false;
     }
     String outputPath = cmdline.getOptionValue(OUTPUT);
     Path mappingPath = new Path(cmdline.getOptionValue(URI_MAPPING));
 
     LOG.info("Tool: " + ExtractLinks.class.getSimpleName());
-    if (isHDFSInput) {
-      LOG.info(" - HDFS input path: " + HDFSPath);
+    if (isHdfs) {
+      LOG.info(" - HDFS input path: " + path);
     } else {
-      LOG.info(" - HBase table name: " + HBaseTableName);
+      LOG.info(" - HBase table name: " + table);
     }
     LOG.info(" - output path: " + outputPath);
     LOG.info(" - mapping file path: " + mappingPath);
@@ -303,7 +321,7 @@ public class ExtractLinks extends Configured implements Tool {
     }
     
     Configuration conf;
-    if (isHDFSInput) {
+    if (isHdfs) {
       conf = getConf();
     } else {
       conf = HBaseConfiguration.create(getConf());
@@ -319,8 +337,8 @@ public class ExtractLinks extends Configured implements Tool {
 
     job.setNumReduceTasks(0); // no reducers
     
-    if (isHDFSInput) { // HDFS input
-      FileInputFormat.setInputPaths(job, new Path(HDFSPath));
+    if (isHdfs) { // HDFS input
+      FileInputFormat.setInputPaths(job, new Path(path));
   
       job.setInputFormatClass(ArcInputFormat.class);
       // set map (key,value) output format
@@ -330,6 +348,7 @@ public class ExtractLinks extends Configured implements Tool {
       job.setMapperClass(ExtractLinksHdfsMapper.class);
     } else { // HBase input
       Scan scan = new Scan();
+      scan.addFamily("c".getBytes());
       // Very conservative settings because a single row might not fit in memory
       // if we have many captured version of a URL.
       scan.setCaching(1);            // Controls the number of rows to pre-fetch
@@ -338,7 +357,7 @@ public class ExtractLinks extends Configured implements Tool {
       scan.setMaxVersions();         // We want all versions
 
       TableMapReduceUtil.initTableMapperJob(
-        HBaseTableName,                  // input HBase table name
+        table,                  // input HBase table name
         scan,                            // Scan instance to control CF and attribute selection
         ExtractLinksHBaseMapper.class,   // mapper 
         IntWritable.class,               // mapper output key
@@ -357,8 +376,8 @@ public class ExtractLinks extends Configured implements Tool {
     LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
 
     Counters counters = job.getCounters();
-    int numRecords = (int) counters.findCounter(Records.TOTAL).getValue();
-    int numLinks = (int) counters.findCounter(Records.LINK_COUNT).getValue();
+    int numRecords = (int) counters.findCounter(MyCounters.RECORDS).getValue();
+    int numLinks = (int) counters.findCounter(MyCounters.LINKS).getValue();
     LOG.info("Read " + numRecords + " records.");
     LOG.info("Extracts " + numLinks + " links.");
 
