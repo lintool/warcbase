@@ -1,22 +1,16 @@
 package org.warcbase.analysis.graph;
 
 import it.unimi.dsi.fastutil.ints.Int2IntAVLTreeMap;
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -27,16 +21,15 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -51,8 +44,6 @@ import org.jwat.arc.ArcRecordBase;
 import org.warcbase.analysis.graph.PrefixMapping.PrefixNode;
 import org.warcbase.data.UriMapping;
 import org.warcbase.mapreduce.ArcInputFormat;
-
-import com.google.common.base.Joiner;
 
 public class ExtractSiteLinks extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ExtractSiteLinks.class);
@@ -69,7 +60,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
 
     private static UriMapping fst;
     private static PrefixMapping prefixMap;
-    private static ArrayList<PrefixNode> prefix;
+    private static List<PrefixNode> prefix;
 
     @Override
     public void setup(Context context) {
@@ -83,7 +74,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
         fst.loadMapping(localFiles[0].toString());
         // load Prefix Mapping from file
         prefixMap = (PrefixMapping) Class.forName(conf.get("PrefixMappingClass")).newInstance();
-        prefix = prefixMap.loadPrefix(localFiles[1].toString(), fst);
+        prefix = PrefixMapping.loadPrefix(localFiles[1].toString(), fst);
 
       } catch (Exception e) {
         e.printStackTrace();
@@ -92,9 +83,8 @@ public class ExtractSiteLinks extends Configured implements Tool {
     }
 
     @Override
-    public void map(LongWritable key, ArcRecordBase record, Context context) throws IOException,
-        InterruptedException {
-
+    public void map(LongWritable key, ArcRecordBase record, Context context)
+        throws IOException, InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
       String url = record.getUrlStr();
       String type = record.getContentTypeStr();
@@ -119,6 +109,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
       if (!type.equals("text/html")) {
         return;
       }
+
       Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
       Elements links = doc.select("a[href]"); // empty if none match
       if (links == null) {
@@ -150,7 +141,8 @@ public class ExtractSiteLinks extends Configured implements Tool {
 
   private static class ExtractSiteLinksReducer extends
       Reducer<IntWritable, IntWritable, IntWritable, Text> {
-    
+    private static final Text VALUE = new Text();
+
     @Override
     public void reduce(IntWritable key, Iterable<IntWritable> values, Context context)
         throws IOException, InterruptedException {
@@ -167,8 +159,8 @@ public class ExtractSiteLinks extends Configured implements Tool {
       
       context.getCounter(Records.LINK_COUNT).increment(links.entrySet().size());
       for (Entry<Integer, Integer> link : links.entrySet()) {
-        String outputValue = String.valueOf(link.getKey()) + "," + String.valueOf(link.getValue());
-        context.write(key, new Text(outputValue));
+        VALUE.set(link.getKey() + "\t" + link.getValue());
+        context.write(key, VALUE);
       }
     }
   }

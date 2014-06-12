@@ -6,10 +6,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
 import java.util.NavigableMap;
 
 import org.apache.commons.cli.CommandLine;
@@ -25,7 +23,6 @@ import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -38,7 +35,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
@@ -50,14 +46,13 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
-import org.warcbase.analysis.graph.PrefixMapping.PrefixNode;
 import org.warcbase.data.UriMapping;
 import org.warcbase.mapreduce.ArcInputFormat;
 
 import com.google.common.base.Joiner;
 
 /**
- * Program for extracting links from ARC files.
+ * Program for extracting links from ARC files or HBase.
  */
 public class ExtractLinks extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ExtractLinks.class);
@@ -66,7 +61,7 @@ public class ExtractLinks extends Configured implements Tool {
     TOTAL, LINK_COUNT
   };
 
-  public static class ExtractLinksHDFSMapper extends
+  public static class ExtractLinksHdfsMapper extends
       Mapper<LongWritable, ArcRecordBase, IntWritable, Text> {
     private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
     private static UriMapping fst;
@@ -158,12 +153,10 @@ public class ExtractLinks extends Configured implements Tool {
     public static final byte[] COLUMN_FAMILY = Bytes.toBytes("links");
     
     private static final Joiner JOINER = Joiner.on(",");
-    public static final IntWritable KEY = new IntWritable();
+    private static final IntWritable KEY = new IntWritable();
     private static final Text VALUE = new Text();
     
     private static UriMapping fst;
-    private static PrefixMapping prefixMap;
-    private static ArrayList<PrefixNode> prefix;
 
     @Override
     public void setup(Context context) {
@@ -175,10 +168,6 @@ public class ExtractLinks extends Configured implements Tool {
         // load FST UriMapping from file
         fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());
-        // load Prefix Mapping from file
-        prefixMap = (PrefixMapping) Class.forName(conf.get("PrefixMappingClass")).newInstance();
-        prefix = prefixMap.loadPrefix(localFiles[1].toString(), fst);
-
       } catch (Exception e) {
         e.printStackTrace();
         throw new RuntimeException("Error Initializing UriMapping");
@@ -338,7 +327,7 @@ public class ExtractLinks extends Configured implements Tool {
       job.setMapOutputKeyClass(IntWritable.class);
       job.setMapOutputValueClass(Text.class);
   
-      job.setMapperClass(ExtractLinksHDFSMapper.class);
+      job.setMapperClass(ExtractLinksHdfsMapper.class);
     } else { // HBase input
       Scan scan = new Scan();
       // Very conservative settings because a single row might not fit in memory

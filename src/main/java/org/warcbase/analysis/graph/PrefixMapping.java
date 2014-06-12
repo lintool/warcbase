@@ -42,7 +42,7 @@ public class PrefixMapping {
     }
   }
 
-  public static ArrayList<PrefixNode> loadPrefix(String prefixFile, UriMapping map)
+  public static List<PrefixNode> loadPrefix(String prefixFile, UriMapping map)
       throws IOException {
     PrefixMapping instance = new PrefixMapping();
     final Comparator<PrefixNode> comparator = new Comparator<PrefixNode>() {
@@ -57,10 +57,9 @@ public class PrefixMapping {
         }
       }
     };
-    ArrayList<PrefixNode> prefixes = new ArrayList<PrefixNode>();
+    List<PrefixNode> prefixes = new ArrayList<PrefixNode>();
     CSVReader reader = new CSVReader(new FileReader(prefixFile), ',');
     reader.readNext();
-    String line;
     String[] record = null;
     while ((record = reader.readNext()) != null) {
       int id = Integer.valueOf(record[0]);
@@ -75,7 +74,7 @@ public class PrefixMapping {
     return prefixes;
   }
 
-  public int getPrefixId(int id, ArrayList<PrefixNode> prefixes) {
+  public int getPrefixId(int id, List<PrefixNode> prefixes) {
     int start = 0, end = prefixes.size() - 1;
     int mid;
     while (start <= end) {
