@@ -21,7 +21,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
@@ -37,20 +36,22 @@ public class MapReduceHBaseDemo extends Configured implements Tool {
   private static enum Records { TOTAL };
 
   private static class MyMapper extends TableMapper<Text, Text> {
-    public static final byte[] CF = "c".getBytes();
+    private final Text KEY = new Text();
+    private final Text VALUE = new Text();
 
     @Override
     public void map(ImmutableBytesWritable row, Result result, Context context)
         throws IOException, InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
 
-      for (KeyValue kv : result.list() ) {
-        if (Bytes.equals(kv.getFamily(), CF)) {
-          // Key = row (inverse URL)
-          // Value = qualifier, timestamp, size
-          context.write(new Text(row.get()),
-              new Text(new String(kv.getQualifier()) + "\t" + kv.getTimestamp() + "\t" + kv.getValueLength()));
-        }
+      KEY.set(row.get());
+      for (KeyValue kv : result.list()) {
+        VALUE.set(new String(kv.getQualifier()) + "\t" + kv.getTimestamp() + "\t"
+            + kv.getValueLength());
+
+        // Key = row (inverse URL)
+        // Value = qualifier, timestamp, size
+        context.write(KEY, VALUE);
       }
     }
   }
@@ -107,6 +108,7 @@ public class MapReduceHBaseDemo extends Configured implements Tool {
     job.setJarByClass(MapReduceHBaseDemo.class);
 
     Scan scan = new Scan();
+    scan.addFamily("c".getBytes());
     // Very conservative settings because a single row might not fit in memory
     // if we have many captured version of a URL.
     scan.setCaching(1);            // Controls the number of rows to pre-fetch
