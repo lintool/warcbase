@@ -48,6 +48,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
 import org.warcbase.data.UriMapping;
+import org.warcbase.data.Util;
 import org.warcbase.mapreduce.ArcInputFormat;
 
 import com.google.common.base.Joiner;
@@ -159,11 +160,11 @@ public class ExtractLinks extends Configured implements Tool {
   }
   
   public static class ExtractLinksHBaseMapper extends TableMapper<IntWritable, Text>{
-    private static final Joiner JOINER = Joiner.on(",");
-    private static final IntWritable KEY = new IntWritable();
-    private static final Text VALUE = new Text();
+    private final Joiner joiner = Joiner.on(",");
+    private final IntWritable key = new IntWritable();
+    private final Text value = new Text();
     
-    private static UriMapping fst;
+    private UriMapping fst;
 
     @Override
     public void setup(Context context) {
@@ -185,48 +186,36 @@ public class ExtractLinks extends Configured implements Tool {
     public void map(ImmutableBytesWritable row, Result result, Context context)
         throws IOException, InterruptedException {
 
-      String url = new String(row.get());
+      String url = Util.reverseBacUri(new String(row.get()));
 
-      int sourceFstId = fst.getID(url);
-//      // rowkey(url) is not indexed in FST
-//      if ( sourceFstId == -1) {
-//        return;
-//      }
+      int srcId = fst.getID(url);
+      if ( srcId == -1) {
+        return;
+      }
       
-      KEY.set(sourceFstId);
+      key.set(srcId);
       for (KeyValue kv : result.list()) {
         String type = new String(kv.getQualifier());
+
+        context.getCounter(MyCounters.RECORDS).increment(1);
 
         if (!type.equals("text/html")) {
           continue;
         }
 
-        context.getCounter(MyCounters.RECORDS).increment(1);
+        context.getCounter(MyCounters.HTML_PAGES).increment(1);
 
         InputStream content = new ByteArrayInputStream(kv.getValue());
-        Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
-        Elements links = doc.select("a[href]"); // empty if none match
+        IntSortedSet linkDestinations = ExtractLinks.extractLinks(content, url, fst);
 
-        KEY.set(fst.getID(url));
-        IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
-        if (links != null) {
-          for (Element link : links) {
-            String linkUrl = link.attr("abs:href");
-            if (fst.getID(linkUrl) != -1) { // link already exists
-              linkUrlSet.add(fst.getID(linkUrl));
-            }
-          }
-
-          if (linkUrlSet.size() == 0) {
-            // Emit empty entry even if there aren't any outgoing links
-            VALUE.set("");
-            context.write(KEY, VALUE);
-            return;
-          }
-
-          VALUE.set(JOINER.join(linkUrlSet));
-          context.getCounter(MyCounters.LINKS).increment(linkUrlSet.size());
-          context.write(KEY, VALUE);
+        if (linkDestinations.size() == 0) {
+          // Emit empty entry even if there aren't any outgoing links
+          value.set("");
+          context.write(key, value);
+        } else {
+          value.set(joiner.join(linkDestinations));
+          context.write(key, value);
+          context.getCounter(MyCounters.LINKS).increment(linkDestinations.size());
         }
       }
     }
