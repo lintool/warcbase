@@ -2,12 +2,15 @@ package org.warcbase.analysis.graph;
 
 import it.unimi.dsi.fastutil.ints.Int2IntAVLTreeMap;
 
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map.Entry;
@@ -41,12 +44,94 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
-import org.warcbase.analysis.graph.PrefixMapping.PrefixNode;
+import org.warcbase.analysis.graph.ExtractSiteLinks.PrefixMapping.PrefixNode;
 import org.warcbase.data.UriMapping;
 import org.warcbase.mapreduce.ArcInputFormat;
 
+import au.com.bytecode.opencsv.CSVReader;
+
 public class ExtractSiteLinks extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ExtractSiteLinks.class);
+
+  public static class PrefixMapping {
+    public class PrefixNode {
+      int id;
+      String url;
+      int startPos;
+      int endPos;
+
+      public PrefixNode(int id, String url, int startPos, int endPos) {
+        this.id = id;
+        this.url = url;
+        this.startPos = startPos;
+        this.endPos = endPos;
+      }
+
+      public int getId() {
+        return id;
+      }
+
+      public String getUrl() {
+        return url;
+      }
+
+      public int getStartPos() {
+        return startPos;
+      }
+
+      public int getEndPos() {
+        return endPos;
+      }
+    }
+
+    public static List<PrefixNode> loadPrefix(String prefixFile, UriMapping map)
+        throws IOException {
+      PrefixMapping instance = new PrefixMapping();
+      final Comparator<PrefixNode> comparator = new Comparator<PrefixNode>() {
+        @Override
+        public int compare(PrefixNode n1, PrefixNode n2) {
+          if (n1.startPos > n2.startPos) {
+            return 1;
+          } else if (n1.startPos == n2.startPos) {
+            return 0;
+          } else {
+            return -1;
+          }
+        }
+      };
+      List<PrefixNode> prefixes = new ArrayList<PrefixNode>();
+      CSVReader reader = new CSVReader(new FileReader(prefixFile), ',');
+      reader.readNext();
+      String[] record = null;
+      while ((record = reader.readNext()) != null) {
+        int id = Integer.valueOf(record[0]);
+        String url = record[1];
+        List<String> results = map.prefixSearch(url);
+        int[] boundary = map.getIdRange(results.get(0), results.get(results.size() - 1));
+        PrefixNode node = instance.new PrefixNode(id, url, boundary[0], boundary[1]);
+        prefixes.add(node);
+      }
+      Collections.sort(prefixes, comparator);
+      reader.close();
+      return prefixes;
+    }
+
+    public int getPrefixId(int id, List<PrefixNode> prefixes) {
+      int start = 0, end = prefixes.size() - 1;
+      int mid;
+      while (start <= end) {
+        mid = (start + end) / 2;
+        if (prefixes.get(mid).getStartPos() <= id && prefixes.get(mid).getEndPos() >= id) {
+          return prefixes.get(mid).getId();
+        } else if (prefixes.get(mid).getStartPos() > id) {
+          end = mid - 1;
+        } else {
+          start = mid + 1;
+        }
+      }
+      return -1;
+    }
+  }
 
   private static enum Records {
     TOTAL, LINK_COUNT
@@ -54,13 +139,14 @@ public class ExtractSiteLinks extends Configured implements Tool {
 
   public static class ExtractSiteLinksMapper extends
       Mapper<LongWritable, ArcRecordBase, IntWritable, IntWritable> {
-    private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
-    private static final IntWritable KEY = new IntWritable();
-    private static final IntWritable VALUE = new IntWritable();
+    private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyyMMdd");
 
-    private static UriMapping fst;
-    private static PrefixMapping prefixMap;
-    private static List<PrefixNode> prefix;
+    private final IntWritable key = new IntWritable();
+    private final IntWritable value = new IntWritable();
+
+    private PrefixMapping prefixMap = new PrefixMapping();
+    private UriMapping fst;
+    private List<PrefixNode> prefix;
 
     @Override
     public void setup(Context context) {
@@ -73,7 +159,6 @@ public class ExtractSiteLinks extends Configured implements Tool {
         fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());
         // load Prefix Mapping from file
-        prefixMap = (PrefixMapping) Class.forName(conf.get("PrefixMappingClass")).newInstance();
         prefix = PrefixMapping.loadPrefix(localFiles[1].toString(), fst);
 
       } catch (Exception e) {
@@ -83,13 +168,13 @@ public class ExtractSiteLinks extends Configured implements Tool {
     }
 
     @Override
-    public void map(LongWritable key, ArcRecordBase record, Context context)
+    public void map(LongWritable w, ArcRecordBase record, Context context)
         throws IOException, InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
       String url = record.getUrlStr();
       String type = record.getContentTypeStr();
       Date date = record.getArchiveDate();
-      String time = df.format(date);
+      String time = DATE_FORMAT.format(date);
       InputStream content = record.getPayloadContent();
 
       if (beginDate != null && endDate != null) {
@@ -120,7 +205,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
       
       // this url is indexed in FST and its prefix is appeared in prefix map (thus declared in prefix file) 
       if (fst.getID(url) != -1 && sourcePrefixId != -1) { 
-        KEY.set(sourcePrefixId);
+        key.set(sourcePrefixId);
         List<Integer> linkUrlList = new ArrayList<Integer>();
         for (Element link : links) {
           String linkUrl = link.attr("abs:href");
@@ -132,8 +217,8 @@ public class ExtractSiteLinks extends Configured implements Tool {
         }
        
         for (Integer linkID : linkUrlList) {
-          VALUE.set(linkID);
-          context.write(KEY, VALUE);
+          value.set(linkID);
+          context.write(key, value);
         }
        }
      } // end map function
@@ -256,7 +341,6 @@ public class ExtractSiteLinks extends Configured implements Tool {
     job.setJarByClass(ExtractSiteLinks.class);
 
     job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
-    job.getConfiguration().set("PrefixMappingClass", PrefixMapping.class.getCanonicalName());
     // Put the mapping file and prefix file in the distributed cache
     // so each map worker will have it.
     job.addCacheFile(mappingPath.toUri());
