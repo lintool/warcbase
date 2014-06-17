@@ -69,6 +69,9 @@ public class InvertAnchorText extends Configured implements Tool {
     Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
     Elements links = doc.select("a[href]");
 
+    // Note that if there are outgoing links to the same destination page, we retain all copies
+    // (and their anchor texts). This behavior is explicitly different from that of ExtractLinks,
+    // which de-duplicates outgoing links to the same destination.
     Int2ObjectMap<List<String>> anchors = new Int2ObjectOpenHashMap<List<String>>();
     if (links != null) {
       for (Element link : links) {

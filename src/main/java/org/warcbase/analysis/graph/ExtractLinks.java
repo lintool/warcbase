@@ -73,6 +73,7 @@ public class ExtractLinks extends Configured implements Tool {
       for (Element link : links) {
         String linkUrl = link.attr("abs:href");
         if (fst.getID(linkUrl) != -1) {
+          // Note, we explicitly de-duplicate outgoing pages to the same target.
           linkDestinations.add(fst.getID(linkUrl));
         }
       }
