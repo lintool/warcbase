@@ -156,6 +156,7 @@ public class InvertAnchorText extends Configured implements Tool {
           value.set(srcId + "\t" + s);
           context.write(key, value);
         }
+        context.getCounter(MyCounters.LINKS).increment(entry.getValue().size());
       }
     }
   }
@@ -211,6 +212,7 @@ public class InvertAnchorText extends Configured implements Tool {
             value.set(srcId + "\t" + s);
             context.write(key, value);
           }
+          context.getCounter(MyCounters.LINKS).increment(entry.getValue().size());
         }
       }
     }
@@ -316,7 +318,8 @@ public class InvertAnchorText extends Configured implements Tool {
       conf.set("hbase.zookeeper.quorum", "bespinrm.umiacs.umd.edu");
     }
 
-    Job job = Job.getInstance(conf, InvertAnchorText.class.getSimpleName());
+    Job job = Job.getInstance(conf, InvertAnchorText.class.getSimpleName() +
+        (isHdfs ? ":HDFS:" + path : ":HBase:" + table));
     job.setJarByClass(InvertAnchorText.class);
 
     job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());

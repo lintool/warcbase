@@ -317,7 +317,8 @@ public class ExtractLinks extends Configured implements Tool {
       conf.set("hbase.zookeeper.quorum", "bespinrm.umiacs.umd.edu");
     }
       
-    Job job = Job.getInstance(conf, ExtractLinks.class.getSimpleName());
+    Job job = Job.getInstance(conf, ExtractLinks.class.getSimpleName() +
+        (isHdfs ? ":HDFS:" + path : ":HBase:" + table));
     job.setJarByClass(ExtractLinks.class);
 
     job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
