@@ -21,12 +21,17 @@ public class WarcbaseAdmin {
 
   private static final String INITIALIZE_OPTION = "initialize";
   private static final String FORCE_OPTION = "force";
+  private static final String HELP_OPTION = "help";
+  private static final String ADD_OPTION = "addCollection";
 
   public static void main(String[] args) throws Exception {
     Options options = new Options();
     options.addOption(new Option(INITIALIZE_OPTION, "initialize metadata table"));
     options.addOption(new Option(FORCE_OPTION, "force"));
+    options.addOption(new Option(HELP_OPTION, "prints help message"));
 
+    // ZooKeeper is fairly noisy in logging. Normally, not a big deal, but in this case
+    // gets in the way.
     Logger.getLogger(org.apache.zookeeper.ZooKeeper.class).setLevel(Level.WARN);
     Logger.getLogger(org.apache.zookeeper.ClientCnxn.class).setLevel(Level.WARN);
     Logger.getLogger(org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper.class).setLevel(Level.WARN);

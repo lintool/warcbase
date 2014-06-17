@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
 import org.jsoup.Jsoup;
-import org.warcbase.data.Util;
+import org.warcbase.data.UrlUtil;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -108,7 +108,7 @@ public class ExtractText {
       String id = "";
       int idInd = 0;
       String keyStr = Bytes.toString(key);
-      String uri = Util.reverseBacUri(keyStr);
+      String uri = UrlUtil.keyToUrl(keyStr);
       boolean ambiguous = false;
       for(int i=0;i<ids.size();i++){
         if(keyStr.substring(0, Math.min(40, keyStr.length())).contains(ids.get(i))){
