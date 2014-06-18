@@ -24,19 +24,19 @@ import org.apache.lucene.util.fst.PositiveIntOutputs;
 import org.apache.lucene.util.fst.Util;
 import org.warcbase.ingest.IngestFiles;
 
-public class UriMapping {
-  private static final Logger LOG = Logger.getLogger(UriMapping.class);
+public class UrlMapping {
+  private static final Logger LOG = Logger.getLogger(UrlMapping.class);
 
   private FST<Long> fst;
 
-  public UriMapping(FST<Long> fst) {
+  public UrlMapping(FST<Long> fst) {
     this.fst = fst;
   }
-  
-  public UriMapping() {
+
+  public UrlMapping() {
   }
 
-  public UriMapping(String outputFileName) {
+  public UrlMapping(String outputFileName) {
     PositiveIntOutputs outputs = PositiveIntOutputs.getSingleton();
     File outputFile = new File(outputFileName);
     try {
@@ -48,7 +48,7 @@ public class UriMapping {
   }
 
   public void loadMapping(String outputFileName) {
-    UriMapping tmp = new UriMapping(outputFileName);
+    UrlMapping tmp = new UrlMapping(outputFileName);
     this.fst = tmp.fst;
   }
 
@@ -87,7 +87,7 @@ public class UriMapping {
     }
     return Util.toBytesRef(key, scratchBytes).utf8ToString();
   }
-  
+
   public List<String> prefixSearch(String prefix) {
     if (prefix == null || prefix.length() == 0 ) {
       return new ArrayList<String>();
@@ -125,7 +125,7 @@ public class UriMapping {
 
     return strResults;
   }
-  
+
   public int[] getIdRange(String first, String last){
     if (first == null || last == null) {
       return null;
@@ -147,15 +147,15 @@ public class UriMapping {
 
     return new int[] { (int) startId.longValue(), (int) endId.longValue() };
   }
-  
-  private boolean collect(List<BytesRef> res, BytesReader fstReader, 
+
+  private boolean collect(List<BytesRef> res, BytesReader fstReader,
       BytesRef output, Arc<Long> arc) throws IOException {
     if (output.length == output.bytes.length) {
       output.bytes = ArrayUtil.grow(output.bytes);
     }
     assert output.offset == 0;
     output.bytes[output.length++] = (byte) arc.label;
-    
+
     fst.readFirstTargetArc(arc, arc, fstReader);
     while (true) {
       if (arc.label == FST.END_LABEL) {
@@ -167,7 +167,7 @@ public class UriMapping {
         }
         output.length = save;
       }
-      
+
       if (arc.isLast()) {
         break;
       }
@@ -175,14 +175,14 @@ public class UriMapping {
     }
     return false;
   }
-  
+
   @SuppressWarnings("static-access")
   public static void main(String[] args) throws Exception {
     final String DATA = "data";
     final String ID = "getId";
     final String URL = "getUrl";
     final String PREFIX = "getPrefix";
-    
+
     Options options = new Options();
 
     options.addOption(OptionBuilder.withArgName("path").hasArg()
@@ -193,7 +193,7 @@ public class UriMapping {
         .withDescription("get url").create(URL));
     options.addOption(OptionBuilder.withArgName("path").hasArg()
         .withDescription("get prefix").create(PREFIX));
-    
+
     CommandLine cmdline = null;
     CommandLineParser parser = new GnuParser();
 
@@ -204,18 +204,18 @@ public class UriMapping {
           + exp.getMessage());
       System.exit(-1);
     }
-    
+
     if (!cmdline.hasOption(DATA) || (!cmdline.hasOption(ID)
         && !cmdline.hasOption(URL) && !cmdline.hasOption(PREFIX))) {
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp(IngestFiles.class.getCanonicalName(), options);
       System.exit(-1);
     }
-    
+
     String filePath = cmdline.getOptionValue(DATA);
-    UriMapping map = new UriMapping(filePath);
+    UrlMapping map = new UrlMapping(filePath);
     map.loadMapping(filePath);
-    
+
     if (cmdline.hasOption(ID)) {
       String url = cmdline.getOptionValue(ID);
       System.out.println(map.getID(url));

@@ -45,7 +45,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
 import org.warcbase.analysis.graph.ExtractSiteLinks.PrefixMapping.PrefixNode;
-import org.warcbase.data.UriMapping;
+import org.warcbase.data.UrlMapping;
 import org.warcbase.mapreduce.ArcInputFormat;
 
 import au.com.bytecode.opencsv.CSVReader;
@@ -84,7 +84,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
       }
     }
 
-    public static List<PrefixNode> loadPrefix(String prefixFile, UriMapping map)
+    public static List<PrefixNode> loadPrefix(String prefixFile, UrlMapping map)
         throws IOException {
       PrefixMapping instance = new PrefixMapping();
       final Comparator<PrefixNode> comparator = new Comparator<PrefixNode>() {
@@ -145,7 +145,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
     private final IntWritable value = new IntWritable();
 
     private PrefixMapping prefixMap = new PrefixMapping();
-    private UriMapping fst;
+    private UrlMapping fst;
     private List<PrefixNode> prefix;
 
     @Override
@@ -156,7 +156,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
         Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
 
         // load FST UriMapping from file
-        fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());
         // load Prefix Mapping from file
         prefix = PrefixMapping.loadPrefix(localFiles[1].toString(), fst);
@@ -340,7 +340,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
     Job job = Job.getInstance(getConf(), ExtractSiteLinks.class.getSimpleName());
     job.setJarByClass(ExtractSiteLinks.class);
 
-    job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
+    job.getConfiguration().set("UriMappingClass", UrlMapping.class.getCanonicalName());
     // Put the mapping file and prefix file in the distributed cache
     // so each map worker will have it.
     job.addCacheFile(mappingPath.toUri());
