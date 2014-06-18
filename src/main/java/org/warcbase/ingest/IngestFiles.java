@@ -27,7 +27,7 @@ import org.jwat.warc.WarcReader;
 import org.jwat.warc.WarcReaderFactory;
 import org.jwat.warc.WarcRecord;
 import org.warcbase.data.HbaseManager;
-import org.warcbase.data.Util;
+import org.warcbase.data.UrlUtil;
 
 public class IngestFiles {
   private static final String CREATE_OPTION = "create";
@@ -85,7 +85,7 @@ public class IngestFiles {
             return;
           }
 
-          key = Util.reverseHostname(url);
+          key = UrlUtil.urlToKey(url);
           type = record.getContentTypeStr();
 
           if (key != null && type == null) {
@@ -149,7 +149,7 @@ public class IngestFiles {
 
     while ((warcRecord = warcReader.getNextRecord()) != null) {
       uri = warcRecord.header.warcTargetUriStr;
-      key = Util.reverseHostname(uri);
+      key = UrlUtil.urlToKey(uri);
       Payload payload = warcRecord.getPayload();
       HttpHeader httpHeader = null;
       InputStream payloadStream = null;
