@@ -22,7 +22,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
 import org.warcbase.data.HbaseManager;
-import org.warcbase.data.Util;
+import org.warcbase.data.UrlUtil;
 
 public class WarcbaseServlet extends HttpServlet {
   private static final long serialVersionUID = 847405540723915805L;
@@ -88,7 +88,7 @@ public class WarcbaseServlet extends HttpServlet {
     }
     query = query.replace(" ", "%20");
     
-    String q = Util.reverseHostname(query);
+    String q = UrlUtil.urlToKey(query);
     HTableInterface table = pool.getTable(tableName);
     Get get = new Get(Bytes.toBytes(q));
     get.setMaxVersions(HbaseManager.MAX_VERSIONS);

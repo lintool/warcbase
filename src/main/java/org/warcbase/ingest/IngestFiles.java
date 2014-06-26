@@ -27,7 +27,7 @@ import org.jwat.warc.WarcReader;
 import org.jwat.warc.WarcReaderFactory;
 import org.jwat.warc.WarcRecord;
 import org.warcbase.data.HbaseManager;
-import org.warcbase.data.Util;
+import org.warcbase.data.UrlUtil;
 
 public class IngestFiles {
   private static final String CREATE_OPTION = "create";
@@ -59,47 +59,68 @@ public class IngestFiles {
     ArcRecordBase record = null;
     String url = null;
     String date = null;
-    byte[] content = null;
     String type = null;
     String key = null;
+    byte[] content = null;
 
-    InputStream in = new FileInputStream(inputArcFile);
-    ArcReader reader = ArcReaderFactory.getReader(in);
-    while ((record = reader.getNextRecord()) != null) {
-      try {
-        url = record.getUrlStr();
-        date = record.getArchiveDateStr();
-        content = IOUtils.toByteArray(record.getPayloadContent());
-        key = Util.reverseHostname(url);
-        type = record.getContentTypeStr();
+    InputStream in = null;
+    ArcReader reader = null;
 
-        if (key != null && type == null) {
-          type = "text/plain";
-        }
+    try {
+      // Per file trapping of exceptions.
+      in = new FileInputStream(inputArcFile);
+      reader = ArcReaderFactory.getReader(in);
 
-        if (key == null) {
-          continue;
-        }
+      while ((record = reader.getNextRecord()) != null) {
+        try {
+          // Per record trapping of exceptions.
+          url = record.getUrlStr();
+          date = record.getArchiveDateStr();
 
-        if (content.length > MAX_CONTENT_SIZE) {
-          skipped++;
-        } else {
+          try {
+            // This is prone to OOM errors when the underlying file is corrupt.
+            content = IOUtils.toByteArray(record.getPayloadContent());
+          } catch (OutOfMemoryError e) {
+            // Yes, kinda sketchy... but try to move on.
+            return;
+          }
+
+          key = UrlUtil.urlToKey(url);
+          type = record.getContentTypeStr();
+
+          if (key != null && type == null) {
+            type = "text/plain";
+          }
+
+          if (key == null) {
+            continue;
+          }
+
+          if (content.length > MAX_CONTENT_SIZE) {
+            skipped++;
+          } else {
+            if (hbaseManager.addRecord(key, date, content, type)) {
+              cnt++;
+            } else {
+              skipped++;
+            }
+          }
+
           if (cnt % 10000 == 0 && cnt > 0) {
             LOG.info("Ingested " + cnt + " records into Hbase.");
           }
-          if (hbaseManager.addRecord(key, date, content, type)) {
-            cnt++;
-          } else {
-            skipped++;
-          }
+        } catch (Exception e) {
+          LOG.error("Error ingesting record: " + e);
         }
-      } catch (Exception e) {
-        LOG.error("Error ingesting record: " + e);
       }
+    } catch (Exception e) {
+      LOG.error("Error ingesting file: " + inputArcFile);
+    } finally {
+      if (reader != null)
+        reader.close();
+      if (in != null)
+        in.close();
     }
-
-    reader.close();
-    in.close();
   }
 
   private void ingestWarcFile(File inputWarcFile) throws IOException {
@@ -128,7 +149,7 @@ public class IngestFiles {
 
     while ((warcRecord = warcReader.getNextRecord()) != null) {
       uri = warcRecord.header.warcTargetUriStr;
-      key = Util.reverseHostname(uri);
+      key = UrlUtil.urlToKey(uri);
       Payload payload = warcRecord.getPayload();
       HttpHeader httpHeader = null;
       InputStream payloadStream = null;

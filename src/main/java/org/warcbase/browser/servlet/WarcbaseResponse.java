@@ -24,8 +24,8 @@ import org.jsoup.nodes.Element;
 import org.warcbase.data.HbaseManager;
 import org.warcbase.data.JSInternalUriConverter;
 import org.warcbase.data.TextDocument2;
-import org.warcbase.data.Util;
 import org.apache.commons.lang3.*;
+import org.warcbase.data.UrlUtil;
 
 public class WarcbaseResponse {
   private final Configuration hbaseConfig;
@@ -76,7 +76,7 @@ public class WarcbaseResponse {
 
   public void writeDates(HttpServletResponse resp, String tableName, String query)
       throws IOException {
-    String q = Util.reverseHostname(query);
+    String q = UrlUtil.urlToKey(query);
     HTableInterface table = pool.getTable(tableName);
 
     Get get = new Get(Bytes.toBytes(q));
@@ -265,7 +265,7 @@ public class WarcbaseResponse {
       long realDate, boolean nobanner) throws IOException {
     byte[] data = null;
     String type = null;
-    String q = Util.reverseHostname(query);
+    String q = UrlUtil.urlToKey(query);
     HTableInterface table = pool.getTable(tableName);
     Get get = new Get(Bytes.toBytes(q));
     get.setMaxVersions(HbaseManager.MAX_VERSIONS);
