@@ -22,6 +22,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.warcbase.data.HbaseManager;
+import org.warcbase.data.JSInternalUriConverter;
 import org.warcbase.data.TextDocument2;
 import org.warcbase.data.Util;
 import org.apache.commons.lang3.*;
@@ -152,8 +153,6 @@ public class WarcbaseResponse {
       TextDocument2 t2 = new TextDocument2(null, null, null);
       String bodyContent = new String(content, "UTF8");
       
-      System.out.println(content.length);
-      System.out.println(bodyContent);
       // Fixes https://github.com/lintool/warcbase/issues/25
       bodyContent = bodyContent.replaceAll("�", "");
 
@@ -167,6 +166,9 @@ public class WarcbaseResponse {
       bodyContent = new String(Bytes.toBytes(doc.html()), "UTF8");
       bodyContent = StringEscapeUtils.unescapeHtml4(bodyContent);
       bodyContent = t2.fixURLs(bodyContent, query, String.valueOf(d), tableName);
+      bodyContent = StringEscapeUtils.unescapeHtml4(bodyContent);
+      JSInternalUriConverter j2 = new JSInternalUriConverter(tableName);
+      bodyContent = j2.fixURLs(bodyContent, query, String.valueOf(d), tableName);
       bodyContent = StringEscapeUtils.unescapeHtml4(bodyContent);
       doc = Jsoup.parse(bodyContent);
       base = doc.select("base").first();
@@ -254,6 +256,7 @@ public class WarcbaseResponse {
         noframes.html(body.html());
       }
       bodyContent = doc.html();
+      bodyContent = bodyContent.replaceAll("<!--", "<!--\n");
       out.println(bodyContent);
     }
   }
