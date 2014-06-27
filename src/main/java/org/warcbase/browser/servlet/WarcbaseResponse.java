@@ -3,9 +3,7 @@ package org.warcbase.browser.servlet;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Date;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -24,7 +22,9 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.warcbase.data.HbaseManager;
+import org.warcbase.data.JSInternalUriConverter;
 import org.warcbase.data.TextDocument2;
+import org.apache.commons.lang3.*;
 import org.warcbase.data.UrlUtil;
 
 public class WarcbaseResponse {
@@ -115,7 +115,7 @@ public class WarcbaseResponse {
   }
 
   private void writeResponse(HttpServletResponse resp, Result rs, byte[] content, String query,
-      long d, String type, int num, String tableName) throws IOException {
+      long d, String type, int num, String tableName, boolean nobanner) throws IOException {
     if (type.startsWith("text/plain") || !type.startsWith("text")) {
       resp.setHeader("Content-Type", type);
       resp.setContentLength(content.length);
@@ -145,20 +145,31 @@ public class WarcbaseResponse {
           break;
         }
       }
+
       System.setProperty("file.encoding", "UTF8");
       resp.setHeader("Content-Type", type);
       resp.setCharacterEncoding("UTF-8");
       PrintWriter out = resp.getWriter();
       TextDocument2 t2 = new TextDocument2(null, null, null);
       String bodyContent = new String(content, "UTF8");
+      
+      // Fixes https://github.com/lintool/warcbase/issues/25
+      bodyContent = bodyContent.replaceAll("�", "");
+
       Document doc = Jsoup.parse(bodyContent);
       Element head = doc.select("head").first();
       Element base = doc.select("base").first();
       if (base == null) {
         head.prepend("<base id='warcbase-base-added' href='" + query + "'>");
       }
-      bodyContent = doc.html();
+      //bodyContent = doc.html();
+      bodyContent = new String(Bytes.toBytes(doc.html()), "UTF8");
+      bodyContent = StringEscapeUtils.unescapeHtml4(bodyContent);
       bodyContent = t2.fixURLs(bodyContent, query, String.valueOf(d), tableName);
+      bodyContent = StringEscapeUtils.unescapeHtml4(bodyContent);
+      JSInternalUriConverter j2 = new JSInternalUriConverter(tableName);
+      bodyContent = j2.fixURLs(bodyContent, query, String.valueOf(d), tableName);
+      bodyContent = StringEscapeUtils.unescapeHtml4(bodyContent);
       doc = Jsoup.parse(bodyContent);
       base = doc.select("base").first();
       if (base != null) {
@@ -168,7 +179,19 @@ public class WarcbaseResponse {
       head = doc.select("head").first();
       head.prepend("<script type=\"text/javascript\"> function initYTVideo(id) {  _wmVideos_.init('/web/', id); } </script>  <script> function $(a){return document.getElementById(a)};     function addLoadEvent(a){if(window.addEventListener)addEventListener('load',a,false);else if(window.attachEvent)attachEvent('onload',a)} </script>");
       Element body = doc.select("body").first();
-      body.prepend("<div id=\"wm-ipp\" style=\"display: block; position: relative; padding: 0px 5px; min-height: 70px; min-width: 800px; z-index: 9000;\"><div id=\"wm-ipp-inside\" style=\"position:fixed;padding:0!important;margin:0!important;width:97%;min-width:780px;border:5px solid #000;border-top:none;background-image:url("
+      if(body == null){
+        Element noframes = doc.select("noframes").first();
+        if(noframes != null){
+          Document docBody = Jsoup.parse(StringEscapeUtils.unescapeHtml4(noframes.html()));
+          //body = docBody.select("body").first();
+        }
+      }
+      if(body == null) {
+        out.println(bodyContent);
+        return;
+      }
+      if (!nobanner) {
+        body.prepend("<div id=\"wm-ipp\" style=\"display: block; position: relative; padding: 0px 5px; min-height: 70px; min-width: 800px; z-index: 9000;\"><div id=\"wm-ipp-inside\" style=\"position:fixed;padding:0!important;margin:0!important;width:97%;min-width:780px;border:5px solid #000;border-top:none;background-image:url("
           + TextDocument2.SERVER_PREFIX
           + "warcbase/"
           + "images/wm_tb_bk_trns.png);text-align:center;-moz-box-shadow:1px 1px 3px #333;-webkit-box-shadow:1px 1px 3px #333;box-shadow:1px 1px 3px #333;font-size:11px!important;font-family:'Lucida Grande','Arial',sans-serif!important;\">    <table style=\"border-collapse:collapse;margin:0;padding:0;width:100%;\"><tbody><tr>    <td style=\"padding:10px;vertical-align:top;min-width:110px;\">    <a href=\""
@@ -226,14 +249,20 @@ public class WarcbaseResponse {
           + TextDocument2.SERVER_PREFIX
           + "warcbase/"
           + "images/wm_tb_close.png) no-repeat 100% 0;color:#33f;font-family:'Lucida Grande','Arial',sans-serif;margin-bottom:23px;background-color:transparent;border:none;\" title=\"Close the toolbar\">Close</a>            </td>    </tr></tbody></table>  </div> </div>      <style type=\"text/css\">body{margin-top:0!important;padding-top:0!important;min-width:800px!important;}#wm-ipp a:hover{text-decoration:underline!important;}</style>");
+      }
 
+      if (doc.select("body").first() == null) {
+        Element noframes = doc.select("noframes").first();
+        noframes.html(body.html());
+      }
       bodyContent = doc.html();
+      bodyContent = bodyContent.replaceAll("<!--", "<!--\n");
       out.println(bodyContent);
     }
   }
 
   public void writeContent(HttpServletResponse resp, String tableName, String query, long d,
-      long realDate) throws IOException {
+      long realDate, boolean nobanner) throws IOException {
     byte[] data = null;
     String type = null;
     String q = UrlUtil.urlToKey(query);
@@ -253,8 +282,9 @@ public class WarcbaseResponse {
       }
     }
 
-    writeResponse(resp, rs, data, query, realDate, type, rs.raw().length, tableName);
+    writeResponse(resp, rs, data, query, realDate, type, rs.raw().length, tableName, nobanner);
     table.close();
   }
 
+  
 }

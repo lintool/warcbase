@@ -66,13 +66,28 @@ public class WarcbaseServlet extends HttpServlet {
       return;
     }
 
-    if (d == null) {
-      d = splits[2];
-    }
-    if (query == null) {
-      query = pathInfo.substring(3 + splits[1].length() + splits[2].length(), pathInfo.length());
+    boolean nobanner = false;
+    if (splits[2].equals("nobanner")) {
+      nobanner = true;
     }
 
+    if (d == null) {
+      if (nobanner) {
+        d = splits[2 + 1];
+      } else {
+        d = splits[2];
+      }
+    }
+    
+    if (query == null) {
+      if (!nobanner) {
+        query = pathInfo.substring(3 + splits[1].length() + splits[2].length(), pathInfo.length());
+      } else {
+        query = pathInfo.substring(4 + splits[1].length() + splits[2].length() + splits[3].length(), pathInfo.length());
+      }
+    }
+    query = query.replace(" ", "%20");
+    
     String q = UrlUtil.urlToKey(query);
     HTableInterface table = pool.getTable(tableName);
     Get get = new Get(Bytes.toBytes(q));
@@ -92,7 +107,7 @@ public class WarcbaseServlet extends HttpServlet {
         long timestamp = rs.raw()[i].getTimestamp();
         String date = new Date(timestamp).toString();
         if (timestamp == dLong) {
-          warcbaseResponse.writeContent(resp, tableName, query, timestamp, dLong);
+          warcbaseResponse.writeContent(resp, tableName, query, timestamp, dLong, nobanner);
           table.close();
           return;
         }
@@ -104,12 +119,12 @@ public class WarcbaseServlet extends HttpServlet {
       Arrays.sort(dates, 0, rs.raw().length);
       for (int i = 1; i < rs.raw().length; i++)
         if (dates[i] > dLong) {// d < i
-          warcbaseResponse.writeContent(resp, tableName, query, dates[i], dLong);
+          warcbaseResponse.writeContent(resp, tableName, query, dates[i], dLong, nobanner);
           table.close();
           return;
         }
       int i = rs.raw().length;
-      warcbaseResponse.writeContent(resp, tableName, query, dates[i - 1], dLong);
+      warcbaseResponse.writeContent(resp, tableName, query, dates[i - 1], dLong, nobanner);
       table.close();
       return;
     }
@@ -140,4 +155,5 @@ public class WarcbaseServlet extends HttpServlet {
     out.println("</body>");
     out.println("</html>");
   }
+  
 }

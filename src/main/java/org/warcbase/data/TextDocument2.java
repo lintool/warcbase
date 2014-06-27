@@ -367,6 +367,7 @@ public class TextDocument2 {
       if (replayURIPrefix == null) {
         sb = new StringBuilder(url.length() + datespec.length());
         sb.append(SERVER_PREFIX + tableName + "/");
+        sb.append("nobanner" + "/");
         sb.append(datespec);
         sb.append("/");
         sb.append(url);
@@ -407,10 +408,24 @@ public class TextDocument2 {
       if (replayURIPrefix == null) {
         sb = new StringBuilder(url.length() + datespec.length());
         sb.append(SERVER_PREFIX + tableName + "/");
+        sb.append("nobanner" + "/");
         sb.append(datespec);
         sb.append("/");
         sb.append(url);
-        return sb.toString();
+        String newUrl = sb.toString();
+        newUrl = newUrl.replaceAll("%22", "\"");
+        newUrl = newUrl.replaceAll("%5B", "[");
+        newUrl = newUrl.replaceAll("%5D", "]");
+        newUrl = newUrl.replaceAll("%2A", "*");
+        newUrl = newUrl.replaceAll("%2B", "+");
+        newUrl = newUrl.replaceAll("%2C", ",");
+        newUrl = newUrl.replaceAll("%2D", "-");
+        newUrl = newUrl.replaceAll("%2E", ".");
+        newUrl = newUrl.replaceAll("%2F", "/");
+        newUrl = newUrl.replaceAll("%3A", ":");
+        newUrl = newUrl.replaceAll("%3B", ";");
+        newUrl = newUrl.replaceAll("%3D", "=");
+        return newUrl;
       }
       if (url.startsWith(replayURIPrefix)) {
         return url;
