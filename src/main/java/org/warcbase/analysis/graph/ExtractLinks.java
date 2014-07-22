@@ -61,19 +61,20 @@ import com.google.common.base.Joiner;
  */
 public class ExtractLinks extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ExtractLinks.class);
-
+  
+  private static final Joiner JOINER = Joiner.on(",");
+  public static final IntWritable KEY = new IntWritable();
+  private static final Text VALUE = new Text();
+  
+  private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
+  private static UriMapping fst;
+  
   private static enum Records {
     TOTAL, LINK_COUNT
   };
 
   public static class ExtractLinksHDFSMapper extends
       Mapper<LongWritable, ArcRecordBase, IntWritable, Text> {
-    private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
-    private static UriMapping fst;
-
-    private static final Joiner JOINER = Joiner.on(",");
-    private static final IntWritable KEY = new IntWritable();
-    private static final Text VALUE = new Text();
 
     @Override
     public void setup(Context context) {
@@ -156,14 +157,6 @@ public class ExtractLinks extends Configured implements Tool {
   
   public static class ExtractLinksHBaseMapper extends TableMapper<IntWritable, Text>{
     public static final byte[] COLUMN_FAMILY = Bytes.toBytes("links");
-    
-    private static final Joiner JOINER = Joiner.on(",");
-    public static final IntWritable KEY = new IntWritable();
-    private static final Text VALUE = new Text();
-    
-    private static UriMapping fst;
-    private static PrefixMapping prefixMap;
-    private static ArrayList<PrefixNode> prefix;
 
     @Override
     public void setup(Context context) {
@@ -175,10 +168,6 @@ public class ExtractLinks extends Configured implements Tool {
         // load FST UriMapping from file
         fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());
-        // load Prefix Mapping from file
-        prefixMap = (PrefixMapping) Class.forName(conf.get("PrefixMappingClass")).newInstance();
-        prefix = prefixMap.loadPrefix(localFiles[1].toString(), fst);
-
       } catch (Exception e) {
         e.printStackTrace();
         throw new RuntimeException("Error Initializing UriMapping");
@@ -282,7 +271,7 @@ public class ExtractLinks extends Configured implements Tool {
     FileSystem fs = FileSystem.get(getConf());
     String HDFSPath = null, HBaseTableName = null;
     boolean isHDFSInput = true; // set default as HDFS input
-    if (cmdline.hasOption(HDFSPath)) {
+    if (cmdline.hasOption(HDFS)) {
       HDFSPath = cmdline.getOptionValue(HDFS);
     } else {
       HBaseTableName = cmdline.getOptionValue(HBASE);
