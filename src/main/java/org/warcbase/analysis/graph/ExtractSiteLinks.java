@@ -66,14 +66,6 @@ import com.google.common.base.Joiner;
 public class ExtractSiteLinks extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ExtractSiteLinks.class);
 
-  private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
-  private static final IntWritable KEY = new IntWritable();
-  private static final IntWritable VALUE = new IntWritable();
-
-  private static UriMapping fst;
-  private static PrefixMapping prefixMap;
-  private static ArrayList<PrefixNode> prefix;
-
   private static enum Records {
     TOTAL, LINK_COUNT
   };
@@ -81,11 +73,22 @@ public class ExtractSiteLinks extends Configured implements Tool {
   // HDFS ExtractSiteLinks Mapper
   public static class ExtractSiteLinksHDFSMapper extends
       Mapper<LongWritable, ArcRecordBase, IntWritable, IntWritable> {
+    private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
+    private static String beginDate, endDate;
+    private static final IntWritable KEY = new IntWritable();
+    private static final IntWritable VALUE = new IntWritable();
 
+    private static UriMapping fst;
+    private static PrefixMapping prefixMap;
+    private static ArrayList<PrefixNode> prefix;
+    
     @Override
     public void setup(Context context) {
       try {
         Configuration conf = context.getConfiguration();
+        beginDate = conf.get("beginDate");
+        endDate = conf.get("endDate");
+        
         @SuppressWarnings("deprecation")
         Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
 
@@ -110,6 +113,9 @@ public class ExtractSiteLinks extends Configured implements Tool {
       String url = record.getUrlStr();
       String type = record.getContentTypeStr();
       Date date = record.getArchiveDate();
+      if (date == null) {
+        return;
+      }
       String time = df.format(date);
       InputStream content = record.getPayloadContent();
 
@@ -126,7 +132,9 @@ public class ExtractSiteLinks extends Configured implements Tool {
           return;
         }
       }
-
+      
+      LOG.info(time+","+beginDate+","+endDate+","+"afterJudge");
+      
       if (!type.equals("text/html")) {
         return;
       }
@@ -163,7 +171,16 @@ public class ExtractSiteLinks extends Configured implements Tool {
   // HBase ExtractSiteLinks Mapper
   public static class ExtractSiteLinksHBaseMapper extends TableMapper<IntWritable, IntWritable> {
     public static final byte[] COLUMN_FAMILY = Bytes.toBytes("links");
+    
+    private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
+    private static String beginDate, endDate;
+    private static final IntWritable KEY = new IntWritable();
+    private static final IntWritable VALUE = new IntWritable();
 
+    private static UriMapping fst;
+    private static PrefixMapping prefixMap;
+    private static ArrayList<PrefixNode> prefix;
+    
     @Override
     public void setup(Context context) {
       try {
@@ -328,7 +345,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
     Path prefixFilePath = new Path(cmdline.getOptionValue(PREFIX_FILE));
     int reduceTasks = cmdline.hasOption(NUM_REDUCERS) ? Integer.parseInt(cmdline
         .getOptionValue(NUM_REDUCERS)) : 1;
-
+    
     LOG.info("Tool: " + ExtractSiteLinks.class.getSimpleName());
     if (isHDFSInput) {
       LOG.info(" - HDFS input path: " + HDFSPath);
@@ -358,6 +375,13 @@ public class ExtractSiteLinks extends Configured implements Tool {
     Configuration conf;
     if (isHDFSInput) {
       conf = getConf();
+      // passing global variable values to individual nodes
+      if(beginDate != null) {
+        conf.set("beginDate", beginDate);
+      }
+      if(endDate != null) {
+        conf.set("endDate", endDate);
+      }
     } else {
       conf = HBaseConfiguration.create(getConf());
       conf.set("hbase.zookeeper.quorum", "bespinrm.umiacs.umd.edu");

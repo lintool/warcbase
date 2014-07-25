@@ -62,24 +62,25 @@ import com.google.common.base.Joiner;
 public class ExtractLinks extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ExtractLinks.class);
   
-  private static final Joiner JOINER = Joiner.on(",");
-  public static final IntWritable KEY = new IntWritable();
-  private static final Text VALUE = new Text();
-  
-  private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
-  private static UriMapping fst;
-  
   private static enum Records {
     TOTAL, LINK_COUNT
   };
 
   public static class ExtractLinksHDFSMapper extends
       Mapper<LongWritable, ArcRecordBase, IntWritable, Text> {
-
+    private static final Joiner JOINER = Joiner.on(",");
+    public static final IntWritable KEY = new IntWritable();
+    private static final Text VALUE = new Text();
+    
+    private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
+    private static UriMapping fst;
+    private static String beginDate, endDate;
     @Override
     public void setup(Context context) {
       try {
         Configuration conf = context.getConfiguration();
+        beginDate = conf.get("beginDate");
+        endDate = conf.get("endDate");
         // There appears to be a bug in getCacheFiles() which returns null,
         // even though getLocalCacheFiles is deprecated...
         @SuppressWarnings("deprecation")
@@ -92,6 +93,8 @@ public class ExtractLinks extends Configured implements Tool {
         fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());
         // simply assume only one file in distributed cache.
+        
+        
       } catch (Exception e) {
         e.printStackTrace();
         throw new RuntimeException("Error Initializing UriMapping");
@@ -105,9 +108,13 @@ public class ExtractLinks extends Configured implements Tool {
       String url = record.getUrlStr();
       String type = record.getContentTypeStr();
       Date date = record.getArchiveDate();
+      if (date == null) {
+        return;
+      }
       String time = df.format(date);
+      
       InputStream content = record.getPayloadContent();
-
+      
       if (beginDate != null && endDate != null) {
         if (time.compareTo(beginDate) < 0 || time.compareTo(endDate) > 0) {
           return;
@@ -121,7 +128,9 @@ public class ExtractLinks extends Configured implements Tool {
           return;
         }
       }
-
+      
+      LOG.info(time+","+beginDate+","+endDate+","+"afterJudge");
+      
       if (!type.equals("text/html")) {
         return;
       }
@@ -157,7 +166,13 @@ public class ExtractLinks extends Configured implements Tool {
   
   public static class ExtractLinksHBaseMapper extends TableMapper<IntWritable, Text>{
     public static final byte[] COLUMN_FAMILY = Bytes.toBytes("links");
-
+    private static final Joiner JOINER = Joiner.on(",");
+    public static final IntWritable KEY = new IntWritable();
+    private static final Text VALUE = new Text();
+    
+    private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
+    private static UriMapping fst;
+    
     @Override
     public void setup(Context context) {
       try {
@@ -305,6 +320,13 @@ public class ExtractLinks extends Configured implements Tool {
     Configuration conf;
     if (isHDFSInput) {
       conf = getConf();
+      // passing global variable values to individual nodes
+      if(beginDate != null) {
+        conf.set("beginDate", beginDate);
+      }
+      if(endDate != null) {
+        conf.set("endDate", endDate);
+      }
     } else {
       conf = HBaseConfiguration.create(getConf());
       conf.set("hbase.zookeeper.quorum", "bespinrm.umiacs.umd.edu");
