@@ -127,11 +127,15 @@ public class IngestFiles {
             continue;
         }
         
-        String metaline = meta.getUrl() + " " + meta.getMimetype() + " " + meta.getIp() + 
-            " " + ArchiveUtils.parse14DigitDate(meta.getDate()).getTime() + " " + (int)meta.getLength();
+        String metaline = meta.getUrl() + " " + meta.getIp() + 
+            " " + meta.getDate() + " " + meta.getMimetype() + " " + (int)meta.getLength();
 
+        //date = ArchiveUtils.parse14DigitDate(meta.getDate()).getTime() + "";
+        date = meta.getDate();
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dout = new DataOutputStream(baos);
+        dout.write(metaline.getBytes());
+        dout.write("\n".getBytes());
         copyFrom(r, (int)meta.getLength(), true, dout);
 
         System.out.println("-----------");
@@ -156,6 +160,7 @@ public class IngestFiles {
       if (baos.toByteArray().length > MAX_CONTENT_SIZE) {
         skipped++;
       } else {
+      System.out.println(key + " " + type + " " + date);
         if (hbaseManager.addRecord(key, date, baos.toByteArray(), type)) {
           cnt++;
         } else {

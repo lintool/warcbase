@@ -116,10 +116,11 @@ public class WarcbaseResponse {
 
   private void writeResponse(HttpServletResponse resp, Result rs, byte[] content, String query,
       long d, String type, int num, String tableName, boolean nobanner) throws IOException {
-    if (type.startsWith("text/plain") || !type.startsWith("text")) {
+      //    if (type.startsWith("text/plain") || !type.startsWith("text")) {
       resp.setHeader("Content-Type", type);
       resp.setContentLength(content.length);
       resp.getOutputStream().write(content);
+      /*
     } else {
       long[] dates = new long[rs.size()];
       for (int i = 0; i < rs.raw().length; i++)
@@ -259,6 +260,7 @@ public class WarcbaseResponse {
       bodyContent = bodyContent.replaceAll("<!--", "<!--\n");
       out.println(bodyContent);
     }
+      */
   }
 
   public void writeContent(HttpServletResponse resp, String tableName, String query, long d,
