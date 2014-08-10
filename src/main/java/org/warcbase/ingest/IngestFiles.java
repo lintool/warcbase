@@ -35,7 +35,9 @@ public class IngestFiles {
   public static final int MAX_CONTENT_SIZE = 1024 * 1024;
 
   private int cnt = 0;
-  private int skipped = 0;
+  private int errors = 0;
+  private int toolarge = 0;
+  private int invalidUrls = 0;
 
   private final HbaseManager hbaseManager;
 
@@ -84,6 +86,11 @@ public class IngestFiles {
           continue;
         }
 
+        if (meta.getUrl().startsWith("dns:")) {
+            invalidUrls++;
+            continue;
+        }
+
         String metaline = meta.getUrl() + " " + meta.getIp() + " " + meta.getDate() + " "
             + meta.getMimetype() + " " + (int) meta.getLength();
 
@@ -98,8 +105,8 @@ public class IngestFiles {
         String type = meta.getMimetype();
 
         if (key == null) {
-          LOG.error("Invalid URL: " + key);
-          skipped++;
+          LOG.error("Invalid URL: " + meta.getUrl());
+          invalidUrls++;
           continue;
         }
 
@@ -108,12 +115,12 @@ public class IngestFiles {
         }
 
         if ((int) meta.getLength() > MAX_CONTENT_SIZE) {
-          skipped++;
+          toolarge++;
         } else {
           if (hbaseManager.addRecord(key, date, baos.toByteArray(), type)) {
             cnt++;
           } else {
-            skipped++;
+            errors++;
           }
         }
 
@@ -123,6 +130,7 @@ public class IngestFiles {
       }
     } catch (Exception e) {
       LOG.error("Error ingesting file: " + inputArcFile);
+      e.printStackTrace();
     } finally {
       if (reader != null)
         try {
@@ -139,8 +147,6 @@ public class IngestFiles {
 
   private void ingestFolder(File inputFolder, int i) throws Exception {
     long startTime = System.currentTimeMillis();
-    cnt = 0;
-    skipped = 0;
 
     for (; i < inputFolder.listFiles().length; i++) {
       File inputFile = inputFolder.listFiles()[i];
@@ -151,15 +157,15 @@ public class IngestFiles {
 
       LOG.info("processing file " + i + ": " + inputFile.getName());
 
-      if ( inputFile.getName().endsWith(".warc.gz") || inputFile.getName().endsWith(".arc.gz") ) {
+      if ( inputFile.getName().endsWith(".warc.gz") || inputFile.getName().endsWith(".warc") ) {
         ingestWarcFile(inputFile);
-      } else if (inputFile.getName().endsWith(".warc") || inputFile.getName().endsWith(".arc")) {
+      } else if (inputFile.getName().endsWith(".arc.gz") || inputFile.getName().endsWith(".arc")) {
         ingestArcFile(inputFile);
       }
     }
 
     long totalTime = System.currentTimeMillis() - startTime;
-    LOG.info("Total " + cnt + " records inserted, " + skipped + " records skipped");
+    LOG.info("Total " + cnt + " records inserted, " + toolarge + " records too large, " + invalidUrls + " invalid URLs, " + errors + " insertion errors.");
     LOG.info("Total time: " + totalTime + "ms");
     LOG.info("Ingest rate: " + cnt / (totalTime / 1000) + " records per second.");
   }
