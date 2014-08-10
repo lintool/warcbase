@@ -1,10 +1,14 @@
 package org.warcbase.ingest;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Iterator;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.cli.CommandLine;
@@ -16,9 +20,14 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
-import org.jwat.arc.ArcReader;
+import org.archive.io.ArchiveRecord;
+import org.archive.io.arc.ARCReader;
+import org.archive.io.arc.ARCReaderFactory;
+import org.archive.io.arc.ARCRecord;
+import org.archive.io.arc.ARCRecordMetaData;
+import org.archive.io.arc.ARCWriter;
+import org.archive.util.ArchiveUtils;
 import org.jwat.arc.ArcReaderFactory;
-import org.jwat.arc.ArcRecordBase;
 import org.jwat.common.ByteCountingPushBackInputStream;
 import org.jwat.common.HttpHeader;
 import org.jwat.common.Payload;
@@ -53,10 +62,32 @@ public class IngestFiles {
 
   public IngestFiles(String name, boolean create) throws Exception {
     hbaseManager = new HbaseManager(name, create);
+    //hbaseManager = null;
   }
 
-  private void ingestArcFile(File inputArcFile) throws IOException {
-    ArcRecordBase record = null;
+  protected final byte [] scratchbuffer = new byte[4 * 1024];
+
+  protected long copyFrom(final InputStream is, final long recordLength, boolean enforceLength, DataOutputStream out)
+      throws IOException {
+    int read = scratchbuffer.length;
+    long tot = 0;
+    while ((tot < recordLength) && (read = is.read(scratchbuffer)) != -1) {
+      int write = read;
+      // never write more than enforced length
+      write = (int) Math.min(write, recordLength - tot);
+      tot += read;
+      out.write(scratchbuffer, 0, write);
+    }
+    if (enforceLength && tot != recordLength) {
+      // throw exception if desired for read vs. declared mismatches
+      throw new IOException("Read " + tot + " but expected " + recordLength);
+    }
+
+    return tot;
+  }
+
+  private void ingestArcFile(File inputArcFile) throws Exception {
+    //ArcRecordBase record = null;
     String url = null;
     String date = null;
     String type = null;
@@ -64,63 +95,152 @@ public class IngestFiles {
     byte[] content = null;
 
     InputStream in = null;
-    ArcReader reader = null;
+    //ArcReader reader = null;
 
-    try {
-      // Per file trapping of exceptions.
-      in = new FileInputStream(inputArcFile);
-      reader = ArcReaderFactory.getReader(in);
+    ARCReader reader = ARCReaderFactory.get(inputArcFile);
 
-      while ((record = reader.getNextRecord()) != null) {
-        try {
-          // Per record trapping of exceptions.
-          url = record.getUrlStr();
-          date = record.getArchiveDateStr();
-
-          try {
-            // This is prone to OOM errors when the underlying file is corrupt.
-            content = IOUtils.toByteArray(record.getPayloadContent());
-          } catch (OutOfMemoryError e) {
-            // Yes, kinda sketchy... but try to move on.
-            return;
-          }
-
-          key = UrlUtil.urlToKey(url);
-          type = record.getContentTypeStr();
-
-          if (key != null && type == null) {
-            type = "text/plain";
-          }
-
-          if (key == null) {
-            continue;
-          }
-
-          if (content.length > MAX_CONTENT_SIZE) {
-            skipped++;
-          } else {
-            if (hbaseManager.addRecord(key, date, content, type)) {
-              cnt++;
-            } else {
-              skipped++;
+    boolean firstRecord = true;
+    ARCWriter writer = null;
+    for (Iterator<ArchiveRecord> ii = reader.iterator(); ii.hasNext();) {
+        ARCRecord r = (ARCRecord)ii.next();
+        // We're to dump the arc on stdout.
+        // Get the first record's data if any.
+        ARCRecordMetaData meta = r.getMetaData();
+        if (firstRecord) {
+            firstRecord = false;
+            // Get an ARCWriter.
+            ByteArrayOutputStream baos =
+                new ByteArrayOutputStream(r.available());
+            // This is slow but done only once at top of ARC.
+            while (r.available() > 0) {
+                baos.write(r.read());
             }
-          }
+//            List<String> listOfMetadata = new ArrayList<String>();
+//            listOfMetadata.add(baos.toString(WriterPoolMember.UTF8));
+//            // Assume getArc returns full path to file.  ARCWriter
+//            // or new File will complain if it is otherwise.
+//            List<File> outDirs = new ArrayList<File>(); 
+//            WriterPoolSettingsData settings = 
+//                new WriterPoolSettingsData("","",-1L,false,outDirs,listOfMetadata); 
+//            writer = new ARCWriter(new AtomicInteger(), System.out,
+//                new File(meta.getArc()), settings);
+            continue;
+        }
+        
+        String metaline = meta.getUrl() + " " + meta.getMimetype() + " " + meta.getIp() + 
+            " " + ArchiveUtils.parse14DigitDate(meta.getDate()).getTime() + " " + (int)meta.getLength();
 
-          if (cnt % 10000 == 0 && cnt > 0) {
-            LOG.info("Ingested " + cnt + " records into Hbase.");
-          }
-        } catch (Exception e) {
-          LOG.error("Error ingesting record: " + e);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dout = new DataOutputStream(baos);
+        copyFrom(r, (int)meta.getLength(), true, dout);
+
+        System.out.println("-----------");
+        System.out.println(metaline);
+//        System.out.println(new String(bytes, "UTF8"));
+
+//        writer.write(meta.getUrl(), meta.getMimetype(), meta.getIp(),
+//            ArchiveUtils.parse14DigitDate(meta.getDate()).getTime(),
+//            (int)meta.getLength(), r);
+        
+      key = UrlUtil.urlToKey(meta.getUrl());
+      type = meta.getMimetype();
+
+      if (key != null && type == null) {
+        type = "text/plain";
+      }
+
+      if (key == null) {
+        continue;
+      }
+
+      if (baos.toByteArray().length > MAX_CONTENT_SIZE) {
+        skipped++;
+      } else {
+        if (hbaseManager.addRecord(key, date, baos.toByteArray(), type)) {
+          cnt++;
+        } else {
+          skipped++;
         }
       }
-    } catch (Exception e) {
-      LOG.error("Error ingesting file: " + inputArcFile);
-    } finally {
-      if (reader != null)
-        reader.close();
-      if (in != null)
-        in.close();
+
+      if (cnt % 10000 == 0 && cnt > 0) {
+        LOG.info("Ingested " + cnt + " records into Hbase.");
+      }
+
     }
+    
+//    for (Iterator<ArchiveRecord> ii = reader.iterator(); ii.hasNext();) {
+//      ARCRecord r = (ARCRecord) ii.next();
+//      ARCRecordMetaData meta = r.getMetaData();
+//      
+//      ByteArrayOutputStream os = new ByteArrayOutputStream();
+//      PrintStream ps = new PrintStream(os);
+//      ...
+//      String output = os.toString("UTF8");
+//      
+//      
+//      Swriter.write(meta.getUrl(), meta.getMimetype(), meta.getIp(),
+//          ArchiveUtils.parse14DigitDate(meta.getDate()).getTime(),
+//          (int)meta.getLength(), r);
+//      
+//    }
+//    reader.close();
+
+//    try {
+//      // Per file trapping of exceptions.
+//      in = new FileInputStream(inputArcFile);
+//      reader = ArcReaderFactory.getReader(in);
+//
+//      while ((record = reader.getNextRecord()) != null) {
+//        try {
+//          // Per record trapping of exceptions.
+//          url = record.getUrlStr();
+//          date = record.getArchiveDateStr();
+//
+//          try {
+//            // This is prone to OOM errors when the underlying file is corrupt.
+//            content = IOUtils.toByteArray(record.getPayloadContent());
+//          } catch (OutOfMemoryError e) {
+//            // Yes, kinda sketchy... but try to move on.
+//            return;
+//          }
+//
+//          key = UrlUtil.urlToKey(url);
+//          type = record.getContentTypeStr();
+//
+//          if (key != null && type == null) {
+//            type = "text/plain";
+//          }
+//
+//          if (key == null) {
+//            continue;
+//          }
+//
+//          if (content.length > MAX_CONTENT_SIZE) {
+//            skipped++;
+//          } else {
+//            if (hbaseManager.addRecord(key, date, content, type)) {
+//              cnt++;
+//            } else {
+//              skipped++;
+//            }
+//          }
+//
+//          if (cnt % 10000 == 0 && cnt > 0) {
+//            LOG.info("Ingested " + cnt + " records into Hbase.");
+//          }
+//        } catch (Exception e) {
+//          LOG.error("Error ingesting record: " + e);
+//        }
+//      }
+//    } catch (Exception e) {
+//      LOG.error("Error ingesting file: " + inputArcFile);
+//    } finally {
+//      if (reader != null)
+//        reader.close();
+//      if (in != null)
+//        in.close();
+//    }
   }
 
   private void ingestWarcFile(File inputWarcFile) throws IOException {
@@ -209,7 +329,7 @@ public class IngestFiles {
     gzInputStream.close();
   }
 
-  private void ingestFolder(File inputFolder, int i) throws IOException {
+  private void ingestFolder(File inputFolder, int i) throws Exception {
     long startTime = System.currentTimeMillis();
     cnt = 0;
     skipped = 0;
