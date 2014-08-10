@@ -138,8 +138,8 @@ public class IngestFiles {
         dout.write("\n".getBytes());
         copyFrom(r, (int)meta.getLength(), true, dout);
 
-        System.out.println("-----------");
-        System.out.println(metaline);
+	//        System.out.println("-----------");
+        //System.out.println(metaline);
 //        System.out.println(new String(bytes, "UTF8"));
 
 //        writer.write(meta.getUrl(), meta.getMimetype(), meta.getIp(),
@@ -157,16 +157,16 @@ public class IngestFiles {
         continue;
       }
 
-      if (baos.toByteArray().length > MAX_CONTENT_SIZE) {
-        skipped++;
-      } else {
-      System.out.println(key + " " + type + " " + date);
+      //      if (baos.toByteArray().length > MAX_CONTENT_SIZE) {
+      //        skipped++;
+      //      } else {
+      //System.out.println(key + " " + type + " " + date);
         if (hbaseManager.addRecord(key, date, baos.toByteArray(), type)) {
           cnt++;
         } else {
           skipped++;
         }
-      }
+	//      }
 
       if (cnt % 10000 == 0 && cnt > 0) {
         LOG.info("Ingested " + cnt + " records into Hbase.");
