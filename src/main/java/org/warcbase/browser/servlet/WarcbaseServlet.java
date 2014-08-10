@@ -2,11 +2,6 @@ package org.warcbase.browser.servlet;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.Date;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -36,10 +31,12 @@ public class WarcbaseServlet extends HttpServlet {
     warcbaseResponse = new WarcbaseResponse();
   }
 
-  protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException,
-      IOException {
+  protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+      throws ServletException, IOException {
     String query = req.getParameter("query");
     String d = req.getParameter("date");
+
+    LOG.info("Servlet called with: " + req);
 
     if (req.getPathInfo() == null || req.getPathInfo() == "/") {
       warcbaseResponse.writeTables(resp);
@@ -102,50 +99,7 @@ public class WarcbaseServlet extends HttpServlet {
     }
 
     long dLong = Long.parseLong(d);
-    if (d != null && d != "") {
-      for (int i = 0; i < rs.raw().length; i++) {
-        long timestamp = rs.raw()[i].getTimestamp();
-        String date = new Date(timestamp).toString();
-        System.out.println("##" + query + " " + tableName + " " + timestamp);
-        if (timestamp == dLong) {
-          warcbaseResponse.writeContent(resp, tableName, query, timestamp, dLong, nobanner);
-          table.close();
-          return;
-        }
-      }
-
-// We exactly matching timestamps: the API should be dumb, leaving the smarts to Wayback
-//
-//      long[] dates = new long[rs.size()];
-//      for (int i = 0; i < rs.raw().length; i++)
-//        dates[i] = rs.raw()[i].getTimestamp();
-//      Arrays.sort(dates, 0, rs.raw().length);
-//      for (int i = 1; i < rs.raw().length; i++)
-//        if (dates[i] > dLong) {// d < i
-//          warcbaseResponse.writeContent(resp, tableName, query, dates[i], dLong, nobanner);
-//          table.close();
-//          return;
-//        }
-//      int i = rs.raw().length;
-//      warcbaseResponse.writeContent(resp, tableName, query, dates[i - 1], dLong, nobanner);
-
-      table.close();
-      return;
-    }
-
-    resp.setContentType("text/html");
-    resp.setStatus(HttpServletResponse.SC_OK);
-    PrintWriter out = resp.getWriter();
-    out.println("<html>");
-    out.println("<body>");
-    for (int i = 0; i < rs.raw().length; i++) {
-      String date = new String(rs.raw()[i].getQualifier());
-      out.println("<br/> <a href='http://" + req.getServerName() + ":" + req.getServerPort()
-          + req.getRequestURI() + "/" + date + "/" + query + "'>" + date + "</a>");
-    }
-    out.println("</body>");
-    out.println("</html>");
-    table.close();
+    warcbaseResponse.writeContent(resp, tableName, query, dLong);
   }
 
   protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException,

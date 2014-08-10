@@ -18,11 +18,14 @@ import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.log4j.Logger;
 import org.warcbase.data.HbaseManager;
 import org.warcbase.data.TextDocument2;
 import org.warcbase.data.UrlUtil;
 
 public class WarcbaseResponse {
+  private static final Logger LOG = Logger.getLogger(WarcbaseResponse.class);
+
   private final Configuration hbaseConfig;
   private HBaseAdmin hbaseAdmin;
   private static HTablePool pool = new HTablePool();
@@ -109,31 +112,24 @@ public class WarcbaseResponse {
     table.close();
   }
 
-  public void writeContent(HttpServletResponse resp, String tableName, String query, long d,
-      long realDate, boolean nobanner) throws IOException {
-    byte[] data = null;
-    String type = null;
-    String q = UrlUtil.urlToKey(query);
+  public void writeContent(HttpServletResponse resp, String tableName, String url, long ts) throws IOException {
+    String key = UrlUtil.urlToKey(url);
     HTableInterface table = pool.getTable(tableName);
-    Get get = new Get(Bytes.toBytes(q));
-    get.setMaxVersions(HbaseManager.MAX_VERSIONS);
+    Get get = new Get(Bytes.toBytes(key));
+    get.setTimeStamp(ts);
     Result rs = null;
     rs = table.get(get);
 
-    for (int i = 0; i < rs.raw().length; i++) {
-      long timestamp = rs.raw()[i].getTimestamp();
-      if (timestamp == d) {
-        data = rs.raw()[i].getValue();
-        type = Bytes.toString(rs.raw()[i].getQualifier());
+    if (rs.raw().length == 1) {
+      // We should have exactly one result here...
+      byte[] data = rs.raw()[0].getValue();
+      String type = Bytes.toString(rs.raw()[0].getQualifier());
 
-        resp.setHeader("Content-Type", type);
-        resp.setContentLength(data.length);
-        resp.getOutputStream().write(data);
-
-        break;
-      }
+      LOG.info("Retreiving " + key + " at " + ts);
+      resp.setHeader("Content-Type", type);
+      resp.setContentLength(data.length);
+      resp.getOutputStream().write(data);
     }
-
     table.close();
   }
 }
