@@ -5,6 +5,8 @@ import java.io.PrintWriter;
 import java.sql.Date;
 import java.text.ParseException;
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -38,6 +40,9 @@ public class WarcbaseServlet extends HttpServlet {
   private HBaseAdmin hbaseAdmin;
   private static HTablePool pool = new HTablePool();
 
+  private final Pattern p1 = Pattern.compile("^/([^//]+)/(\\d+)/(http://.*)$");
+  private final Pattern p2 = Pattern.compile("^/([^//]+)/\\*/(http://.*)$");
+
   public WarcbaseServlet() throws MasterNotRunningException, ZooKeeperConnectionException {
     this.hbaseConfig = HBaseConfiguration.create();
     hbaseAdmin = new HBaseAdmin(hbaseConfig);
@@ -48,7 +53,17 @@ public class WarcbaseServlet extends HttpServlet {
     String query = req.getParameter("query");
     String d = req.getParameter("date");
 
-    LOG.info("Servlet called with: " + req);
+    LOG.info("Servlet called: " + req.getPathInfo());
+    Matcher m1 = p1.matcher(req.getPathInfo());
+    if (m1.find()) {
+      // collection, url, 14 digit date
+      writeContent(resp, m1.group(1), m1.group(3), m1.group(2));
+    }
+
+    Matcher m2 = p2.matcher(req.getPathInfo());
+    if (m2.find()) {
+      writeDates(resp, m2.group(1), m2.group(2));
+    }
 
     if (req.getPathInfo() == null || req.getPathInfo() == "/") {
       writeTables(resp);
@@ -97,7 +112,6 @@ public class WarcbaseServlet extends HttpServlet {
     }
     query = query.replace(" ", "%20");
     
-    writeContent(resp, tableName, query, d);
   }
 
   protected void doPost(HttpServletRequest req, HttpServletResponse resp)
@@ -163,28 +177,15 @@ public class WarcbaseServlet extends HttpServlet {
       dates[i] = rs.raw()[i].getTimestamp();
     Arrays.sort(dates, 0, rs.raw().length);
     
-    resp.setContentType("text/html");
+    resp.setContentType("text/plain");
     resp.setStatus(HttpServletResponse.SC_OK);
     PrintWriter out = null;
     out = resp.getWriter();
 
-    out.println("<html>");
-    out.println("<body>");
-    if (rs.raw().length == 0) {
-      out.println("Not Found.");
-      out.println("<br/><a href='" + TextDocument2.SERVER_PREFIX + tableName + "'>" + "back to "
-          + tableName + "</a>");
-    } else {
-      for (int i = 0; i < rs.raw().length; i++){
-        //if (new String(rs.raw()[i].getFamily(), "UTF8").equals("content")) {
-        String date = new Date(dates[i]).toString();
-         out.println("<br/> <a href='" + TextDocument2.SERVER_PREFIX + tableName + "/" + dates[i]
-              + "/" + query + "'>" + date + "</a>");
-        //}
-      }
+    for (int i = 0; i < rs.raw().length; i++) {
+      String date14digit = ArchiveUtils.get14DigitDate(new Date(dates[i]));
+      out.println(date14digit + "\t" + "/" + tableName + "/" + date14digit + "/" + query);
     }
-    out.println("</body>");
-    out.println("</html>");
     table.close();
   }
 
@@ -206,7 +207,7 @@ public class WarcbaseServlet extends HttpServlet {
       byte[] data = rs.raw()[0].getValue();
       String type = Bytes.toString(rs.raw()[0].getQualifier());
 
-      LOG.info("Retreiving " + key + " at " + date14digit);
+      LOG.info("Fetching " + key + " at " + date14digit);
       resp.setHeader("Content-Type", type);
       resp.setContentLength(data.length);
       resp.getOutputStream().write(data);
