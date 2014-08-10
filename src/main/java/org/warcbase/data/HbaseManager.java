@@ -16,6 +16,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
+import org.archive.util.ArchiveUtils;
 import org.warcbase.ingest.IngestFiles;
 
 public class HbaseManager {
@@ -67,14 +68,13 @@ public class HbaseManager {
     admin.close();
   }
 
-  public boolean addRecord(String key, String date, byte[] data, String type) {
+  public boolean addRecord(final String key, final String date14digits,
+      final byte[] data, final String type) {
     try {
-      SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddhhmmss");
-      java.util.Date parsedDate = dateFormat.parse(date);
-      Timestamp timestamp = new java.sql.Timestamp(parsedDate.getTime());
+      long timestamp = ArchiveUtils.parse14DigitDate(date14digits).getTime();
       Put put = new Put(Bytes.toBytes(key));
       put.setWriteToWAL(false);
-      put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(type), timestamp.getTime(), data);
+      put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(type), timestamp, data);
       table.put(put);
       return true;
     } catch (Exception e) {

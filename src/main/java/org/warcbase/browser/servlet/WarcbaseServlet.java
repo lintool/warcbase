@@ -106,6 +106,7 @@ public class WarcbaseServlet extends HttpServlet {
       for (int i = 0; i < rs.raw().length; i++) {
         long timestamp = rs.raw()[i].getTimestamp();
         String date = new Date(timestamp).toString();
+        System.out.println("##" + query + " " + tableName + " " + timestamp);
         if (timestamp == dLong) {
           warcbaseResponse.writeContent(resp, tableName, query, timestamp, dLong, nobanner);
           table.close();
@@ -113,18 +114,21 @@ public class WarcbaseServlet extends HttpServlet {
         }
       }
 
-      long[] dates = new long[rs.size()];
-      for (int i = 0; i < rs.raw().length; i++)
-        dates[i] = rs.raw()[i].getTimestamp();
-      Arrays.sort(dates, 0, rs.raw().length);
-      for (int i = 1; i < rs.raw().length; i++)
-        if (dates[i] > dLong) {// d < i
-          warcbaseResponse.writeContent(resp, tableName, query, dates[i], dLong, nobanner);
-          table.close();
-          return;
-        }
-      int i = rs.raw().length;
-      warcbaseResponse.writeContent(resp, tableName, query, dates[i - 1], dLong, nobanner);
+// We exactly matching timestamps: the API should be dumb, leaving the smarts to Wayback
+//
+//      long[] dates = new long[rs.size()];
+//      for (int i = 0; i < rs.raw().length; i++)
+//        dates[i] = rs.raw()[i].getTimestamp();
+//      Arrays.sort(dates, 0, rs.raw().length);
+//      for (int i = 1; i < rs.raw().length; i++)
+//        if (dates[i] > dLong) {// d < i
+//          warcbaseResponse.writeContent(resp, tableName, query, dates[i], dLong, nobanner);
+//          table.close();
+//          return;
+//        }
+//      int i = rs.raw().length;
+//      warcbaseResponse.writeContent(resp, tableName, query, dates[i - 1], dLong, nobanner);
+
       table.close();
       return;
     }
