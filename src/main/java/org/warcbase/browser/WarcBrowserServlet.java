@@ -56,12 +56,16 @@ public class WarcBrowserServlet extends HttpServlet {
     Matcher m1 = p1.matcher(req.getPathInfo());
     if (m1.find()) {
       // collection, url, 14 digit date
-      writeContent(resp, m1.group(1), m1.group(3), m1.group(2));
+      String url = m1.group(3);
+      url = url.replaceAll(" ", "%20");
+      writeContent(resp, m1.group(1), url, m1.group(2));
     }
 
     Matcher m2 = p2.matcher(req.getPathInfo());
     if (m2.find()) {
-      writeDates(resp, m2.group(1), m2.group(2));
+      String url = m2.group(2);
+      url = url.replaceAll(" ", "%20");
+      writeDates(resp, m2.group(1), url);
     }
 
     if (req.getPathInfo() == null || req.getPathInfo() == "/") {
