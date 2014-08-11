@@ -14,8 +14,6 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.warcbase.browser.servlet.WarcbaseServlet;
-import org.warcbase.data.TextDocument2;
 
 public class WarcBrowser {
   private static final Logger LOG = Logger.getLogger(WarcBrowser.class);
@@ -28,7 +26,7 @@ public class WarcBrowser {
     ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
     context.setContextPath("/");
     server.setHandler(context);
-    context.addServlet(new ServletHolder(new WarcbaseServlet()), "/*");
+    context.addServlet(new ServletHolder(new WarcBrowserServlet()), "/*");
 
     ServletHolder holder = context.addServlet(DefaultServlet.class, "/warcbase/*");
     holder.setInitParameter("resourceBase", "src/main/webapp/");
@@ -89,7 +87,6 @@ public class WarcBrowser {
     LOG.info("Starting server on port " + port + " with server prefix " + server);
     LOG.setLevel(Level.OFF);
     WarcBrowser browser = new WarcBrowser(port);
-    TextDocument2.SERVER_PREFIX = server;
 
     browser.start();
   }

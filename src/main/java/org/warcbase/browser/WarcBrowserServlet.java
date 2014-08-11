@@ -1,4 +1,4 @@
-package org.warcbase.browser.servlet;
+package org.warcbase.browser;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -26,13 +26,12 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
 import org.archive.util.ArchiveUtils;
-import org.warcbase.data.HbaseManager;
-import org.warcbase.data.TextDocument2;
+import org.warcbase.data.HBaseTableManager;
 import org.warcbase.data.UrlUtil;
 
-public class WarcbaseServlet extends HttpServlet {
+public class WarcBrowserServlet extends HttpServlet {
   private static final long serialVersionUID = 847405540723915805L;
-  private static final Logger LOG = Logger.getLogger(WarcbaseServlet.class);
+  private static final Logger LOG = Logger.getLogger(WarcBrowserServlet.class);
 
   private String tableName;
 
@@ -43,7 +42,7 @@ public class WarcbaseServlet extends HttpServlet {
   private final Pattern p1 = Pattern.compile("^/([^//]+)/(\\d+)/(http://.*)$");
   private final Pattern p2 = Pattern.compile("^/([^//]+)/\\*/(http://.*)$");
 
-  public WarcbaseServlet() throws MasterNotRunningException, ZooKeeperConnectionException {
+  public WarcBrowserServlet() throws MasterNotRunningException, ZooKeeperConnectionException {
     this.hbaseConfig = HBaseConfiguration.create();
     hbaseAdmin = new HBaseAdmin(hbaseConfig);
   }
@@ -89,29 +88,6 @@ public class WarcbaseServlet extends HttpServlet {
       writeDates(resp, tableName, query);
       return;
     }
-
-    boolean nobanner = false;
-    if (splits[2].equals("nobanner")) {
-      nobanner = true;
-    }
-
-    if (d == null) {
-      if (nobanner) {
-        d = splits[2 + 1];
-      } else {
-        d = splits[2];
-      }
-    }
-    
-    if (query == null) {
-      if (!nobanner) {
-        query = pathInfo.substring(3 + splits[1].length() + splits[2].length(), pathInfo.length());
-      } else {
-        query = pathInfo.substring(4 + splits[1].length() + splits[2].length() + splits[3].length(), pathInfo.length());
-      }
-    }
-    query = query.replace(" ", "%20");
-    
   }
 
   protected void doPost(HttpServletRequest req, HttpServletResponse resp)
@@ -138,8 +114,7 @@ public class WarcbaseServlet extends HttpServlet {
     out.println("<body>");
     for (HTableDescriptor htableDescriptor : htableDescriptors) {
       String tableNameTmp = htableDescriptor.getNameAsString();
-      out.println("<br/> <a href='" + TextDocument2.SERVER_PREFIX + tableNameTmp + "'>"
-          + tableNameTmp + "</a>");
+      out.println("<br/>" + tableNameTmp + tableNameTmp + "</a>");
     }
     out.println("</body>");
     out.println("</html>");
@@ -168,7 +143,7 @@ public class WarcbaseServlet extends HttpServlet {
     HTableInterface table = pool.getTable(tableName);
 
     Get get = new Get(Bytes.toBytes(q));
-    get.setMaxVersions(HbaseManager.MAX_VERSIONS);
+    get.setMaxVersions(HBaseTableManager.MAX_VERSIONS);
     Result rs = null;
     rs = table.get(get);
    
