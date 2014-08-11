@@ -38,529 +38,378 @@ import org.archive.wayback.resourceindex.filterfactory.ExclusionCaptureFilterGro
 import org.archive.wayback.resourceindex.filterfactory.FilterGroupFactory;
 import org.archive.wayback.resourceindex.filterfactory.QueryCaptureFilterGroupFactory;
 import org.archive.wayback.resourceindex.filterfactory.WindowFilterGroup;
-import org.archive.wayback.resourcestore.LocationDBResourceStore;
 import org.archive.wayback.util.ObjectFilter;
 import org.archive.wayback.util.ObjectFilterChain;
 import org.archive.wayback.util.ObjectFilterIterator;
 import org.archive.wayback.util.url.AggressiveUrlCanonicalizer;
 import org.archive.wayback.webapp.PerfStats;
 
-/**
- * ResourceIndex implementation which assumes a "local" SearchResultSource.
- * 
- * Extracting SearchResults from the source involves several layered steps:
- * 
- * 1) extraction of results based on a prefix into the index
- * 2) passing each result through a series of adapters
- *       these adapters can create new fields based on existing fields, or can
- *       annotate fields as they are scanned in order
- * 3) filtering results based on request filters, which may come from 
- *       * WaybackRequest-specific parameters. 
- *           Ex. exact host match only, exact scheme match only, ...
- *       * AccessPoint-specific configuration 
- *           Ex. only return records with (ARC/WARC) filename prefixed with XXX
- *           Ex. block any dates not older than 6 months
- * 4) filtering based on AccessControl configurations
- *        Ex. block any urls with prefixes in file X
- * 5) windowing filters, which provide pagination of the results, allowing
- *        requests to specify "show results between 10 and 20"
- * 6) post filter adapters, which may annotate final results with other 
- *        information
- *        Ex. for each result, consult DB to see if user-contributed messages
- *            apply to the results 
- * 
- * After all results have been processed, we annotate the final SearchResultS
- * object with summary information about the results included. As we set up the 
- * chain of filters, we instrument the chain with counters that observe the 
- * number of results that went into, and came out of the Exclusion filters.
- * 
- * If there were results presented to the Exclusion filter, but none were 
- * emitted from it, an AccessControlException is thrown.
- *
- * @author brad
- * @version $Date$, $Revision$
- */
 public class WarcbaseResourceIndex extends LocalResourceIndex {
-	public final static int TYPE_REPLAY = 0;
-	public final static int TYPE_CAPTURE = 1;
-	public final static int TYPE_URL = 2;
+  public final static int TYPE_REPLAY = 0;
+  public final static int TYPE_CAPTURE = 1;
+  public final static int TYPE_URL = 2;
 
-	/**
-	 * maximum number of records to return
-	 */
-	private final static int MAX_RECORDS = 1000;
-	
-	enum PerfStat
-	{
-		IndexLoad;
-	}
-	
-	private int maxRecords = MAX_RECORDS;
+  /**
+   * maximum number of records to return
+   */
+  private final static int MAX_RECORDS = 1000;
 
-	protected SearchResultSource source;
-	
-	private UrlCanonicalizer canonicalizer = null;
-	
-	private boolean dedupeRecords = false;
-	
-	private boolean timestampSearch = false;
-	
-	private boolean markPrefixQueries = false;
-	
-	private ObjectFilter<CaptureSearchResult> annotater = null;
-	
-	private ObjectFilter<CaptureSearchResult> filter = null;
+  enum PerfStat {
+    IndexLoad;
+  }
 
-	
-	protected List<FilterGroupFactory> fgFactories = null;
-	
-	public WarcbaseResourceIndex() {
-		canonicalizer = new AggressiveUrlCanonicalizer();
-		fgFactories = new ArrayList<FilterGroupFactory>();
-		fgFactories.add(new AccessPointCaptureFilterGroupFactory());		
-		fgFactories.add(new CoreCaptureFilterGroupFactory());		
-		fgFactories.add(new QueryCaptureFilterGroupFactory());		
-		fgFactories.add(new AnnotatingCaptureFilterGroupFactory());
-		fgFactories.add(new ExclusionCaptureFilterGroupFactory());
-		fgFactories.add(new ClosestTrackingCaptureFilterGroupFactory());
-	}
+  private int maxRecords = MAX_RECORDS;
 
-	private void cleanupIterator(CloseableIterator<? extends SearchResult> itr)
-	throws ResourceIndexNotAvailableException {
-		try {
-			itr.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new ResourceIndexNotAvailableException(
-					e.getLocalizedMessage());
-		}
-	}
-	
-	protected List<CaptureFilterGroup> getRequestFilterGroups(WaybackRequest r) 
-	throws BadQueryException {
-		
-		ArrayList<CaptureFilterGroup> groups = 
-			new ArrayList<CaptureFilterGroup>();
-		for(FilterGroupFactory f : fgFactories) {
-			groups.add(f.getGroup(r, canonicalizer, this));
-		}
-		return groups;
-	}
-	
-	
-	public CaptureSearchResults doCaptureQuery(WaybackRequest wbRequest,
-			int type) throws ResourceIndexNotAvailableException,
-		ResourceNotInArchiveException, BadQueryException,
-		AccessControlException {
+  protected SearchResultSource source;
 
-		wbRequest.setResultsPerPage(100);
-		String urlKey;
-		try {
-			urlKey = canonicalizer.urlStringToKey(wbRequest.getRequestUrl());
-		} catch (IOException e) {
-			throw new BadQueryException("Bad URL(" + 
-					wbRequest.getRequestUrl() + ")");
-		}
-		
-		// Special handling for index where the key is url<space>timestamp
-		// for faster binary search lookup
-		if (timestampSearch && wbRequest.isTimestampSearchKey()) {
-			String replayTimestamp = wbRequest.getReplayTimestamp();
-			
-			if (replayTimestamp != null) {	
-				urlKey += " " + replayTimestamp;
-			}
-		}
+  private UrlCanonicalizer canonicalizer = null;
 
-		System.out.println(">>> Searching for " + urlKey + " " + wbRequest.getReplayTimestamp());
-		System.out.println(">>> access point " + wbRequest.getAccessPoint());
-		
-		// the CaptureSearchResults we are about to return:
-		CaptureSearchResults results = new CaptureSearchResults();
-		// the various filters to apply to the results:
-		ObjectFilterChain<CaptureSearchResult> filters = 
-			new ObjectFilterChain<CaptureSearchResult>();
+  private boolean dedupeRecords = false;
 
-		// Groupings of filters for... sanity and summary annotation of results:
-		// Windows:
-		WindowFilterGroup<CaptureSearchResult> window = 
-			new WindowFilterGroup<CaptureSearchResult>(wbRequest,this);
-		List<CaptureFilterGroup> groups = getRequestFilterGroups(wbRequest); 
-		if(filter != null) {
-			filters.addFilter(filter);
-		}
+  private boolean timestampSearch = false;
 
-		for(CaptureFilterGroup cfg : groups) {
-			filters.addFilters(cfg.getFilters());
-		}
-		filters.addFilters(window.getFilters());
-		
-		CloseableIterator<CaptureSearchResult> itr = null;
-		
-//		try {
-//			PerfStats.timeStart(PerfStat.IndexLoad);
-//			
-//			itr = new ObjectFilterIterator<CaptureSearchResult>(source.getPrefixIterator(urlKey),filters);
-//			
-//			while(itr.hasNext()) {
-//				results.addSearchResult(itr.next());
-//			}
-//		} catch(RuntimeIOException e) {
-//			throw new ResourceIndexNotAvailableException(e.getLocalizedMessage());
-//		} finally {
-//			if (itr != null) {
-//				cleanupIterator(itr);
-//			}
-//			
-//			PerfStats.timeEnd(PerfStat.IndexLoad);
-//		}
+  private boolean markPrefixQueries = false;
 
-		
-//		CaptureSearchResults orig = new CaptureSearchResults();
-//		try {
-//			itr = new ObjectFilterIterator<CaptureSearchResult>(
-//					source.getPrefixIterator(urlKey), filters);
-//
-//			while (itr.hasNext()) {
-//				orig.addSearchResult(itr.next());
-//			}
-//		} catch (RuntimeIOException e) {
-//		}
-//		for (CaptureSearchResult r : orig ) {
-//			System.out.println(">>>orig: " + r.getOriginalUrl() + " " + r.getCaptureTimestamp() + " " + r.getUrlKey() +
-//					" " + r.getRedirectUrl() + " " + r.getHttpCode());
-//		}
+  private ObjectFilter<CaptureSearchResult> annotater = null;
 
-		//CaptureSearchResults orig = new CaptureSearchResults();
-		try {
-			itr = new ObjectFilterIterator<CaptureSearchResult>(
-					getIterator(wbRequest.getRequestUrl(), urlKey), filters);
+  private ObjectFilter<CaptureSearchResult> filter = null;
 
-			while (itr.hasNext()) {
-				results.addSearchResult(itr.next());
-			}
-		} catch (RuntimeIOException e) {
-		}
-		for (CaptureSearchResult r : results ) {
-			System.out.println(">>>orig: " + r.getOriginalUrl() + " " + r.getCaptureTimestamp() + " " + r.getUrlKey() +
-					" " + r.getRedirectUrl() + " " + r.getHttpCode());
-		}
+  protected List<FilterGroupFactory> fgFactories = null;
 
-//		String resourceUrl = "http://nest.umiacs.umd.edu:8080/arc.sample.raw/*/" + wbRequest.getRequestUrl();
-//		System.out.println(">>> fetching resource url: " + resourceUrl);
-//		try {
-//			for (String line : new String(LocationDBResourceStore.getAsByteArray(new URL(resourceUrl))).split("\n")) {
-//				System.out.println(">>>!!! " + line);
-//				CaptureSearchResult r = new CaptureSearchResult();
-//				r.setCaptureDate(ArchiveUtils.parse14DigitDate(line.split("\\s+")[0]));
-//				r.setOriginalUrl(wbRequest.getRequestUrl());
-//				r.setUrlKey(urlKey);
-//				// needed, or otherwise we'll get a NPE in CalendarResults.jsp
-//				r.setRedirectUrl("-");
-//				r.setHttpCode("200");
-//				r.setOffset(0);
-//				results.addSearchResult(r);
-//			}
-//		} catch (MalformedURLException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (ParseException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
+  public WarcbaseResourceIndex() {
+    canonicalizer = new AggressiveUrlCanonicalizer();
+    fgFactories = new ArrayList<FilterGroupFactory>();
+    fgFactories.add(new AccessPointCaptureFilterGroupFactory());
+    fgFactories.add(new CoreCaptureFilterGroupFactory());
+    fgFactories.add(new QueryCaptureFilterGroupFactory());
+    fgFactories.add(new AnnotatingCaptureFilterGroupFactory());
+    fgFactories.add(new ExclusionCaptureFilterGroupFactory());
+    fgFactories.add(new ClosestTrackingCaptureFilterGroupFactory());
+  }
 
-		for(CaptureFilterGroup cfg : groups) {
-//			if ( cfg.getClass().getName().equals("org.archive.wayback.resourceindex.filterfactory.AccessPointCaptureFilterGroup")) {
-//				continue;
-//			}
-//			if ( cfg.getClass().getName().equals(">> Running cfg: class org.archive.wayback.resourceindex.filterfactory.AnnotatingCaptureFilterGroup")) {
-//				continue;
-//			}
+  private void cleanupIterator(CloseableIterator<? extends SearchResult> itr)
+      throws ResourceIndexNotAvailableException {
+    try {
+      itr.close();
+    } catch (IOException e) {
+      e.printStackTrace();
+      throw new ResourceIndexNotAvailableException(e.getLocalizedMessage());
+    }
+  }
 
-			System.out.println(">> Running cfg: " + cfg.getClass());
-			cfg.annotateResults(results);
-		}
+  protected List<CaptureFilterGroup> getRequestFilterGroups(WaybackRequest r)
+      throws BadQueryException {
 
-		for (CaptureSearchResult r : results ) {
-			System.out.println(">>>filter: " + r.getOriginalUrl() + " " + r.getCaptureTimestamp());
-		}
+    ArrayList<CaptureFilterGroup> groups = new ArrayList<CaptureFilterGroup>();
+    for (FilterGroupFactory f : fgFactories) {
+      groups.add(f.getGroup(r, canonicalizer, this));
+    }
+    return groups;
+  }
 
-		System.out.println(">>> passed1");
-		window.annotateResults(results);
+  public CaptureSearchResults doCaptureQuery(WaybackRequest wbRequest, int type)
+      throws ResourceIndexNotAvailableException, ResourceNotInArchiveException, BadQueryException,
+      AccessControlException {
 
-		for (CaptureSearchResult r : results ) {
-			System.out.println(">>>final: " + r.getOriginalUrl() + " " + r.getCaptureTimestamp());
-		}
+    wbRequest.setResultsPerPage(100);
+    String urlKey;
+    try {
+      urlKey = canonicalizer.urlStringToKey(wbRequest.getRequestUrl());
+    } catch (IOException e) {
+      throw new BadQueryException("Bad URL(" + wbRequest.getRequestUrl() + ")");
+    }
 
-		return results;
-	}
+    // Special handling for index where the key is url<space>timestamp
+    // for faster binary search lookup
+    if (timestampSearch && wbRequest.isTimestampSearchKey()) {
+      String replayTimestamp = wbRequest.getReplayTimestamp();
 
-	public CloseableIterator<CaptureSearchResult> getIterator(final String url, final String urlKey)
-			throws ResourceIndexNotAvailableException {
+      if (replayTimestamp != null) {
+        urlKey += " " + replayTimestamp;
+      }
+    }
 
-		final String resourceUrl = "http://nest.umiacs.umd.edu:8080/arc.sample.raw/*/" + url;
-		System.out.println(">>> fetching resource url: " + resourceUrl);
-		List<String> lines = null;
-		try {
-			lines = Arrays.asList(new String(WarcbaseResourceStore.getAsByteArray(new URL(resourceUrl))).split("\n"));
-		} catch (MalformedURLException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		final Iterator<String> it = lines.iterator();
+    System.out.println(">>> Searching for " + urlKey + " " + wbRequest.getReplayTimestamp());
 
-		return new CloseableIterator<CaptureSearchResult>() {
-			
-			@Override
-			public boolean hasNext() {
-				return it.hasNext();
-			}
+    CaptureSearchResults results = new CaptureSearchResults();
+    ObjectFilterChain<CaptureSearchResult> filters = new ObjectFilterChain<CaptureSearchResult>();
 
-			@Override
-			public CaptureSearchResult next() {
-				String line = it.next();
-				System.out.println(">>>!!! " + line);
-				String[] splits = line.split("\\s+");
-				CaptureSearchResult r = new CaptureSearchResult();
-				try {
-					r.setCaptureDate(ArchiveUtils.parse14DigitDate(splits[0]));
-				} catch (ParseException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				r.setOriginalUrl(url);
-				r.setUrlKey(urlKey);
-				// doesn't matter, or we get NPE
-				r.setMimeType(splits[1]);
-				r.setFile("foo");
-				// needed, or otherwise we'll get a NPE in CalendarResults.jsp
-				r.setRedirectUrl("-");
-				r.setHttpCode("200");
-				r.setOffset(0);
-				return r;
-			}
+    WindowFilterGroup<CaptureSearchResult> window =
+        new WindowFilterGroup<CaptureSearchResult>(wbRequest, this);
+    List<CaptureFilterGroup> groups = getRequestFilterGroups(wbRequest);
+    if (filter != null) {
+      filters.addFilter(filter);
+    }
 
-			@Override
-			public void remove() {
-				// TODO Auto-generated method stub
-				
-			}
+    for (CaptureFilterGroup cfg : groups) {
+      filters.addFilters(cfg.getFilters());
+    }
+    filters.addFilters(window.getFilters());
 
-			@Override
-			public void close() throws IOException {
-				// TODO Auto-generated method stub
-				
-			}
-		};
-	}
+    CloseableIterator<CaptureSearchResult> itr = null;
+    try {
+      itr = new ObjectFilterIterator<CaptureSearchResult>(
+          getIterator(wbRequest.getRequestUrl(), urlKey), filters);
 
-	public UrlSearchResults doUrlQuery(WaybackRequest wbRequest)
-		throws ResourceIndexNotAvailableException, 
-		ResourceNotInArchiveException, BadQueryException, 
-		AccessControlException {
-		
-		String urlKey;
-		try {
-			urlKey = canonicalizer.urlStringToKey(wbRequest.getRequestUrl());
-		} catch (URIException e) {
-			throw new BadQueryException("Bad URL(" + 
-					wbRequest.getRequestUrl() + ")");
-		}
-		
-		if (markPrefixQueries) {
-			urlKey += "*\t";
-		}
+      while (itr.hasNext()) {
+        results.addSearchResult(itr.next());
+      }
+    } catch (RuntimeIOException e) {
+    }
 
-		UrlSearchResults results = new UrlSearchResults();
+    for (CaptureFilterGroup cfg : groups) {
+      cfg.annotateResults(results);
+    }
 
-		// the various CAPTURE filters to apply to the results:
-		ObjectFilterChain<CaptureSearchResult> cFilters = 
-			new ObjectFilterChain<CaptureSearchResult>();
+    window.annotateResults(results);
 
-		
-		// Groupings of filters for clarity(?) and summary annotation of 
-		// results:
-		List<CaptureFilterGroup> groups = getRequestFilterGroups(wbRequest); 
-		for(CaptureFilterGroup cfg : groups) {
-			cFilters.addFilters(cfg.getFilters());
-		}
-		if (filter != null) {
-			cFilters.addFilter(filter);
-		}
-		
+    for (CaptureSearchResult r : results) {
+      System.out.println(">>> " + r.getOriginalUrl() + " " + r.getCaptureTimestamp());
+    }
+    return results;
+  }
 
-		// we've filtered the appropriate CaptureResult objects within the 
-		// iterator, now we're going to convert whatever records make it past
-		// the filters into UrlSearchResults, and then do further window
-		// filtering on those results:
-		// Windows:
-		// the window URL filters to apply to the results, once they're 
-		// UrlSearchResult objects
-		ObjectFilterChain<UrlSearchResult> uFilters = 
-			new ObjectFilterChain<UrlSearchResult>();
-		WindowFilterGroup<UrlSearchResult> window = 
-			new WindowFilterGroup<UrlSearchResult>(wbRequest,this);
-		uFilters.addFilters(window.getFilters());
+  public CloseableIterator<CaptureSearchResult> getIterator(final String url, final String urlKey)
+      throws ResourceIndexNotAvailableException {
 
-		CloseableIterator<CaptureSearchResult> itrC = null;
-		CloseableIterator<UrlSearchResult> itrU = null;
-		
-		try {
-			PerfStats.timeStart(PerfStat.IndexLoad);
-			
-			itrC = new ObjectFilterIterator<CaptureSearchResult>(
-					source.getPrefixIterator(urlKey),cFilters);	
-		
-			itrU = new ObjectFilterIterator<UrlSearchResult>(
-						new CaptureToUrlSearchResultIterator(itrC),
-						uFilters);
-		
-			while(itrU.hasNext()) {
-				results.addSearchResult(itrU.next());
-			}
-		} finally {
-			if (itrU != null) {
-				cleanupIterator(itrU);
-			}
-			PerfStats.timeEnd(PerfStat.IndexLoad);
-		}
-		
-		for(CaptureFilterGroup cfg : groups) {
-			cfg.annotateResults(results);
-		}
-		window.annotateResults(results);
+    final String resourceUrl = "http://nest.umiacs.umd.edu:8080/arc.sample.raw/*/" + url;
+    System.out.println(">>> fetching resource url: " + resourceUrl);
+    List<String> lines = null;
+    try {
+      lines = Arrays.asList(new String(WarcbaseResourceStore.getAsByteArray(new URL(resourceUrl)))
+          .split("\n"));
+    } catch (MalformedURLException e1) {
+      // TODO Auto-generated catch block
+      e1.printStackTrace();
+    } catch (IOException e1) {
+      // TODO Auto-generated catch block
+      e1.printStackTrace();
+    }
+    final Iterator<String> it = lines.iterator();
 
-		return results;
-	}
-	
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.archive.wayback.ResourceIndex#query(org.archive.wayback.core.WaybackRequest)
-	 */
-	public SearchResults query(WaybackRequest wbRequest)
-			throws ResourceIndexNotAvailableException,
-			ResourceNotInArchiveException, BadQueryException,
-			AccessControlException {
-		SearchResults results = null; // return value placeholder
+    return new CloseableIterator<CaptureSearchResult>() {
+      @Override
+      public boolean hasNext() {
+        return it.hasNext();
+      }
 
-		if (wbRequest.isReplayRequest()) {
+      @Override
+      public CaptureSearchResult next() {
+        String line = it.next();
+        System.out.println(">>>!!! " + line);
+        String[] splits = line.split("\\s+");
+        CaptureSearchResult r = new CaptureSearchResult();
+        try {
+          r.setCaptureDate(ArchiveUtils.parse14DigitDate(splits[0]));
+        } catch (ParseException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+        r.setOriginalUrl(url);
+        r.setUrlKey(urlKey);
+        // doesn't matter, or we get NPE
+        r.setMimeType(splits[1]);
+        r.setFile("foo");
+        // needed, or otherwise we'll get a NPE in CalendarResults.jsp
+        r.setRedirectUrl("-");
+        r.setHttpCode("200");
+        r.setOffset(0);
+        return r;
+      }
 
-			results = doCaptureQuery(wbRequest, TYPE_REPLAY);
-			results.putFilter(WaybackRequest.REQUEST_TYPE, 
-					WaybackRequest.REQUEST_REPLAY_QUERY);
+      @Override public void remove() {}
 
-		} else if (wbRequest.isCaptureQueryRequest()) {
+      @Override public void close() throws IOException {}
+    };
+  }
 
-			results = doCaptureQuery(wbRequest, TYPE_CAPTURE);
-			results.putFilter(WaybackRequest.REQUEST_TYPE, 
-					WaybackRequest.REQUEST_CAPTURE_QUERY);
+  public UrlSearchResults doUrlQuery(WaybackRequest wbRequest)
+      throws ResourceIndexNotAvailableException, ResourceNotInArchiveException, BadQueryException,
+      AccessControlException {
 
-		} else if (wbRequest.isUrlQueryRequest()) {
+    String urlKey;
+    try {
+      urlKey = canonicalizer.urlStringToKey(wbRequest.getRequestUrl());
+    } catch (URIException e) {
+      throw new BadQueryException("Bad URL(" + wbRequest.getRequestUrl() + ")");
+    }
 
-			results = doUrlQuery(wbRequest);
-			results.putFilter(WaybackRequest.REQUEST_TYPE, 
-					WaybackRequest.REQUEST_URL_QUERY);
+    if (markPrefixQueries) {
+      urlKey += "*\t";
+    }
 
-		} else {
+    UrlSearchResults results = new UrlSearchResults();
 
-			throw new BadQueryException("Unknown query type, must be " 
-					+ WaybackRequest.REQUEST_REPLAY_QUERY
-					+ ", " + WaybackRequest.REQUEST_CAPTURE_QUERY 
-					+ ", or " + WaybackRequest.REQUEST_URL_QUERY);
-		}
-		return results;
-	}
+    // the various CAPTURE filters to apply to the results:
+    ObjectFilterChain<CaptureSearchResult> cFilters = new ObjectFilterChain<CaptureSearchResult>();
 
-	public void addSearchResults(Iterator<CaptureSearchResult> itr) throws IOException,
-		UnsupportedOperationException {
-		if(source instanceof UpdatableSearchResultSource) {
-			UpdatableSearchResultSource updatable = 
-				(UpdatableSearchResultSource) source;
-			updatable.addSearchResults(itr,canonicalizer);
-		} else {
-			throw new UnsupportedOperationException("Underlying " +
-					"SearchResultSource is not Updatable.");
-		}
-	}
+    // Groupings of filters for clarity(?) and summary annotation of
+    // results:
+    List<CaptureFilterGroup> groups = getRequestFilterGroups(wbRequest);
+    for (CaptureFilterGroup cfg : groups) {
+      cFilters.addFilters(cfg.getFilters());
+    }
+    if (filter != null) {
+      cFilters.addFilter(filter);
+    }
 
-	public boolean isUpdatable() {
-		return (source instanceof UpdatableSearchResultSource);
-	}
-	
-	/**
-	 * @param maxRecords the maxRecords to set
-	 */
-	public void setMaxRecords(int maxRecords) {
-		this.maxRecords = maxRecords;
-	}
-	public int getMaxRecords() {
-		return maxRecords;
-	}
+    // we've filtered the appropriate CaptureResult objects within the
+    // iterator, now we're going to convert whatever records make it past
+    // the filters into UrlSearchResults, and then do further window
+    // filtering on those results:
+    // Windows:
+    // the window URL filters to apply to the results, once they're
+    // UrlSearchResult objects
+    ObjectFilterChain<UrlSearchResult> uFilters = new ObjectFilterChain<UrlSearchResult>();
+    WindowFilterGroup<UrlSearchResult> window = new WindowFilterGroup<UrlSearchResult>(wbRequest,
+        this);
+    uFilters.addFilters(window.getFilters());
 
+    CloseableIterator<CaptureSearchResult> itrC = null;
+    CloseableIterator<UrlSearchResult> itrU = null;
 
-	/**
-	 * @param source the source to set
-	 */
-	public void setSource(SearchResultSource source) {
-		this.source = source;
-	}
+    try {
+      PerfStats.timeStart(PerfStat.IndexLoad);
 
-	public boolean isDedupeRecords() {
-		return dedupeRecords;
-	}
+      itrC = new ObjectFilterIterator<CaptureSearchResult>(source.getPrefixIterator(urlKey),
+          cFilters);
 
-	public void setDedupeRecords(boolean dedupeRecords) {
-		this.dedupeRecords = dedupeRecords;
-	}
+      itrU = new ObjectFilterIterator<UrlSearchResult>(new CaptureToUrlSearchResultIterator(itrC),
+          uFilters);
 
-	public UrlCanonicalizer getCanonicalizer() {
-		return canonicalizer;
-	}
+      while (itrU.hasNext()) {
+        results.addSearchResult(itrU.next());
+      }
+    } finally {
+      if (itrU != null) {
+        cleanupIterator(itrU);
+      }
+      PerfStats.timeEnd(PerfStat.IndexLoad);
+    }
 
-	public void setCanonicalizer(UrlCanonicalizer canonicalizer) {
-		this.canonicalizer = canonicalizer;
-	}
+    for (CaptureFilterGroup cfg : groups) {
+      cfg.annotateResults(results);
+    }
+    window.annotateResults(results);
 
-	public void shutdown() throws IOException {
-		source.shutdown();
-	}
+    return results;
+  }
 
-	public ObjectFilter<CaptureSearchResult> getAnnotater() {
-		return annotater;
-	}
+  /*
+   * (non-Javadoc)
+   * 
+   * @see org.archive.wayback.ResourceIndex#query(org.archive.wayback.core.WaybackRequest)
+   */
+  public SearchResults query(WaybackRequest wbRequest) throws ResourceIndexNotAvailableException,
+      ResourceNotInArchiveException, BadQueryException, AccessControlException {
+    SearchResults results = null; // return value placeholder
 
-	public void setAnnotater(ObjectFilter<CaptureSearchResult> annotater) {
-		this.annotater = annotater;
-	}
+    if (wbRequest.isReplayRequest()) {
 
-	public ObjectFilter<CaptureSearchResult> getFilter() {
-		return filter;
-	}
+      results = doCaptureQuery(wbRequest, TYPE_REPLAY);
+      results.putFilter(WaybackRequest.REQUEST_TYPE, WaybackRequest.REQUEST_REPLAY_QUERY);
 
-	public void setFilter(ObjectFilter<CaptureSearchResult> filter) {
-		this.filter = filter;
-	}
+    } else if (wbRequest.isCaptureQueryRequest()) {
 
-	public boolean isTimestampSearch() {
-		return timestampSearch;
-	}
+      results = doCaptureQuery(wbRequest, TYPE_CAPTURE);
+      results.putFilter(WaybackRequest.REQUEST_TYPE, WaybackRequest.REQUEST_CAPTURE_QUERY);
 
-	public void setTimestampSearch(boolean timestampSearch) {
-		this.timestampSearch = timestampSearch;
-	}
+    } else if (wbRequest.isUrlQueryRequest()) {
 
-	public boolean isMarkPrefixQueries() {
-		return markPrefixQueries;
-	}
+      results = doUrlQuery(wbRequest);
+      results.putFilter(WaybackRequest.REQUEST_TYPE, WaybackRequest.REQUEST_URL_QUERY);
 
-	public void setMarkPrefixQueries(boolean markPrefixQueries) {
-		this.markPrefixQueries = markPrefixQueries;
-	}
+    } else {
+
+      throw new BadQueryException("Unknown query type, must be "
+          + WaybackRequest.REQUEST_REPLAY_QUERY + ", " + WaybackRequest.REQUEST_CAPTURE_QUERY
+          + ", or " + WaybackRequest.REQUEST_URL_QUERY);
+    }
+    return results;
+  }
+
+  public void addSearchResults(Iterator<CaptureSearchResult> itr) throws IOException,
+      UnsupportedOperationException {
+    if (source instanceof UpdatableSearchResultSource) {
+      UpdatableSearchResultSource updatable = (UpdatableSearchResultSource) source;
+      updatable.addSearchResults(itr, canonicalizer);
+    } else {
+      throw new UnsupportedOperationException("Underlying "
+          + "SearchResultSource is not Updatable.");
+    }
+  }
+
+  public boolean isUpdatable() {
+    return (source instanceof UpdatableSearchResultSource);
+  }
+
+  /**
+   * @param maxRecords the maxRecords to set
+   */
+  public void setMaxRecords(int maxRecords) {
+    this.maxRecords = maxRecords;
+  }
+
+  public int getMaxRecords() {
+    return maxRecords;
+  }
+
+  /**
+   * @param source the source to set
+   */
+  public void setSource(SearchResultSource source) {
+    this.source = source;
+  }
+
+  public boolean isDedupeRecords() {
+    return dedupeRecords;
+  }
+
+  public void setDedupeRecords(boolean dedupeRecords) {
+    this.dedupeRecords = dedupeRecords;
+  }
+
+  public UrlCanonicalizer getCanonicalizer() {
+    return canonicalizer;
+  }
+
+  public void setCanonicalizer(UrlCanonicalizer canonicalizer) {
+    this.canonicalizer = canonicalizer;
+  }
+
+  public void shutdown() throws IOException {
+    source.shutdown();
+  }
+
+  public ObjectFilter<CaptureSearchResult> getAnnotater() {
+    return annotater;
+  }
+
+  public void setAnnotater(ObjectFilter<CaptureSearchResult> annotater) {
+    this.annotater = annotater;
+  }
+
+  public ObjectFilter<CaptureSearchResult> getFilter() {
+    return filter;
+  }
+
+  public void setFilter(ObjectFilter<CaptureSearchResult> filter) {
+    this.filter = filter;
+  }
+
+  public boolean isTimestampSearch() {
+    return timestampSearch;
+  }
+
+  public void setTimestampSearch(boolean timestampSearch) {
+    this.timestampSearch = timestampSearch;
+  }
+
+  public boolean isMarkPrefixQueries() {
+    return markPrefixQueries;
+  }
+
+  public void setMarkPrefixQueries(boolean markPrefixQueries) {
+    this.markPrefixQueries = markPrefixQueries;
+  }
 }
