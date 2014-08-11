@@ -43,13 +43,13 @@ public class WarcbaseResourceStore implements ResourceStore {
       out.write(getAsByteArray(new URL(resourceUrl)));
       out.close();
     } catch (IOException e) {
-      e.printStackTrace();
+      throw new ResourceNotAvailableException("Error fetching API: " + resourceUrl);
     }
 
     try {
       r = ResourceFactory.getResource(new File(tmp), 157);
     } catch (IOException e) {
-      e.printStackTrace();
+      throw new ResourceNotAvailableException("Error reading local file: " + tmp);
     }
 
     if (r == null) {

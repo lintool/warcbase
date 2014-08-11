@@ -143,20 +143,21 @@ public class WarcbaseResourceIndex extends LocalResourceIndex {
   }
 
   public CloseableIterator<CaptureSearchResult> getIterator(final String url, final String urlKey)
-      throws ResourceIndexNotAvailableException {
+      throws ResourceNotInArchiveException, ResourceIndexNotAvailableException {
 
     final String resourceUrl = "http://" + host + ":" + port + "/" + table + "/*/" + url;
     System.out.println(">>> fetching resource url: " + resourceUrl);
     List<String> lines = null;
     try {
-      lines = Arrays.asList(new String(
-          WarcbaseResourceStore.getAsByteArray(new URL(resourceUrl))).split("\n"));
-    } catch (MalformedURLException e1) {
-      // TODO Auto-generated catch block
-      e1.printStackTrace();
-    } catch (IOException e1) {
-      // TODO Auto-generated catch block
-      e1.printStackTrace();
+      byte[] bytes = WarcbaseResourceStore.getAsByteArray(new URL(resourceUrl));
+      if (bytes.length == 0) {
+        throw new ResourceNotInArchiveException("No entries found in: " + resourceUrl);
+      }
+      lines = Arrays.asList(new String(bytes).split("\n"));
+    } catch (MalformedURLException e) {
+      throw new ResourceIndexNotAvailableException("Error contacting REST API: " + resourceUrl);
+    } catch (IOException e) {
+      throw new ResourceIndexNotAvailableException("Error contacting REST API: " + resourceUrl);
     }
     final Iterator<String> it = lines.iterator();
 
@@ -174,7 +175,6 @@ public class WarcbaseResourceIndex extends LocalResourceIndex {
         try {
           r.setCaptureDate(ArchiveUtils.parse14DigitDate(splits[0]));
         } catch (ParseException e) {
-          // TODO Auto-generated catch block
           e.printStackTrace();
         }
         r.setOriginalUrl(url);
