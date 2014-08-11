@@ -176,6 +176,8 @@ public class WarcbaseServlet extends HttpServlet {
     for (int i = 0; i < rs.raw().length; i++)
       dates[i] = rs.raw()[i].getTimestamp();
     Arrays.sort(dates, 0, rs.raw().length);
+
+    String type = Bytes.toString(rs.raw()[0].getQualifier());
     
     resp.setContentType("text/plain");
     resp.setStatus(HttpServletResponse.SC_OK);
@@ -184,7 +186,7 @@ public class WarcbaseServlet extends HttpServlet {
 
     for (int i = 0; i < rs.raw().length; i++) {
       String date14digit = ArchiveUtils.get14DigitDate(new Date(dates[i]));
-      out.println(date14digit + "\t" + "/" + tableName + "/" + date14digit + "/" + query);
+      out.println(date14digit + "\t" + type + "\t" + "/" + tableName + "/" + date14digit + "/" + query);
     }
     table.close();
   }
