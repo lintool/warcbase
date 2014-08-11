@@ -20,10 +20,15 @@ import org.archive.wayback.resourcestore.resourcefile.ResourceFactory;
 public class WarcbaseResourceStore implements ResourceStore {
   private static final Logger LOGGER = Logger.getLogger(WarcbaseResourceStore.class.getName());
 
+  // Set from bean.
+  private String host;
+  private int port;
+  private String table;
+
   @Override
   public Resource retrieveResource(CaptureSearchResult result) throws ResourceNotAvailableException {
     Resource r = null;
-    String resourceUrl = "http://nest.umiacs.umd.edu:8080/arc.sample.raw/"
+    String resourceUrl = "http://" + host + ":" + port + "/" + table + "/"
         + ArchiveUtils.get14DigitDate(result.getCaptureDate()) + "/" + result.getOriginalUrl();
     LOGGER.info("Fetching resource url: " + resourceUrl);
 
@@ -89,4 +94,28 @@ public class WarcbaseResourceStore implements ResourceStore {
 
   @Override
   public void shutdown() throws IOException {}
+
+  public String getHost() {
+    return host;
+  }
+
+  public void setHost(String host) {
+    this.host = host;
+  }
+
+  public int getPort() {
+    return port;
+  }
+
+  public void setPort(int port) {
+    this.port = port;
+  }
+
+  public String getTable() {
+    return table;
+  }
+
+  public void setTable(String table) {
+    this.table = table;
+  }
 }

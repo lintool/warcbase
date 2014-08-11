@@ -43,7 +43,12 @@ public class WarcbaseResourceIndex extends LocalResourceIndex {
   private final static int MAX_RECORDS = 1000;
 
   private int maxRecords = MAX_RECORDS;
+
+  // Set from bean.
   private UrlCanonicalizer canonicalizer = null;
+  private String host;
+  private int port;
+  private String table;
 
   private ObjectFilter<CaptureSearchResult> annotater = null;
   private ObjectFilter<CaptureSearchResult> filter = null;
@@ -140,7 +145,7 @@ public class WarcbaseResourceIndex extends LocalResourceIndex {
   public CloseableIterator<CaptureSearchResult> getIterator(final String url, final String urlKey)
       throws ResourceIndexNotAvailableException {
 
-    final String resourceUrl = "http://nest.umiacs.umd.edu:8080/arc.sample.raw/*/" + url;
+    final String resourceUrl = "http://" + host + ":" + port + "/" + table + "/*/" + url;
     System.out.println(">>> fetching resource url: " + resourceUrl);
     List<String> lines = null;
     try {
@@ -220,5 +225,29 @@ public class WarcbaseResourceIndex extends LocalResourceIndex {
 
   public void setFilter(ObjectFilter<CaptureSearchResult> filter) {
     this.filter = filter;
+  }
+
+  public String getHost() {
+    return host;
+  }
+
+  public void setHost(String host) {
+    this.host = host;
+  }
+
+  public int getPort() {
+    return port;
+  }
+
+  public void setPort(int port) {
+    this.port = port;
+  }
+
+  public String getTable() {
+    return table;
+  }
+
+  public void setTable(String table) {
+    this.table = table;
   }
 }
