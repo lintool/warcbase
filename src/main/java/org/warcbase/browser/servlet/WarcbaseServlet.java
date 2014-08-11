@@ -171,14 +171,18 @@ public class WarcbaseServlet extends HttpServlet {
     get.setMaxVersions(HbaseManager.MAX_VERSIONS);
     Result rs = null;
     rs = table.get(get);
-    
+   
+    String type = null; 
     long[] dates = new long[rs.size()];
-    for (int i = 0; i < rs.raw().length; i++)
+    for (int i = 0; i < rs.raw().length; i++) {
       dates[i] = rs.raw()[i].getTimestamp();
+      if (type == null && rs.raw()[i] != null) {
+	  type = Bytes.toString(rs.raw()[i].getQualifier());
+      }
+    }
     Arrays.sort(dates, 0, rs.raw().length);
+    // Will the versions diff in type?
 
-    String type = Bytes.toString(rs.raw()[0].getQualifier());
-    
     resp.setContentType("text/plain");
     resp.setStatus(HttpServletResponse.SC_OK);
     PrintWriter out = null;
