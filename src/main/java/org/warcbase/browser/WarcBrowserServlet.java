@@ -52,8 +52,13 @@ public class WarcBrowserServlet extends HttpServlet {
     String query = req.getParameter("query");
     String d = req.getParameter("date");
 
-    LOG.info("Servlet called: " + req.getPathInfo());
-    Matcher m1 = p1.matcher(req.getPathInfo());
+    String path = req.getPathInfo();
+    if (req.getQueryString() != null) {
+        path = path + "?" + req.getQueryString();
+    }
+
+    LOG.info("Servlet called: " + path);
+    Matcher m1 = p1.matcher(path);
     if (m1.find()) {
       // collection, url, 14 digit date
       String url = m1.group(3);
@@ -61,7 +66,7 @@ public class WarcBrowserServlet extends HttpServlet {
       writeContent(resp, m1.group(1), url, m1.group(2));
     }
 
-    Matcher m2 = p2.matcher(req.getPathInfo());
+    Matcher m2 = p2.matcher(path);
     if (m2.find()) {
       String url = m2.group(2);
       url = url.replaceAll(" ", "%20");
