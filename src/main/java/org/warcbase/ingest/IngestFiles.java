@@ -20,7 +20,7 @@ import org.archive.io.arc.ARCReader;
 import org.archive.io.arc.ARCReaderFactory;
 import org.archive.io.arc.ARCRecord;
 import org.archive.io.arc.ARCRecordMetaData;
-import org.warcbase.data.HbaseManager;
+import org.warcbase.data.HBaseTableManager;
 import org.warcbase.data.UrlUtil;
 
 public class IngestFiles {
@@ -39,10 +39,10 @@ public class IngestFiles {
   private int toolarge = 0;
   private int invalidUrls = 0;
 
-  private final HbaseManager hbaseManager;
+  private final HBaseTableManager hbaseManager;
 
   public IngestFiles(String name, boolean create) throws Exception {
-    hbaseManager = new HbaseManager(name, create);
+    hbaseManager = new HBaseTableManager(name, create);
   }
 
   protected final byte [] scratchbuffer = new byte[4 * 1024];
@@ -117,7 +117,7 @@ public class IngestFiles {
         if ((int) meta.getLength() > MAX_CONTENT_SIZE) {
           toolarge++;
         } else {
-          if (hbaseManager.addRecord(key, date, baos.toByteArray(), type)) {
+          if (hbaseManager.insertRecord(key, date, baos.toByteArray(), type)) {
             cnt++;
           } else {
             errors++;

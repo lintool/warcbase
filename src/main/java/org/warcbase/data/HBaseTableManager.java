@@ -1,9 +1,6 @@
 package org.warcbase.data;
 
 import java.lang.reflect.Field;
-import java.sql.Timestamp;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -19,16 +16,17 @@ import org.apache.log4j.Logger;
 import org.archive.util.ArchiveUtils;
 import org.warcbase.ingest.IngestFiles;
 
-public class HbaseManager {
-  private static final String[] FAMILIES = { "c"};
-  private static final Logger LOG = Logger.getLogger(HbaseManager.class);
+public class HBaseTableManager {
+  private static final Logger LOG = Logger.getLogger(HBaseTableManager.class);
+
+  private static final String[] FAMILIES = { "c" };
   private static final int MAX_KEY_VALUE_SIZE = IngestFiles.MAX_CONTENT_SIZE + 200;
   public static final int MAX_VERSIONS = Integer.MAX_VALUE;
 
   private final HTable table;
   private final HBaseAdmin admin;
 
-  public HbaseManager(String name, boolean create) throws Exception {
+  public HBaseTableManager(String name, boolean create) throws Exception {
     Configuration hbaseConfig = HBaseConfiguration.create();
     admin = new HBaseAdmin(hbaseConfig);
 
@@ -45,7 +43,6 @@ public class HbaseManager {
 
       HTableDescriptor tableDesc = new HTableDescriptor(name);
       for (int i = 0; i < FAMILIES.length; i++) {
-        //tableDesc.addFamily(new HColumnDescriptor(FAMILIES[i]));
         HColumnDescriptor hColumnDesc = new HColumnDescriptor(FAMILIES[i]);
         hColumnDesc.setMaxVersions(MAX_VERSIONS);
         hColumnDesc.setCompressionType(Algorithm.SNAPPY);
@@ -58,8 +55,6 @@ public class HbaseManager {
     }
 
     table = new HTable(hbaseConfig, name);
-    // TODO: This doesn't seem right.
-    // Look in HBase book to see how you can set table parameters programmatically.
     Field maxKeyValueSizeField = HTable.class.getDeclaredField("maxKeyValueSize");
     maxKeyValueSizeField.setAccessible(true);
     maxKeyValueSizeField.set(table, MAX_KEY_VALUE_SIZE);
@@ -68,7 +63,7 @@ public class HbaseManager {
     admin.close();
   }
 
-  public boolean addRecord(final String key, final String date14digits,
+  public boolean insertRecord(final String key, final String date14digits,
       final byte[] data, final String type) {
     try {
       long timestamp = ArchiveUtils.parse14DigitDate(date14digits).getTime();
@@ -78,18 +73,10 @@ public class HbaseManager {
       table.put(put);
       return true;
     } catch (Exception e) {
-      LOG.error("Couldn't insert key: " + key);
-      LOG.error("File Size: " + data.length);
+      LOG.error("Couldn't insert key: " + key + ", size: " + data.length);
       LOG.error(e.getMessage());
       e.printStackTrace();
       return false;
     }
-  }
-
-  public static void main(String[] args) throws ParseException {
-    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddhhmmss");
-    java.util.Date parsedDate = dateFormat.parse("20040124034300");
-    Timestamp timestamp = new java.sql.Timestamp(parsedDate.getTime());
-    System.out.println(timestamp.getTime());
   }
 }
