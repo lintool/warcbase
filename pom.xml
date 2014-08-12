@@ -490,11 +490,13 @@
     </dependency>
 
 		<!-- download and "mvn install" from here: https://github.com/openplanets/libmagic-jna-wrapper -->
+<!-- Since this jar isn't published anywhere, removing for now.
 		<dependency>
 			<groupId>org.opf-labs</groupId>
 			<artifactId>libmagic-jna-wrapper</artifactId>
 			<version>0.0.2-SNAPSHOT</version>
 		</dependency>
+-->
 
   </dependencies>
 </project>
