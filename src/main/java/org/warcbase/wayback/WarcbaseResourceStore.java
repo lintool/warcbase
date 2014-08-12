@@ -1,15 +1,15 @@
 package org.warcbase.wayback;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Random;
 import java.util.logging.Logger;
 
+import org.archive.io.arc.ARCReader;
+import org.archive.io.arc.ARCReaderFactory;
 import org.archive.util.ArchiveUtils;
 import org.archive.wayback.ResourceStore;
 import org.archive.wayback.core.CaptureSearchResult;
@@ -32,24 +32,13 @@ public class WarcbaseResourceStore implements ResourceStore {
         + ArchiveUtils.get14DigitDate(result.getCaptureDate()) + "/" + result.getOriginalUrl();
     LOGGER.info("Fetching resource url: " + resourceUrl);
 
-    Random rand = new Random();
-    String tmp = "tmp-" + Math.abs(rand.nextInt()) + ".arc";
-
     try {
-      FileOutputStream out = new FileOutputStream(tmp);
-      out.write("filedesc://issgov20031224215723-43.arc.gz 0.0.0.0 20031224215723 text/plain 77\n".getBytes());
-      out.write("1 0 InternetArchive\n".getBytes());
-      out.write("URL IP-address Archive-date Content-type Archive-length\n\n\n".getBytes());
-      out.write(getAsByteArray(new URL(resourceUrl)));
-      out.close();
+      // Note that this hard codes ARC records, which we need to fix later.
+      ARCReader reader = (ARCReader) ARCReaderFactory.get(resourceUrl.toString(),
+          new BufferedInputStream(new URL(resourceUrl).openStream()), false);
+      r = ResourceFactory.ARCArchiveRecordToResource(reader.get(), reader);
     } catch (IOException e) {
-      throw new ResourceNotAvailableException("Error fetching API: " + resourceUrl);
-    }
-
-    try {
-      r = ResourceFactory.getResource(new File(tmp), 157);
-    } catch (IOException e) {
-      throw new ResourceNotAvailableException("Error reading local file: " + tmp);
+      throw new ResourceNotAvailableException("Error reading " + resourceUrl);
     }
 
     if (r == null) {
