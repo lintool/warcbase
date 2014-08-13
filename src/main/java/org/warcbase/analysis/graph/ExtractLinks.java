@@ -129,8 +129,6 @@ public class ExtractLinks extends Configured implements Tool {
         }
       }
       
-      LOG.info(time+","+beginDate+","+endDate+","+"afterJudge");
-      
       if (!type.equals("text/html")) {
         return;
       }
