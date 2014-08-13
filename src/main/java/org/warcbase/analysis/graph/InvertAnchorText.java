@@ -48,7 +48,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
-import org.warcbase.data.UrlMapping;
+import org.warcbase.data.UriMapping;
 import org.warcbase.data.UrlUtil;
 import org.warcbase.mapreduce.ArcInputFormat;
 
@@ -64,7 +64,7 @@ public class InvertAnchorText extends Configured implements Tool {
     RECORDS, HTML_PAGES, LINKS
   };
 
-  private static Int2ObjectMap<List<String>> extractLinks(InputStream content, String url, UrlMapping fst)
+  private static Int2ObjectMap<List<String>> extractLinks(InputStream content, String url, UriMapping fst)
       throws IOException {
     Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
     Elements links = doc.select("a[href]");
@@ -96,7 +96,7 @@ public class InvertAnchorText extends Configured implements Tool {
     private final IntWritable key = new IntWritable();
     private final Text value = new Text();
 
-    private UrlMapping fst;
+    private UriMapping fst;
 
     @Override
     public void setup(Context context) {
@@ -111,7 +111,7 @@ public class InvertAnchorText extends Configured implements Tool {
         System.out.println("cache contents: " + Arrays.toString(localFiles));
 
         // load FST UriMapping from file
-        fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());
         // simply assume only one file in distributed cache.
       } catch (Exception e) {
@@ -168,7 +168,7 @@ public class InvertAnchorText extends Configured implements Tool {
     private final IntWritable key = new IntWritable();
     private final Text value = new Text();
 
-    private UrlMapping fst;
+    private UriMapping fst;
 
     @Override
     public void setup(Context context) {
@@ -178,7 +178,7 @@ public class InvertAnchorText extends Configured implements Tool {
         Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
 
         // load FST UriMapping from file
-        fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());
       } catch (Exception e) {
         e.printStackTrace();
@@ -325,7 +325,7 @@ public class InvertAnchorText extends Configured implements Tool {
         (isHdfs ? ":HDFS:" + path : ":HBase:" + table));
     job.setJarByClass(InvertAnchorText.class);
 
-    job.getConfiguration().set("UriMappingClass", UrlMapping.class.getCanonicalName());
+    job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
     // Put the mapping file in the distributed cache so each map worker will have it.
     job.addCacheFile(mappingPath.toUri());
 

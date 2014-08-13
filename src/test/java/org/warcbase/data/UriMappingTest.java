@@ -18,7 +18,7 @@ import org.junit.Test;
 // This class aims to test the PrefixSearch functionality.
 
 public class UriMappingTest {
-  private UrlMapping map;
+  private UriMapping map;
 
   @Before
   public void setUp() throws Exception {
@@ -34,7 +34,7 @@ public class UriMappingTest {
       builder.add(Util.toIntsRef(scratchBytes, scratchInts), outputValues[i]);
     }
     FST<Long> fst = builder.finish();
-    map = new UrlMapping(fst);
+    map = new UriMapping(fst);
   }
 
   @Test

@@ -1,19 +1,23 @@
 package org.warcbase.analysis.graph;
 
 import it.unimi.dsi.fastutil.ints.Int2IntAVLTreeMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -24,18 +28,27 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
+import org.apache.hadoop.hbase.mapreduce.TableMapper;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
@@ -44,122 +57,47 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
-import org.warcbase.analysis.graph.ExtractSiteLinks.PrefixMapping.PrefixNode;
-import org.warcbase.data.UrlMapping;
+import org.warcbase.analysis.graph.PrefixMapping.PrefixNode;
+import org.warcbase.data.UriMapping;
 import org.warcbase.mapreduce.ArcInputFormat;
 
-import au.com.bytecode.opencsv.CSVReader;
+import com.google.common.base.Joiner;
 
 public class ExtractSiteLinks extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ExtractSiteLinks.class);
-
-  public static class PrefixMapping {
-    public class PrefixNode {
-      int id;
-      String url;
-      int startPos;
-      int endPos;
-
-      public PrefixNode(int id, String url, int startPos, int endPos) {
-        this.id = id;
-        this.url = url;
-        this.startPos = startPos;
-        this.endPos = endPos;
-      }
-
-      public int getId() {
-        return id;
-      }
-
-      public String getUrl() {
-        return url;
-      }
-
-      public int getStartPos() {
-        return startPos;
-      }
-
-      public int getEndPos() {
-        return endPos;
-      }
-    }
-
-    public static List<PrefixNode> loadPrefix(String prefixFile, UrlMapping map)
-        throws IOException {
-      PrefixMapping instance = new PrefixMapping();
-      final Comparator<PrefixNode> comparator = new Comparator<PrefixNode>() {
-        @Override
-        public int compare(PrefixNode n1, PrefixNode n2) {
-          if (n1.startPos > n2.startPos) {
-            return 1;
-          } else if (n1.startPos == n2.startPos) {
-            return 0;
-          } else {
-            return -1;
-          }
-        }
-      };
-      List<PrefixNode> prefixes = new ArrayList<PrefixNode>();
-      CSVReader reader = new CSVReader(new FileReader(prefixFile), ',');
-      reader.readNext();
-      String[] record = null;
-      while ((record = reader.readNext()) != null) {
-        int id = Integer.valueOf(record[0]);
-        String url = record[1];
-        List<String> results = map.prefixSearch(url);
-        int[] boundary = map.getIdRange(results.get(0), results.get(results.size() - 1));
-        PrefixNode node = instance.new PrefixNode(id, url, boundary[0], boundary[1]);
-        prefixes.add(node);
-      }
-      Collections.sort(prefixes, comparator);
-      reader.close();
-      return prefixes;
-    }
-
-    public int getPrefixId(int id, List<PrefixNode> prefixes) {
-      int start = 0, end = prefixes.size() - 1;
-      int mid;
-      while (start <= end) {
-        mid = (start + end) / 2;
-        if (prefixes.get(mid).getStartPos() <= id && prefixes.get(mid).getEndPos() >= id) {
-          return prefixes.get(mid).getId();
-        } else if (prefixes.get(mid).getStartPos() > id) {
-          end = mid - 1;
-        } else {
-          start = mid + 1;
-        }
-      }
-      return -1;
-    }
-  }
 
   private static enum Records {
     TOTAL, LINK_COUNT
   };
 
-  public static class ExtractSiteLinksMapper extends
+  // HDFS ExtractSiteLinks Mapper
+  public static class ExtractSiteLinksHDFSMapper extends
       Mapper<LongWritable, ArcRecordBase, IntWritable, IntWritable> {
-    private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyyMMdd");
+    private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
+    private static String beginDate, endDate;
+    private static final IntWritable KEY = new IntWritable();
+    private static final IntWritable VALUE = new IntWritable();
 
-    private final IntWritable key = new IntWritable();
-    private final IntWritable value = new IntWritable();
-
-    private PrefixMapping prefixMap = new PrefixMapping();
-    private UrlMapping fst;
-    private List<PrefixNode> prefix;
-
+    private static UriMapping fst;
+    private static PrefixMapping prefixMap;
+    private static ArrayList<PrefixNode> prefix;
+    
     @Override
     public void setup(Context context) {
       try {
         Configuration conf = context.getConfiguration();
+        beginDate = conf.get("beginDate");
+        endDate = conf.get("endDate");
+        
         @SuppressWarnings("deprecation")
         Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
 
         // load FST UriMapping from file
-        fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());
         // load Prefix Mapping from file
-        prefix = PrefixMapping.loadPrefix(localFiles[1].toString(), fst);
+        prefixMap = (PrefixMapping) Class.forName(conf.get("PrefixMappingClass")).newInstance();
+        prefix = prefixMap.loadPrefix(localFiles[1].toString(), fst);
 
       } catch (Exception e) {
         e.printStackTrace();
@@ -168,13 +106,17 @@ public class ExtractSiteLinks extends Configured implements Tool {
     }
 
     @Override
-    public void map(LongWritable w, ArcRecordBase record, Context context)
-        throws IOException, InterruptedException {
+    public void map(LongWritable key, ArcRecordBase record, Context context) throws IOException,
+        InterruptedException {
+
       context.getCounter(Records.TOTAL).increment(1);
       String url = record.getUrlStr();
       String type = record.getContentTypeStr();
       Date date = record.getArchiveDate();
-      String time = DATE_FORMAT.format(date);
+      if (date == null) {
+        return;
+      }
+      String time = df.format(date);
       InputStream content = record.getPayloadContent();
 
       if (beginDate != null && endDate != null) {
@@ -190,43 +132,117 @@ public class ExtractSiteLinks extends Configured implements Tool {
           return;
         }
       }
-
+      
       if (!type.equals("text/html")) {
         return;
       }
-
       Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
       Elements links = doc.select("a[href]"); // empty if none match
       if (links == null) {
         return;
       }
-      
+
       int sourcePrefixId = prefixMap.getPrefixId(fst.getID(url), prefix);
-      
-      // this url is indexed in FST and its prefix is appeared in prefix map (thus declared in prefix file) 
-      if (fst.getID(url) != -1 && sourcePrefixId != -1) { 
-        key.set(sourcePrefixId);
+
+      // this url is indexed in FST and its prefix is appeared in prefix map (thus declared in
+      // prefix file)
+      if (fst.getID(url) != -1 && sourcePrefixId != -1) {
+        KEY.set(sourcePrefixId);
         List<Integer> linkUrlList = new ArrayList<Integer>();
         for (Element link : links) {
           String linkUrl = link.attr("abs:href");
           int targetPrefixId = prefixMap.getPrefixId(fst.getID(linkUrl), prefix);
           // target url is indexed in FST and its prefix url is found
-          if (fst.getID(linkUrl) != -1 && targetPrefixId != -1) { 
+          if (fst.getID(linkUrl) != -1 && targetPrefixId != -1) {
             linkUrlList.add(targetPrefixId);
           }
         }
-       
+
         for (Integer linkID : linkUrlList) {
-          value.set(linkID);
-          context.write(key, value);
+          VALUE.set(linkID);
+          context.write(KEY, VALUE);
         }
-       }
-     } // end map function
-  } 
+      }
+    } // end map function
+  } // End of HDFS ExtractSiteLinks Mapper
+
+  // HBase ExtractSiteLinks Mapper
+  public static class ExtractSiteLinksHBaseMapper extends TableMapper<IntWritable, IntWritable> {
+    public static final byte[] COLUMN_FAMILY = Bytes.toBytes("links");
+    
+    private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
+    private static String beginDate, endDate;
+    private static final IntWritable KEY = new IntWritable();
+    private static final IntWritable VALUE = new IntWritable();
+
+    private static UriMapping fst;
+    private static PrefixMapping prefixMap;
+    private static ArrayList<PrefixNode> prefix;
+    
+    @Override
+    public void setup(Context context) {
+      try {
+        Configuration conf = context.getConfiguration();
+        @SuppressWarnings("deprecation")
+        Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
+
+        // load FST UriMapping from file
+        fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        fst.loadMapping(localFiles[0].toString());
+        // load Prefix Mapping from file
+        prefixMap = (PrefixMapping) Class.forName(conf.get("PrefixMappingClass")).newInstance();
+        prefix = prefixMap.loadPrefix(localFiles[1].toString(), fst);
+
+      } catch (Exception e) {
+        e.printStackTrace();
+        throw new RuntimeException("Error Initializing UriMapping");
+      }
+    }
+
+    @Override
+    public void map(ImmutableBytesWritable row, Result result, Context context) throws IOException,
+        InterruptedException {
+      context.getCounter(Records.TOTAL).increment(1);
+
+      int sourceFstId = fst.getID(new String(row.get()));
+      // rowkey(url) is not indexed in FST
+      if (sourceFstId == -1) {
+        return;
+      }
+      int sourcePrefixId = prefixMap.getPrefixId(sourceFstId, prefix);
+      // this url is indexed in FST and its prefix is appeared in prefix map
+      // (thus declared in prefix file)
+      if (sourcePrefixId != -1) {
+        KEY.set(sourcePrefixId);
+        List<Integer> linkUrlList = new ArrayList<Integer>();
+
+        // Assume HBase Table Format
+        // Row : sourceUrl
+        // Column Family : links
+        // Column Qualifier: targetUrl
+        // Value: 1 (1 denotes the existence of this link)
+        NavigableMap<byte[], byte[]> familyMap = result.getFamilyMap(COLUMN_FAMILY);
+        for (byte[] column : familyMap.keySet()) {
+          // byte[] value = familyMap.get(column);
+          int targetFstId = fst.getID(new String(column));
+          if (targetFstId != -1) {
+            int targetPrefixId = prefixMap.getPrefixId(targetFstId, prefix);
+            if (targetPrefixId != -1) {
+              linkUrlList.add(targetPrefixId);
+            }
+          }
+        }
+
+        for (Integer linkID : linkUrlList) {
+          VALUE.set(linkID);
+          context.write(KEY, VALUE);
+        }
+      }
+    }
+  } // End of HBase ExtractSiteLinks Mapper
 
   private static class ExtractSiteLinksReducer extends
       Reducer<IntWritable, IntWritable, IntWritable, Text> {
-    private static final Text VALUE = new Text();
 
     @Override
     public void reduce(IntWritable key, Iterable<IntWritable> values, Context context)
@@ -241,11 +257,11 @@ public class ExtractSiteLinks extends Configured implements Tool {
           links.put(value.get(), 1);
         }
       }
-      
+
       context.getCounter(Records.LINK_COUNT).increment(links.entrySet().size());
       for (Entry<Integer, Integer> link : links.entrySet()) {
-        VALUE.set(link.getKey() + "\t" + link.getValue());
-        context.write(key, VALUE);
+        String outputValue = String.valueOf(link.getKey()) + "," + String.valueOf(link.getValue());
+        context.write(key, new Text(outputValue));
       }
     }
   }
@@ -253,9 +269,11 @@ public class ExtractSiteLinks extends Configured implements Tool {
   /**
    * Creates an instance of this tool.
    */
-  public ExtractSiteLinks() {}
+  public ExtractSiteLinks() {
+  }
 
-  private static final String INPUT = "input";
+  private static final String HDFS = "hdfs";
+  private static final String HBASE = "hbase";
   private static final String OUTPUT = "output";
   private static final String URI_MAPPING = "uriMapping";
   private static final String PREFIX_FILE = "prefixFile";
@@ -271,10 +289,12 @@ public class ExtractSiteLinks extends Configured implements Tool {
   public int run(String[] args) throws Exception {
     Options options = new Options();
 
+    options.addOption(OptionBuilder.withArgName("path").hasArg().withDescription("HDFS input path")
+        .create(HDFS));
     options.addOption(OptionBuilder.withArgName("path").hasArg()
-        .withDescription("input path").create(INPUT));
-    options.addOption(OptionBuilder.withArgName("path").hasArg()
-        .withDescription("output path").create(OUTPUT));
+        .withDescription("HBASE table name").create(HBASE));
+    options.addOption(OptionBuilder.withArgName("path").hasArg().withDescription("output path")
+        .create(OUTPUT));
     options.addOption(OptionBuilder.withArgName("path").hasArg()
         .withDescription("uri mapping file path").create(URI_MAPPING));
     options.addOption(OptionBuilder.withArgName("path").hasArg()
@@ -296,7 +316,9 @@ public class ExtractSiteLinks extends Configured implements Tool {
       return -1;
     }
 
-    if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT) || !cmdline.hasOption(URI_MAPPING)
+    if ((!cmdline.hasOption(HDFS) && !cmdline.hasOption(HBASE)) // No HDFS and HBase input
+        || !cmdline.hasOption(OUTPUT)
+        || !cmdline.hasOption(URI_MAPPING)
         || !cmdline.hasOption(PREFIX_FILE)) {
       System.out.println("args: " + Arrays.toString(args));
       HelpFormatter formatter = new HelpFormatter();
@@ -308,15 +330,26 @@ public class ExtractSiteLinks extends Configured implements Tool {
 
     FileSystem fs = FileSystem.get(getConf());
 
-    String inputPath = cmdline.getOptionValue(INPUT);
+    String HDFSPath = null, HBaseTableName = null;
+    boolean isHDFSInput = true; // set default as HDFS input
+    if (cmdline.hasOption(HDFS)) {
+      HDFSPath = cmdline.getOptionValue(HDFS);
+    } else {
+      HBaseTableName = cmdline.getOptionValue(HBASE);
+      isHDFSInput = false;
+    }
     String outputPath = cmdline.getOptionValue(OUTPUT);
     Path mappingPath = new Path(cmdline.getOptionValue(URI_MAPPING));
     Path prefixFilePath = new Path(cmdline.getOptionValue(PREFIX_FILE));
     int reduceTasks = cmdline.hasOption(NUM_REDUCERS) ? Integer.parseInt(cmdline
         .getOptionValue(NUM_REDUCERS)) : 1;
-
+    
     LOG.info("Tool: " + ExtractSiteLinks.class.getSimpleName());
-    LOG.info(" - input path: " + inputPath);
+    if (isHDFSInput) {
+      LOG.info(" - HDFS input path: " + HDFSPath);
+    } else {
+      LOG.info(" - HBase table name: " + HBaseTableName);
+    }
     LOG.info(" - output path: " + outputPath);
     LOG.info(" - mapping file path:" + mappingPath);
     LOG.info(" - prefix file path:" + prefixFilePath);
@@ -337,10 +370,26 @@ public class ExtractSiteLinks extends Configured implements Tool {
       throw new Exception("prefixFilePath doesn't exist: " + prefixFilePath);
     }
 
-    Job job = Job.getInstance(getConf(), ExtractSiteLinks.class.getSimpleName());
+    Configuration conf;
+    if (isHDFSInput) {
+      conf = getConf();
+      // passing global variable values to individual nodes
+      if(beginDate != null) {
+        conf.set("beginDate", beginDate);
+      }
+      if(endDate != null) {
+        conf.set("endDate", endDate);
+      }
+    } else {
+      conf = HBaseConfiguration.create(getConf());
+      conf.set("hbase.zookeeper.quorum", "bespinrm.umiacs.umd.edu");
+    }
+
+    Job job = Job.getInstance(conf, ExtractSiteLinks.class.getSimpleName());
     job.setJarByClass(ExtractSiteLinks.class);
 
-    job.getConfiguration().set("UriMappingClass", UrlMapping.class.getCanonicalName());
+    job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
+    job.getConfiguration().set("PrefixMappingClass", PrefixMapping.class.getCanonicalName());
     // Put the mapping file and prefix file in the distributed cache
     // so each map worker will have it.
     job.addCacheFile(mappingPath.toUri());
@@ -348,17 +397,36 @@ public class ExtractSiteLinks extends Configured implements Tool {
 
     job.setNumReduceTasks(reduceTasks); // no reducers
 
-    FileInputFormat.setInputPaths(job, new Path(inputPath));
+    if (isHDFSInput) { // HDFS input
+      FileInputFormat.setInputPaths(job, new Path(HDFSPath));
+
+      job.setInputFormatClass(ArcInputFormat.class);
+      // set map (key,value) output format
+      job.setMapOutputKeyClass(IntWritable.class);
+      job.setMapOutputValueClass(IntWritable.class);
+
+      job.setMapperClass(ExtractSiteLinksHDFSMapper.class);
+    } else { // HBase input
+      Scan scan = new Scan();
+      // Very conservative settings because a single row might not fit in memory
+      // if we have many captured version of a URL.
+      scan.setCaching(1); // Controls the number of rows to pre-fetch
+      scan.setBatch(10); // Controls the number of columns to fetch on a per row basis
+      scan.setCacheBlocks(false); // Don't set to true for MR jobs
+      scan.setMaxVersions(); // We want all versions
+
+      TableMapReduceUtil.initTableMapperJob(HBaseTableName, // input HBase table name
+          scan, // Scan instance to control CF and attribute selection
+          ExtractSiteLinksHBaseMapper.class, // mapper
+          IntWritable.class, // mapper output key
+          IntWritable.class, // mapper output value
+          job);
+      job.setOutputFormatClass(TextOutputFormat.class); // set output format
+    }
     FileOutputFormat.setOutputPath(job, new Path(outputPath));
 
-    job.setInputFormatClass(ArcInputFormat.class);
-    // set map (key,value) output format
-    job.setMapOutputKeyClass(IntWritable.class);
-    job.setMapOutputValueClass(IntWritable.class);
     job.setOutputKeyClass(IntWritable.class);
     job.setOutputValueClass(Text.class);
-
-    job.setMapperClass(ExtractSiteLinksMapper.class);
     job.setReducerClass(ExtractSiteLinksReducer.class);
 
     // Delete the output directory if it exists already.

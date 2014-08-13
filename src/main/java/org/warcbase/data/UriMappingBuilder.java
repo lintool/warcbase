@@ -15,7 +15,7 @@ import org.apache.lucene.util.fst.FST.INPUT_TYPE;
 import org.apache.lucene.util.fst.PositiveIntOutputs;
 import org.apache.lucene.util.fst.Util;
 
-public class UrlMappingBuilder {
+public class UriMappingBuilder {
 
   private static void readUrlFromFile(File f, List<String> urls) throws IOException {
     String contents = FileUtils.readFileToString(f);
