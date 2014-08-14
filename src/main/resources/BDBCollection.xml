@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-3.0.xsd"
+       default-init-method="init">
+
+  <bean id="localbdbresourceindex" class="org.warcbase.wayback.WarcbaseResourceIndex">
+    <property name="canonicalizer" ref="waybackCanonicalizer" />
+    <property name="host" value="HOST" />
+    <property name="port" value="PORT" />
+    <property name="table" value="TABLE" />
+  </bean>
+
+  <bean id="localbdbcollection" class="org.archive.wayback.webapp.WaybackCollection">
+    <property name="resourceStore">
+      <bean id="localresourcestore" class="org.warcbase.wayback.WarcbaseResourceStore">
+        <property name="host" value="HOST" />
+        <property name="port" value="PORT" />
+        <property name="table" value="TABLE" />
+      </bean>
+    </property>
+    <property name="resourceIndex" ref="localbdbresourceindex"/>
+  </bean>
+
+</beans>

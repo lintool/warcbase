@@ -6,7 +6,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Logger;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.IntsRef;
 import org.apache.lucene.util.fst.Builder;
@@ -16,17 +25,18 @@ import org.apache.lucene.util.fst.PositiveIntOutputs;
 import org.apache.lucene.util.fst.Util;
 
 public class UrlMappingBuilder {
+  private static final Logger LOG = Logger.getLogger(UrlMappingBuilder.class);
 
   private static void readUrlFromFile(File f, List<String> urls) throws IOException {
     String contents = FileUtils.readFileToString(f);
     String[] lines = contents.split("\\n");
     for (String line : lines) {
-      // This need to modify according to your input file
-      if (!line.equals("")) { // non-empty string
+      if (!line.equals("")) {
         String url = line.split("\\s+")[0];
         urls.add(url);
       }
     }
+    LOG.info("Read " + f + ", " + urls.size() + " URLs");
   }
 
   private static List<String> readUrlFromFolder(String folderName) throws IOException {
@@ -39,53 +49,77 @@ public class UrlMappingBuilder {
     } else {
       readUrlFromFile(folder, urls);
     }
-    Collections.sort(urls); // sort String according to url alphabetical order
+
+    LOG.info("Sorting URLs...");
+    Collections.sort(urls); // sort URLs alphabetically
+    LOG.info("Done sorting!");
+
     return urls;
   }
 
+  public static final String INPUT_OPTION = "input";
+  public static final String OUTPUT_OPTION = "output";
+
+  @SuppressWarnings("static-access")
   public static void main(String[] args) throws IOException {
-    String inputFileName = new String();
-    String outputFileName = new String();
-    if (args.length > 0) { // read file name from main arguments
-      inputFileName = args[0];
-      outputFileName = args[1];
+    Options options = new Options();
+
+    options.addOption(OptionBuilder.withArgName("path").hasArg()
+        .withDescription("input path").create(INPUT_OPTION));
+    options.addOption(OptionBuilder.withArgName("path").hasArg()
+        .withDescription("output path").create(OUTPUT_OPTION));
+
+    CommandLine cmdline = null;
+    CommandLineParser parser = new GnuParser();
+    try {
+      cmdline = parser.parse(options, args);
+    } catch (ParseException exp) {
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.printHelp(UrlMappingBuilder.class.getName(), options);
+      ToolRunner.printGenericCommandUsage(System.out);
+      System.err.println("Error parsing command line: " + exp.getMessage());
+      System.exit(-1);
     }
+
+    if (!cmdline.hasOption(INPUT_OPTION) || !cmdline.hasOption(OUTPUT_OPTION)) {
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.printHelp(UrlMappingBuilder.class.getName(), options);
+      ToolRunner.printGenericCommandUsage(System.out);
+      System.exit(-1);
+    }
+
+    String input = cmdline.getOptionValue(INPUT_OPTION);
+    String output = cmdline.getOptionValue(OUTPUT_OPTION);
+
     List<String> inputValues = null;
     try {
-      // input strings must be sorted in Unicode order
-      inputValues = readUrlFromFolder(inputFileName); // read data
+      inputValues = readUrlFromFolder(input); // read data
     } catch (IOException e) {
       e.printStackTrace();
-    }
-
-    // Be Careful about the file size
-    long size = inputValues.size();
-    List<Long> outputValues = new ArrayList<Long>(); // create the mapping id
-
-    for (long i = 1; i <= size; i++) {
-      outputValues.add(i);
     }
 
     PositiveIntOutputs outputs = PositiveIntOutputs.getSingleton();
     Builder<Long> builder = new Builder<Long>(INPUT_TYPE.BYTE1, outputs);
     BytesRef scratchBytes = new BytesRef();
     IntsRef scratchInts = new IntsRef();
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < inputValues.size(); i++) {
+      if (i % 100000 == 0) {
+        LOG.info(i + " URLs processed.");
+      }
       scratchBytes.copyChars((String) inputValues.get(i));
       try {
-        // Mapping!
-        builder.add(Util.toIntsRef(scratchBytes, scratchInts), (Long) outputValues.get(i));
+        builder.add(Util.toIntsRef(scratchBytes, scratchInts), (long) i);
       } catch (UnsupportedOperationException e) {
-        System.out.println("Duplicate Url:" + inputValues.get(i));
+        System.out.println("Duplicate URL:" + inputValues.get(i));
       } catch (IOException e) {
-        // TODO Auto-generated catch block
         e.printStackTrace();
       }
     }
     FST<Long> fst = builder.finish();
 
     // Save FST to file
-    File outputFile = new File(outputFileName);
+    File outputFile = new File(output);
     fst.save(outputFile);
+    LOG.info("Wrote output to " + output);
   }
 }
