@@ -1,14 +1,13 @@
 package org.warcbase.data;
 
-import java.io.File;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongList;
+
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -21,7 +20,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -29,9 +27,7 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -42,16 +38,13 @@ import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.IntsRef;
 import org.apache.lucene.util.fst.Builder;
 import org.apache.lucene.util.fst.FST;
+import org.apache.lucene.util.fst.FST.INPUT_TYPE;
 import org.apache.lucene.util.fst.PositiveIntOutputs;
 import org.apache.lucene.util.fst.Util;
-import org.apache.lucene.util.fst.FST.INPUT_TYPE;
 import org.jwat.arc.ArcRecordBase;
 import org.warcbase.mapreduce.ArcInputFormat;
 
-import com.sun.tools.javac.util.Log;
-
 public class UriMappingMapReduceBuilder extends Configured implements Tool {
-
   private static final Logger LOG = Logger.getLogger(UriMappingMapReduceBuilder.class);
 
   private static enum Records {
@@ -92,8 +85,8 @@ public class UriMappingMapReduceBuilder extends Configured implements Tool {
     }
 
     @Override
-    public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,
-        InterruptedException {
+    public void reduce(Text key, Iterable<Text> values, Context context)
+        throws IOException, InterruptedException {
       context.getCounter(Records.RECORD_COUNT).increment(1);
       urls.add(key.toString());
     }
@@ -101,7 +94,7 @@ public class UriMappingMapReduceBuilder extends Configured implements Tool {
     @Override
     public void cleanup(Context context) throws IOException {
       long size = urls.size();
-      List outputValues = new ArrayList<Long>(); // create the mapping id
+      LongList outputValues = new LongArrayList(); // create the mapping id
 
       for (long i = 1; i <= size; i++) {
         outputValues.add(i);
@@ -114,12 +107,11 @@ public class UriMappingMapReduceBuilder extends Configured implements Tool {
       for (int i = 0; i < size; i++) {
         scratchBytes.copyChars((String) urls.get(i));
         try {
-          // Mapping!
           builder.add(Util.toIntsRef(scratchBytes, scratchInts), (Long) outputValues.get(i));
         } catch (UnsupportedOperationException e) {
-          LOG.info("Duplicate Url:" + urls.get(i));
+          LOG.error("Duplicate URL:" + urls.get(i));
         } catch (IOException e) {
-          // TODO Auto-generated catch block
+          LOG.error(e.getMessage());
           e.printStackTrace();
         }
       }
@@ -149,8 +141,7 @@ public class UriMappingMapReduceBuilder extends Configured implements Tool {
     }
   }
 
-  public UriMappingMapReduceBuilder() {
-  }
+  public UriMappingMapReduceBuilder() {}
 
   private static final String INPUT = "input";
   private static final String OUTPUT = "output";
@@ -162,10 +153,10 @@ public class UriMappingMapReduceBuilder extends Configured implements Tool {
   public int run(String[] args) throws Exception {
     Options options = new Options();
 
-    options.addOption(OptionBuilder.withArgName("path").hasArg().withDescription("input path")
-        .create(INPUT));
-    options.addOption(OptionBuilder.withArgName("path").hasArg().withDescription("output path")
-        .create(OUTPUT));
+    options.addOption(OptionBuilder.withArgName("path")
+        .hasArg().withDescription("input path").create(INPUT));
+    options.addOption(OptionBuilder.withArgName("path")
+        .hasArg().withDescription("output path").create(OUTPUT));
 
     CommandLine cmdline;
     CommandLineParser parser = new GnuParser();
@@ -194,7 +185,7 @@ public class UriMappingMapReduceBuilder extends Configured implements Tool {
 
     Configuration conf = getConf();
     conf.set("PATH", outputPath);
-    conf.set("mapreduce.reduce.java.opts", "-Xmx4096m");
+    conf.set("mapreduce.reduce.java.opts", "-Xmx5120m");
     Job job = Job.getInstance(conf, UriMappingMapReduceBuilder.class.getSimpleName());
     job.setJarByClass(UriMappingMapReduceBuilder.class);
 
@@ -204,7 +195,7 @@ public class UriMappingMapReduceBuilder extends Configured implements Tool {
     FileInputFormat.setInputPaths(job, new Path(inputPath));
 
     job.setInputFormatClass(ArcInputFormat.class);
-    job.setOutputFormatClass(NullOutputFormat.class); // no automatic output
+    job.setOutputFormatClass(NullOutputFormat.class); // no output
     // set map (key,value) output format
     job.setMapOutputKeyClass(Text.class);
     job.setMapOutputValueClass(Text.class);
@@ -222,15 +213,12 @@ public class UriMappingMapReduceBuilder extends Configured implements Tool {
     int numRecords = (int) counters.findCounter(Records.TOTAL).getValue();
     int numUrls = (int) counters.findCounter(Records.RECORD_COUNT).getValue();
     LOG.info("Read " + numRecords + " records.");
-    LOG.info("Generate " + numUrls + " unique urls.");
+    LOG.info("Encountered " + numUrls + " unique urls.");
 
     return 0;
-
   }
 
   public static void main(String[] args) throws Exception {
-    // TODO Auto-generated method stub
     ToolRunner.run(new UriMappingMapReduceBuilder(), args);
   }
-
 }
