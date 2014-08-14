@@ -105,6 +105,9 @@ public class UrlMappingMapReduceBuilder extends Configured implements Tool {
       BytesRef scratchBytes = new BytesRef();
       IntsRef scratchInts = new IntsRef();
       for (int i = 0; i < size; i++) {
+        if (i % 100000 == 0) {
+          LOG.info(i + " URLs processed.");
+        }
         scratchBytes.copyChars((String) urls.get(i));
         try {
           builder.add(Util.toIntsRef(scratchBytes, scratchInts), (Long) outputValues.get(i));
@@ -129,13 +132,16 @@ public class UrlMappingMapReduceBuilder extends Configured implements Tool {
       OutputStreamDataOutput fstStream = new OutputStreamDataOutput(fStream);
       boolean success = false;
       try {
+        LOG.info("Writing output...");
         fst.save(fstStream);
         success = true;
       } finally {
         if (success) {
           IOUtils.close(fstStream);
+          LOG.info("Done!");
         } else {
           IOUtils.closeWhileHandlingException(fstStream);
+          LOG.info("Error!");
         }
       }
     }

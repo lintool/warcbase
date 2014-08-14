@@ -1,8 +1,5 @@
 package org.warcbase.data;
 
-import it.unimi.dsi.fastutil.longs.LongArrayList;
-import it.unimi.dsi.fastutil.longs.LongList;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,8 +23,7 @@ public class UrlMappingBuilder {
     String contents = FileUtils.readFileToString(f);
     String[] lines = contents.split("\\n");
     for (String line : lines) {
-      // This need to modify according to your input file
-      if (!line.equals("")) { // non-empty string
+      if (!line.equals("")) {
         String url = line.split("\\s+")[0];
         urls.add(url);
       }
@@ -62,28 +58,22 @@ public class UrlMappingBuilder {
     }
     List<String> inputValues = null;
     try {
-      // input strings must be sorted in Unicode order
       inputValues = readUrlFromFolder(inputFileName); // read data
     } catch (IOException e) {
       e.printStackTrace();
-    }
-
-    // Be careful about the file size
-    int size = inputValues.size();
-    LongList outputValues = new LongArrayList(size); // create the mapping id
-
-    for (int i = 1; i <= size; i++) {
-      outputValues.add(i);
     }
 
     PositiveIntOutputs outputs = PositiveIntOutputs.getSingleton();
     Builder<Long> builder = new Builder<Long>(INPUT_TYPE.BYTE1, outputs);
     BytesRef scratchBytes = new BytesRef();
     IntsRef scratchInts = new IntsRef();
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < inputValues.size(); i++) {
+      if (i % 100000 == 0) {
+        LOG.info(i + " URLs processed.");
+      }
       scratchBytes.copyChars((String) inputValues.get(i));
       try {
-        builder.add(Util.toIntsRef(scratchBytes, scratchInts), (Long) outputValues.get(i));
+        builder.add(Util.toIntsRef(scratchBytes, scratchInts), (long) i);
       } catch (UnsupportedOperationException e) {
         System.out.println("Duplicate URL:" + inputValues.get(i));
       } catch (IOException e) {
@@ -95,5 +85,6 @@ public class UrlMappingBuilder {
     // Save FST to file
     File outputFile = new File(outputFileName);
     fst.save(outputFile);
+    LOG.info("Wrote output to " + outputFileName);
   }
 }
