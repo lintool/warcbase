@@ -7,6 +7,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+// http://www.openplanetsfoundation.org/blogs/2014-01-23-standing-shoulders-your-peers
 public class DetectMimeTypeMagic extends EvalFunc<String> {
 
     @Override

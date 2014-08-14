@@ -446,12 +446,6 @@
       <artifactId>commons-lang3</artifactId>
       <version>3.0</version>
     </dependency>
-            
-    <!--dependency>
-      <groupId>org.jwat</groupId>
-      <artifactId>jwat-tools</artifactId>
-      <version>0.5.6-SNAPSHOT</version>
-    </dependency-->
     <!-- End: jwat dependencies -->
 
     <dependency>
@@ -460,11 +454,11 @@
       <version>2.3</version>
     </dependency>
 
-                        <dependency>
-                                <groupId>org.netpreserve.commons</groupId>
-                                <artifactId>webarchive-commons</artifactId>
-                                <version>1.1.3</version>
-                        </dependency>
+    <dependency>
+      <groupId>org.netpreserve.commons</groupId>
+      <artifactId>webarchive-commons</artifactId>
+      <version>1.1.3</version>
+    </dependency>
 
     <dependency>
       <groupId>org.apache.pig</groupId>
@@ -477,7 +471,7 @@
       <version>0.11.0-cdh4.7.0</version>
     </dependency>
 
-<!-- these are needed for the Pig test cases -->
+    <!-- these are needed for the Pig test cases -->
     <dependency>
       <groupId>org.apache.tika</groupId>
       <artifactId>tika-core</artifactId>
@@ -489,14 +483,14 @@
       <version>3.5.2</version>
     </dependency>
 
-		<!-- download and "mvn install" from here: https://github.com/openplanets/libmagic-jna-wrapper -->
-<!-- Since this jar isn't published anywhere, removing for now.
-		<dependency>
-			<groupId>org.opf-labs</groupId>
-			<artifactId>libmagic-jna-wrapper</artifactId>
-			<version>0.0.2-SNAPSHOT</version>
-		</dependency>
--->
+    <!-- download and "mvn install" from here: https://github.com/openplanets/libmagic-jna-wrapper -->
+    <!-- Since this jar isn't published anywhere, removing for now.
+    <dependency>
+      <groupId>org.opf-labs</groupId>
+      <artifactId>libmagic-jna-wrapper</artifactId>
+      <version>0.0.2-SNAPSHOT</version>
+    </dependency>
+    -->
 
   </dependencies>
 </project>
