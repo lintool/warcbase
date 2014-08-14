@@ -93,10 +93,10 @@ public class UrlMappingMapReduceBuilder extends Configured implements Tool {
 
     @Override
     public void cleanup(Context context) throws IOException {
-      long size = urls.size();
-      LongList outputValues = new LongArrayList(); // create the mapping id
+      int size = urls.size();
+      LongList outputValues = new LongArrayList(size); // create the mapping id
 
-      for (long i = 1; i <= size; i++) {
+      for (int i = 1; i <= size; i++) {
         outputValues.add(i);
       }
 

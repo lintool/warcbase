@@ -1,5 +1,8 @@
 package org.warcbase.data;
 
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongList;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -7,6 +10,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.log4j.Logger;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.IntsRef;
 import org.apache.lucene.util.fst.Builder;
@@ -16,6 +20,7 @@ import org.apache.lucene.util.fst.PositiveIntOutputs;
 import org.apache.lucene.util.fst.Util;
 
 public class UrlMappingBuilder {
+  private static final Logger LOG = Logger.getLogger(UrlMappingBuilder.class);
 
   private static void readUrlFromFile(File f, List<String> urls) throws IOException {
     String contents = FileUtils.readFileToString(f);
@@ -27,6 +32,7 @@ public class UrlMappingBuilder {
         urls.add(url);
       }
     }
+    LOG.info("Read " + f + ", " + urls.size() + " URLs");
   }
 
   private static List<String> readUrlFromFolder(String folderName) throws IOException {
@@ -39,7 +45,11 @@ public class UrlMappingBuilder {
     } else {
       readUrlFromFile(folder, urls);
     }
-    Collections.sort(urls); // sort String according to url alphabetical order
+
+    LOG.info("Sorting URLs...");
+    Collections.sort(urls); // sort URLs alphabetically
+    LOG.info("Done sorting!");
+
     return urls;
   }
 
@@ -58,11 +68,11 @@ public class UrlMappingBuilder {
       e.printStackTrace();
     }
 
-    // Be Careful about the file size
-    long size = inputValues.size();
-    List<Long> outputValues = new ArrayList<Long>(); // create the mapping id
+    // Be careful about the file size
+    int size = inputValues.size();
+    LongList outputValues = new LongArrayList(size); // create the mapping id
 
-    for (long i = 1; i <= size; i++) {
+    for (int i = 1; i <= size; i++) {
       outputValues.add(i);
     }
 
@@ -73,12 +83,10 @@ public class UrlMappingBuilder {
     for (int i = 0; i < size; i++) {
       scratchBytes.copyChars((String) inputValues.get(i));
       try {
-        // Mapping!
         builder.add(Util.toIntsRef(scratchBytes, scratchInts), (Long) outputValues.get(i));
       } catch (UnsupportedOperationException e) {
-        System.out.println("Duplicate Url:" + inputValues.get(i));
+        System.out.println("Duplicate URL:" + inputValues.get(i));
       } catch (IOException e) {
-        // TODO Auto-generated catch block
         e.printStackTrace();
       }
     }
