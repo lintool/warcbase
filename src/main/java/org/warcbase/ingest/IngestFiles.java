@@ -32,7 +32,7 @@ public class IngestFiles {
 
   private static final Logger LOG = Logger.getLogger(IngestFiles.class);
 
-  public static final int MAX_CONTENT_SIZE = 1024 * 1024;
+  public static final int MAX_CONTENT_SIZE = 10 * 1024 * 1024;
 
   private int cnt = 0;
   private int errors = 0;
