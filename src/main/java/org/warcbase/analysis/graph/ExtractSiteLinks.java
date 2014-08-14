@@ -58,7 +58,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
 import org.warcbase.analysis.graph.PrefixMapping.PrefixNode;
-import org.warcbase.data.UriMapping;
+import org.warcbase.data.UrlMapping;
 import org.warcbase.mapreduce.ArcInputFormat;
 
 import com.google.common.base.Joiner;
@@ -78,7 +78,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
     private static final IntWritable KEY = new IntWritable();
     private static final IntWritable VALUE = new IntWritable();
 
-    private static UriMapping fst;
+    private static UrlMapping fst;
     private static PrefixMapping prefixMap;
     private static ArrayList<PrefixNode> prefix;
     
@@ -93,7 +93,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
         Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
 
         // load FST UriMapping from file
-        fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());
         // load Prefix Mapping from file
         prefixMap = (PrefixMapping) Class.forName(conf.get("PrefixMappingClass")).newInstance();
@@ -175,7 +175,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
     private static final IntWritable KEY = new IntWritable();
     private static final IntWritable VALUE = new IntWritable();
 
-    private static UriMapping fst;
+    private static UrlMapping fst;
     private static PrefixMapping prefixMap;
     private static ArrayList<PrefixNode> prefix;
     
@@ -187,7 +187,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
         Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
 
         // load FST UriMapping from file
-        fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());
         // load Prefix Mapping from file
         prefixMap = (PrefixMapping) Class.forName(conf.get("PrefixMappingClass")).newInstance();
@@ -388,7 +388,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
     Job job = Job.getInstance(conf, ExtractSiteLinks.class.getSimpleName());
     job.setJarByClass(ExtractSiteLinks.class);
 
-    job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
+    job.getConfiguration().set("UriMappingClass", UrlMapping.class.getCanonicalName());
     job.getConfiguration().set("PrefixMappingClass", PrefixMapping.class.getCanonicalName());
     // Put the mapping file and prefix file in the distributed cache
     // so each map worker will have it.

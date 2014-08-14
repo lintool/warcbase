@@ -24,19 +24,19 @@ import org.apache.lucene.util.fst.PositiveIntOutputs;
 import org.apache.lucene.util.fst.Util;
 import org.warcbase.ingest.IngestFiles;
 
-public class UriMapping {
-  private static final Logger LOG = Logger.getLogger(UriMapping.class);
+public class UrlMapping {
+  private static final Logger LOG = Logger.getLogger(UrlMapping.class);
 
   private FST<Long> fst;
 
-  public UriMapping(FST<Long> fst) {
+  public UrlMapping(FST<Long> fst) {
     this.fst = fst;
   }
 
-  public UriMapping() {
+  public UrlMapping() {
   }
 
-  public UriMapping(String outputFileName) {
+  public UrlMapping(String outputFileName) {
     PositiveIntOutputs outputs = PositiveIntOutputs.getSingleton();
     File outputFile = new File(outputFileName);
     try {
@@ -48,7 +48,7 @@ public class UriMapping {
   }
 
   public void loadMapping(String outputFileName) {
-    UriMapping tmp = new UriMapping(outputFileName);
+    UrlMapping tmp = new UrlMapping(outputFileName);
     this.fst = tmp.fst;
   }
 
@@ -213,7 +213,7 @@ public class UriMapping {
     }
 
     String filePath = cmdline.getOptionValue(DATA);
-    UriMapping map = new UriMapping(filePath);
+    UrlMapping map = new UrlMapping(filePath);
     map.loadMapping(filePath);
 
     if (cmdline.hasOption(ID)) {

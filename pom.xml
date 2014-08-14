@@ -115,7 +115,7 @@
             </program>
             <program>
               <mainClass>org.warcbase.data.UriMapping</mainClass>
-              <name>UriMapping</name>
+              <name>UrlMapping</name>
             </program>
             <program>
               <mainClass>org.warcbase.data.ExtractLinks</mainClass>

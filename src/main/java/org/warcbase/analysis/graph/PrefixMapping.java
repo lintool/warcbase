@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import org.warcbase.data.UriMapping;
+import org.warcbase.data.UrlMapping;
 
 import au.com.bytecode.opencsv.CSVReader;
 
@@ -42,7 +42,7 @@ public class PrefixMapping {
     }
   }
 
-  public static ArrayList<PrefixNode> loadPrefix(String prefixFile, UriMapping map)
+  public static ArrayList<PrefixNode> loadPrefix(String prefixFile, UrlMapping map)
       throws IOException {
     PrefixMapping instance = new PrefixMapping();
     final Comparator<PrefixNode> comparator = new Comparator<PrefixNode>() {

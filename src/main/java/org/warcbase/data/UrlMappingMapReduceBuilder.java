@@ -44,8 +44,8 @@ import org.apache.lucene.util.fst.Util;
 import org.jwat.arc.ArcRecordBase;
 import org.warcbase.mapreduce.ArcInputFormat;
 
-public class UriMappingMapReduceBuilder extends Configured implements Tool {
-  private static final Logger LOG = Logger.getLogger(UriMappingMapReduceBuilder.class);
+public class UrlMappingMapReduceBuilder extends Configured implements Tool {
+  private static final Logger LOG = Logger.getLogger(UrlMappingMapReduceBuilder.class);
 
   private static enum Records {
     TOTAL, RECORD_COUNT
@@ -141,7 +141,7 @@ public class UriMappingMapReduceBuilder extends Configured implements Tool {
     }
   }
 
-  public UriMappingMapReduceBuilder() {}
+  public UrlMappingMapReduceBuilder() {}
 
   private static final String INPUT = "input";
   private static final String OUTPUT = "output";
@@ -186,11 +186,11 @@ public class UriMappingMapReduceBuilder extends Configured implements Tool {
     Configuration conf = getConf();
     conf.set("PATH", outputPath);
     conf.set("mapreduce.reduce.java.opts", "-Xmx5120m");
-    Job job = Job.getInstance(conf, UriMappingMapReduceBuilder.class.getSimpleName());
-    job.setJarByClass(UriMappingMapReduceBuilder.class);
+    Job job = Job.getInstance(conf, UrlMappingMapReduceBuilder.class.getSimpleName());
+    job.setJarByClass(UrlMappingMapReduceBuilder.class);
 
     job.getConfiguration().set("UriMappingBuilderClass",
-        UriMappingMapReduceBuilder.class.getCanonicalName());
+        UrlMappingMapReduceBuilder.class.getCanonicalName());
 
     FileInputFormat.setInputPaths(job, new Path(inputPath));
 
@@ -219,6 +219,6 @@ public class UriMappingMapReduceBuilder extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    ToolRunner.run(new UriMappingMapReduceBuilder(), args);
+    ToolRunner.run(new UrlMappingMapReduceBuilder(), args);
   }
 }

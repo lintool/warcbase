@@ -51,7 +51,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
 import org.warcbase.analysis.graph.PrefixMapping.PrefixNode;
-import org.warcbase.data.UriMapping;
+import org.warcbase.data.UrlMapping;
 import org.warcbase.mapreduce.ArcInputFormat;
 
 import com.google.common.base.Joiner;
@@ -73,7 +73,7 @@ public class ExtractLinks extends Configured implements Tool {
     private static final Text VALUE = new Text();
     
     private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
-    private static UriMapping fst;
+    private static UrlMapping fst;
     private static String beginDate, endDate;
     @Override
     public void setup(Context context) {
@@ -90,7 +90,7 @@ public class ExtractLinks extends Configured implements Tool {
         System.out.println("cache contents: " + Arrays.toString(localFiles));
 
         // load FST UriMapping from file
-        fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());
         // simply assume only one file in distributed cache.
         
@@ -169,7 +169,7 @@ public class ExtractLinks extends Configured implements Tool {
     private static final Text VALUE = new Text();
     
     private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
-    private static UriMapping fst;
+    private static UrlMapping fst;
     
     @Override
     public void setup(Context context) {
@@ -179,7 +179,7 @@ public class ExtractLinks extends Configured implements Tool {
         Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
 
         // load FST UriMapping from file
-        fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());
       } catch (Exception e) {
         e.printStackTrace();
@@ -333,7 +333,7 @@ public class ExtractLinks extends Configured implements Tool {
     Job job = Job.getInstance(conf, ExtractLinks.class.getSimpleName());
     job.setJarByClass(ExtractLinks.class);
 
-    job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
+    job.getConfiguration().set("UriMappingClass", UrlMapping.class.getCanonicalName());
     // Put the mapping file in the distributed cache so each map worker will have it.
     job.addCacheFile(mappingPath.toUri());
 
