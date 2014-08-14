@@ -6,7 +6,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.IntsRef;
@@ -49,16 +57,43 @@ public class UrlMappingBuilder {
     return urls;
   }
 
+  public static final String INPUT_OPTION = "input";
+  public static final String OUTPUT_OPTION = "output";
+
+  @SuppressWarnings("static-access")
   public static void main(String[] args) throws IOException {
-    String inputFileName = new String();
-    String outputFileName = new String();
-    if (args.length > 0) { // read file name from main arguments
-      inputFileName = args[0];
-      outputFileName = args[1];
+    Options options = new Options();
+
+    options.addOption(OptionBuilder.withArgName("path").hasArg()
+        .withDescription("input path").create(INPUT_OPTION));
+    options.addOption(OptionBuilder.withArgName("path").hasArg()
+        .withDescription("output path").create(OUTPUT_OPTION));
+
+    CommandLine cmdline = null;
+    CommandLineParser parser = new GnuParser();
+    try {
+      cmdline = parser.parse(options, args);
+    } catch (ParseException exp) {
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.printHelp(UrlMappingBuilder.class.getName(), options);
+      ToolRunner.printGenericCommandUsage(System.out);
+      System.err.println("Error parsing command line: " + exp.getMessage());
+      System.exit(-1);
     }
+
+    if (!cmdline.hasOption(INPUT_OPTION) || !cmdline.hasOption(OUTPUT_OPTION)) {
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.printHelp(UrlMappingBuilder.class.getName(), options);
+      ToolRunner.printGenericCommandUsage(System.out);
+      System.exit(-1);
+    }
+
+    String input = cmdline.getOptionValue(INPUT_OPTION);
+    String output = cmdline.getOptionValue(OUTPUT_OPTION);
+
     List<String> inputValues = null;
     try {
-      inputValues = readUrlFromFolder(inputFileName); // read data
+      inputValues = readUrlFromFolder(input); // read data
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -83,8 +118,8 @@ public class UrlMappingBuilder {
     FST<Long> fst = builder.finish();
 
     // Save FST to file
-    File outputFile = new File(outputFileName);
+    File outputFile = new File(output);
     fst.save(outputFile);
-    LOG.info("Wrote output to " + outputFileName);
+    LOG.info("Wrote output to " + output);
   }
 }
