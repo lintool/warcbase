@@ -21,7 +21,7 @@ import org.archive.io.arc.ARCReaderFactory;
 import org.archive.io.arc.ARCRecord;
 import org.archive.io.arc.ARCRecordMetaData;
 import org.warcbase.data.HBaseTableManager;
-import org.warcbase.data.UrlUtil;
+import org.warcbase.data.UrlUtils;
 
 public class IngestFiles {
   private static final String CREATE_OPTION = "create";
@@ -101,7 +101,7 @@ public class IngestFiles {
         dout.write("\n".getBytes());
         copyStream(r, (int) meta.getLength(), true, dout);
 
-        String key = UrlUtil.urlToKey(meta.getUrl());
+        String key = UrlUtils.urlToKey(meta.getUrl());
         String type = meta.getMimetype();
 
         if (key == null) {

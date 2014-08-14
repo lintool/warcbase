@@ -49,7 +49,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
 import org.warcbase.data.UrlMapping;
-import org.warcbase.data.UrlUtil;
+import org.warcbase.data.UrlUtils;
 import org.warcbase.mapreduce.ArcInputFormat;
 
 import com.google.common.collect.Lists;
@@ -189,7 +189,7 @@ public class InvertAnchorText extends Configured implements Tool {
     @Override
     public void map(ImmutableBytesWritable row, Result result, Context context)
         throws IOException, InterruptedException {
-      String url = UrlUtil.keyToUrl(new String(row.get()));
+      String url = UrlUtils.keyToUrl(new String(row.get()));
 
       int srcId = fst.getID(url);
       if ( srcId == -1) {

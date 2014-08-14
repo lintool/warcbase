@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
 import org.archive.util.ArchiveUtils;
 import org.warcbase.data.HBaseTableManager;
-import org.warcbase.data.UrlUtil;
+import org.warcbase.data.UrlUtils;
 
 public class WarcBrowserServlet extends HttpServlet {
   private static final long serialVersionUID = 847405540723915805L;
@@ -148,7 +148,7 @@ public class WarcBrowserServlet extends HttpServlet {
 
   public void writeDates(HttpServletResponse resp, String tableName, String query)
       throws IOException {
-    String q = UrlUtil.urlToKey(query);
+    String q = UrlUtils.urlToKey(query);
     HTableInterface table = pool.getTable(tableName);
 
     Get get = new Get(Bytes.toBytes(q));
@@ -181,7 +181,7 @@ public class WarcBrowserServlet extends HttpServlet {
 
   public void writeContent(HttpServletResponse resp, String tableName, String url, String date14digit) 
       throws IOException {
-    String key = UrlUtil.urlToKey(url);
+    String key = UrlUtils.urlToKey(url);
     HTableInterface table = pool.getTable(tableName);
     Get get = new Get(Bytes.toBytes(key));
     try {

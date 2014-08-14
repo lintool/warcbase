@@ -4,14 +4,14 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-public class UrilUtilTest {
+public class UrlUtilsTest {
   @Test
   public void test1() {
     String url = "http://www.house.gov/mthompson/the_1st_district.htm";
     String rowKey = "gov.house.www/mthompson/the_1st_district.htm";
 
-    assertEquals(rowKey, UrlUtil.urlToKey(url));
-    assertEquals(url, UrlUtil.keyToUrl(rowKey));
+    assertEquals(rowKey, UrlUtils.urlToKey(url));
+    assertEquals(url, UrlUtils.keyToUrl(rowKey));
   }
 
   @Test
@@ -22,8 +22,8 @@ public class UrilUtilTest {
         "com.d.c.b.a:12345", "org.warcbase", "foo" };
 
     for (int i=0; i<hostnames.length; i++) {
-      assertEquals(reversed[i], UrlUtil.reverseHostname(hostnames[i]));
-      assertEquals(hostnames[i], UrlUtil.reverseHostname(UrlUtil.reverseHostname(hostnames[i])));
+      assertEquals(reversed[i], UrlUtils.reverseHostname(hostnames[i]));
+      assertEquals(hostnames[i], UrlUtils.reverseHostname(UrlUtils.reverseHostname(hostnames[i])));
     }
   }
 }
