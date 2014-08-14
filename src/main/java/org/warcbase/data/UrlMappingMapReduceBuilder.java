@@ -1,8 +1,5 @@
 package org.warcbase.data;
 
-import it.unimi.dsi.fastutil.longs.LongArrayList;
-import it.unimi.dsi.fastutil.longs.LongList;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -47,9 +44,7 @@ import org.warcbase.mapreduce.ArcInputFormat;
 public class UrlMappingMapReduceBuilder extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(UrlMappingMapReduceBuilder.class);
 
-  private static enum Records {
-    TOTAL, RECORD_COUNT
-  };
+  private static enum Records { TOTAL, UNIQUE };
 
   public static class UriMappingBuilderMapper extends
       Mapper<LongWritable, ArcRecordBase, Text, Text> {
@@ -60,15 +55,10 @@ public class UrlMappingMapReduceBuilder extends Configured implements Tool {
     public void map(LongWritable key, ArcRecordBase record, Context context) throws IOException,
         InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
-      String url = record.getUrlStr();
-      String type = record.getContentTypeStr();
-
-      if (!type.equals("text/html")) {
-        return;
+      if (record.getUrlStr().startsWith("http://")) {
+        KEY.set(record.getUrlStr());
+        context.write(KEY, VALUE);
       }
-
-      KEY.set(url);
-      context.write(KEY, VALUE);
     }
   }
 
@@ -77,9 +67,9 @@ public class UrlMappingMapReduceBuilder extends Configured implements Tool {
     public static List<String> urls = new ArrayList<String>();
     private static String path;
 
-    // read PATH environment
     @Override
     public void setup(Context context) {
+      // read PATH variable, which is where to write the FST data
       Configuration conf = context.getConfiguration();
       path = conf.get("PATH");
     }
@@ -87,30 +77,23 @@ public class UrlMappingMapReduceBuilder extends Configured implements Tool {
     @Override
     public void reduce(Text key, Iterable<Text> values, Context context)
         throws IOException, InterruptedException {
-      context.getCounter(Records.RECORD_COUNT).increment(1);
+      context.getCounter(Records.UNIQUE).increment(1);
       urls.add(key.toString());
     }
 
     @Override
     public void cleanup(Context context) throws IOException {
-      int size = urls.size();
-      LongList outputValues = new LongArrayList(size); // create the mapping id
-
-      for (int i = 1; i <= size; i++) {
-        outputValues.add(i);
-      }
-
       PositiveIntOutputs outputs = PositiveIntOutputs.getSingleton();
       Builder<Long> builder = new Builder<Long>(INPUT_TYPE.BYTE1, outputs);
       BytesRef scratchBytes = new BytesRef();
       IntsRef scratchInts = new IntsRef();
-      for (int i = 0; i < size; i++) {
+      for (int i = 0; i < urls.size(); i++) {
         if (i % 100000 == 0) {
           LOG.info(i + " URLs processed.");
         }
         scratchBytes.copyChars((String) urls.get(i));
         try {
-          builder.add(Util.toIntsRef(scratchBytes, scratchInts), (Long) outputValues.get(i));
+          builder.add(Util.toIntsRef(scratchBytes, scratchInts), (long) i);
         } catch (UnsupportedOperationException e) {
           LOG.error("Duplicate URL:" + urls.get(i));
         } catch (IOException e) {
@@ -216,10 +199,8 @@ public class UrlMappingMapReduceBuilder extends Configured implements Tool {
     LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
 
     Counters counters = job.getCounters();
-    int numRecords = (int) counters.findCounter(Records.TOTAL).getValue();
-    int numUrls = (int) counters.findCounter(Records.RECORD_COUNT).getValue();
-    LOG.info("Read " + numRecords + " records.");
-    LOG.info("Encountered " + numUrls + " unique urls.");
+    LOG.info("Read " + counters.findCounter(Records.TOTAL).getValue() + " total URLs.");
+    LOG.info("Read " + counters.findCounter(Records.UNIQUE).getValue() + " unique URLs.");
 
     return 0;
   }
