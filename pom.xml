@@ -103,19 +103,19 @@
         <artifactId>appassembler-maven-plugin</artifactId>
         <version>1.3.1</version>
         <configuration>
-          <extraJvmArguments>-Xms512M -Xmx1524M</extraJvmArguments>
+          <extraJvmArguments>-Xms512M -Xmx24576M</extraJvmArguments>
           <programs>
             <program>
               <mainClass>org.warcbase.WarcbaseAdmin</mainClass>
               <name>WarcbaseAdmin</name>
             </program>
             <program>
-              <mainClass>org.warcbase.data.UriMappingBuilder</mainClass>
-              <name>UriMappingBuilder</name>
+              <mainClass>org.warcbase.data.UrlMappingBuilder</mainClass>
+              <name>UrlMappingBuilder</name>
             </program>
             <program>
-              <mainClass>org.warcbase.data.UriMapping</mainClass>
-              <name>UriMapping</name>
+              <mainClass>org.warcbase.data.UrlMapping</mainClass>
+              <name>UrlMapping</name>
             </program>
             <program>
               <mainClass>org.warcbase.data.ExtractLinks</mainClass>
