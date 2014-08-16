@@ -19,22 +19,15 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
-import org.jwat.common.UriProfile;
-import org.jwat.warc.WarcReader;
-import org.jwat.warc.WarcReaderFactory;
-import org.jwat.warc.WarcRecord;
+import org.jwat.arc.ArcReader;
+import org.jwat.arc.ArcReaderFactory;
+import org.jwat.arc.ArcRecordBase;
 
-public class WarcInputFormat extends FileInputFormat<LongWritable, WarcRecord> {
-  private static final UriProfile uriProfile = UriProfile.RFC3986_ABS_16BIT_LAX;
-  private static final boolean bBlockDigestEnabled = true;
-  private static final boolean bPayloadDigestEnabled = true;
-  private static final int recordHeaderMaxSize = 8192;
-  private static final int payloadHeaderMaxSize = 32768;
-
+public class JwatArcInputFormat extends FileInputFormat<LongWritable, ArcRecordBase> {
   @Override
-  public RecordReader<LongWritable, WarcRecord> createRecordReader(InputSplit split,
+  public RecordReader<LongWritable, ArcRecordBase> createRecordReader(InputSplit split,
       TaskAttemptContext context) throws IOException, InterruptedException {
-    return new WarcRecordReader();
+    return new ArcRecordReader();
   }
 
   @Override
@@ -42,14 +35,14 @@ public class WarcInputFormat extends FileInputFormat<LongWritable, WarcRecord> {
     return false;
   }
 
-  public class WarcRecordReader extends RecordReader<LongWritable, WarcRecord> {
+  public class ArcRecordReader extends RecordReader<LongWritable, ArcRecordBase> {
     private CompressionCodecFactory compressionCodecs = null;
-    private WarcReader reader;
+    private ArcReader reader;
     private long start;
     private long pos;
     private long end;
     private LongWritable key = null;
-    private WarcRecord value = null;
+    private ArcRecordBase value = null;
     private Seekable filePosition;
     private CompressionCodec codec;
     private Decompressor decompressor;
@@ -77,14 +70,7 @@ public class WarcInputFormat extends FileInputFormat<LongWritable, WarcRecord> {
         filePosition = fileIn;
       }
 
-      reader = WarcReaderFactory.getReaderUncompressed(in);
-
-      reader.setWarcTargetUriProfile(uriProfile);
-      reader.setBlockDigestEnabled(bBlockDigestEnabled);
-      reader.setPayloadDigestEnabled(bPayloadDigestEnabled);
-      reader.setRecordHeaderMaxSize(recordHeaderMaxSize);
-      reader.setPayloadHeaderMaxSize(payloadHeaderMaxSize);
-
+      reader = ArcReaderFactory.getReader(in);
       this.pos = start;
     }
 
@@ -121,7 +107,7 @@ public class WarcInputFormat extends FileInputFormat<LongWritable, WarcRecord> {
     }
 
     @Override
-    public WarcRecord getCurrentValue() {
+    public ArcRecordBase getCurrentValue() {
       return value;
     }
 

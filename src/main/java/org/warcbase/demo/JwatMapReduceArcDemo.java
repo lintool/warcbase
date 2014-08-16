@@ -1,4 +1,4 @@
-package org.warcbase.analysis.demo;
+package org.warcbase.demo;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -10,53 +10,44 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
-import org.apache.hadoop.hbase.mapreduce.TableMapper;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
+import org.jwat.arc.ArcRecordBase;
+import org.warcbase.mapreduce.JwatArcInputFormat;
 
-public class MapReduceHBaseDemo extends Configured implements Tool {
-  private static final Logger LOG = Logger.getLogger(MapReduceHBaseDemo.class);
+public class JwatMapReduceArcDemo extends Configured implements Tool {
+  private static final Logger LOG = Logger.getLogger(JwatMapReduceArcDemo.class);
 
   private static enum Records { TOTAL };
 
-  private static class MyMapper extends TableMapper<Text, Text> {
-    private final Text KEY = new Text();
-    private final Text VALUE = new Text();
-
+  private static class MyMapper
+      extends Mapper<LongWritable, ArcRecordBase, Text, Text> {
     @Override
-    public void map(ImmutableBytesWritable row, Result result, Context context)
+    public void map(LongWritable key, ArcRecordBase record, Context context)
         throws IOException, InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
 
-      KEY.set(row.get());
-      for (KeyValue kv : result.list()) {
-        VALUE.set(new String(kv.getQualifier()) + "\t" + kv.getTimestamp() + "\t"
-            + kv.getValueLength());
+      String url = record.getUrlStr();
+      String date = record.getArchiveDateStr();
+      String type = record.getContentTypeStr();
 
-        // Key = row (inverse URL)
-        // Value = qualifier, timestamp, size
-        context.write(KEY, VALUE);
-      }
+      context.write(new Text(url + " " + type), new Text(date));
     }
   }
 
-  public MapReduceHBaseDemo() {}
+  public JwatMapReduceArcDemo() {}
 
   public static final String INPUT_OPTION = "input";
   public static final String OUTPUT_OPTION = "output";
@@ -95,38 +86,20 @@ public class MapReduceHBaseDemo extends Configured implements Tool {
     String input = cmdline.getOptionValue(INPUT_OPTION);
     Path output = new Path(cmdline.getOptionValue(OUTPUT_OPTION));
 
-    LOG.info("Tool name: " + MapReduceHBaseDemo.class.getSimpleName());
+    LOG.info("Tool name: " + JwatMapReduceArcDemo.class.getSimpleName());
     LOG.info(" - input: " + input);
     LOG.info(" - output: " + output);
 
-    Configuration config = HBaseConfiguration.create(getConf());
-    // This should be fetched from external config files,
-    // but not working due to weirdness in current config.
-    config.set("hbase.zookeeper.quorum", "bespinrm.umiacs.umd.edu");
-
-    Job job = Job.getInstance(config, MapReduceHBaseDemo.class.getSimpleName() + ":" + input);
-    job.setJarByClass(MapReduceHBaseDemo.class);
-
-    Scan scan = new Scan();
-    scan.addFamily("c".getBytes());
-    // Very conservative settings because a single row might not fit in memory
-    // if we have many captured version of a URL.
-    scan.setCaching(1);            // Controls the number of rows to pre-fetch
-    scan.setBatch(10);             // Controls the number of columns to fetch on a per row basis
-    scan.setCacheBlocks(false);    // Don't set to true for MR jobs
-    scan.setMaxVersions();         // We want all versions
-
-    TableMapReduceUtil.initTableMapperJob(
-      input,            // input HBase table name
-      scan,             // Scan instance to control CF and attribute selection
-      MyMapper.class,   // mapper
-      Text.class,       // mapper output key
-      Text.class,       // mapper output value
-      job);
-
+    Job job = Job.getInstance(getConf(), JwatMapReduceArcDemo.class.getSimpleName() + ":" + input);
+    job.setJarByClass(JwatMapReduceArcDemo.class);
     job.setNumReduceTasks(0);
+
+    FileInputFormat.addInputPaths(job, input);
     FileOutputFormat.setOutputPath(job, output);
+
+    job.setInputFormatClass(JwatArcInputFormat.class);
     job.setOutputFormatClass(TextOutputFormat.class);
+    job.setMapperClass(MyMapper.class);
 
     FileSystem fs = FileSystem.get(getConf());
     if ( FileSystem.get(getConf()).exists(output)) {
@@ -146,8 +119,8 @@ public class MapReduceHBaseDemo extends Configured implements Tool {
    * Dispatches command-line arguments to the tool via the <code>ToolRunner</code>.
    */
   public static void main(String[] args) throws Exception {
-    LOG.info("Running " + MapReduceHBaseDemo.class.getCanonicalName() + " with args "
+    LOG.info("Running " + JwatMapReduceArcDemo.class.getCanonicalName() + " with args "
         + Arrays.toString(args));
-    ToolRunner.run(new MapReduceHBaseDemo(), args);
+    ToolRunner.run(new JwatMapReduceArcDemo(), args);
   }
 }

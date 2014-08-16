@@ -26,7 +26,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import org.jwat.arc.ArcRecordBase;
-import org.warcbase.mapreduce.ArcInputFormat;
+import org.warcbase.mapreduce.JwatArcInputFormat;
 
 public class ArcCounter extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ArcCounter.class);
@@ -104,7 +104,7 @@ public class ArcCounter extends Configured implements Tool {
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(IntWritable.class);
 
-    job.setInputFormatClass(ArcInputFormat.class);
+    job.setInputFormatClass(JwatArcInputFormat.class);
     job.setOutputFormatClass(TextOutputFormat.class);
 
     job.setMapperClass(mapperClass);

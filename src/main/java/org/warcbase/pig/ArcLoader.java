@@ -16,7 +16,7 @@ import org.apache.pig.backend.hadoop.executionengine.mapReduceLayer.PigSplit;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.jwat.arc.ArcRecordBase;
-import org.warcbase.mapreduce.ArcInputFormat;
+import org.warcbase.mapreduce.JwatArcInputFormat;
 
 import com.google.common.collect.Lists;
 
@@ -29,8 +29,8 @@ public class ArcLoader extends FileInputLoadFunc {
   }
 
   @Override
-  public ArcInputFormat getInputFormat() throws IOException {
-    return new ArcInputFormat();
+  public JwatArcInputFormat getInputFormat() throws IOException {
+    return new JwatArcInputFormat();
   }
 
   @Override

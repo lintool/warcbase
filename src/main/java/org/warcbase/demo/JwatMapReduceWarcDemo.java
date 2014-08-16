@@ -1,4 +1,4 @@
-package org.warcbase.analysis.demo;
+package org.warcbase.demo;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -24,30 +24,31 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
-import org.jwat.arc.ArcRecordBase;
-import org.warcbase.mapreduce.ArcInputFormat;
+import org.jwat.warc.WarcRecord;
+import org.warcbase.mapreduce.JwatWarcInputFormat;
 
-public class MapReduceArcDemo extends Configured implements Tool {
-  private static final Logger LOG = Logger.getLogger(MapReduceArcDemo.class);
+public class JwatMapReduceWarcDemo extends Configured implements Tool {
+  private static final Logger LOG = Logger.getLogger(JwatMapReduceWarcDemo.class);
 
   private static enum Records { TOTAL };
 
   private static class MyMapper
-      extends Mapper<LongWritable, ArcRecordBase, Text, Text> {
+      extends Mapper<LongWritable, WarcRecord, Text, Text> {
     @Override
-    public void map(LongWritable key, ArcRecordBase record, Context context)
+    public void map(LongWritable key, WarcRecord record, Context context)
         throws IOException, InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
 
-      String url = record.getUrlStr();
-      String date = record.getArchiveDateStr();
-      String type = record.getContentTypeStr();
+      String url = record.header.warcTargetUriStr;
+      String date = record.header.warcDateStr;
 
-      context.write(new Text(url + " " + type), new Text(date));
+      if (url != null) {
+        context.write(new Text(url), new Text(date));
+      }
     }
   }
 
-  public MapReduceArcDemo() {}
+  public JwatMapReduceWarcDemo() {}
 
   public static final String INPUT_OPTION = "input";
   public static final String OUTPUT_OPTION = "output";
@@ -86,18 +87,18 @@ public class MapReduceArcDemo extends Configured implements Tool {
     String input = cmdline.getOptionValue(INPUT_OPTION);
     Path output = new Path(cmdline.getOptionValue(OUTPUT_OPTION));
 
-    LOG.info("Tool name: " + MapReduceArcDemo.class.getSimpleName());
+    LOG.info("Tool name: " + JwatMapReduceWarcDemo.class.getSimpleName());
     LOG.info(" - input: " + input);
     LOG.info(" - output: " + output);
 
-    Job job = Job.getInstance(getConf(), MapReduceArcDemo.class.getSimpleName() + ":" + input);
-    job.setJarByClass(MapReduceArcDemo.class);
+    Job job = Job.getInstance(getConf(), JwatMapReduceWarcDemo.class.getSimpleName() + ":" + input);
+    job.setJarByClass(JwatMapReduceWarcDemo.class);
     job.setNumReduceTasks(0);
 
     FileInputFormat.addInputPaths(job, input);
     FileOutputFormat.setOutputPath(job, output);
 
-    job.setInputFormatClass(ArcInputFormat.class);
+    job.setInputFormatClass(JwatWarcInputFormat.class);
     job.setOutputFormatClass(TextOutputFormat.class);
     job.setMapperClass(MyMapper.class);
 
@@ -110,7 +111,7 @@ public class MapReduceArcDemo extends Configured implements Tool {
 
     Counters counters = job.getCounters();
     int numDocs = (int) counters.findCounter(Records.TOTAL).getValue();
-    LOG.info("Read " + numDocs + " records.");
+    LOG.info("Read " + numDocs + " docs.");
 
     return 0;
   }
@@ -119,8 +120,8 @@ public class MapReduceArcDemo extends Configured implements Tool {
    * Dispatches command-line arguments to the tool via the <code>ToolRunner</code>.
    */
   public static void main(String[] args) throws Exception {
-    LOG.info("Running " + MapReduceArcDemo.class.getCanonicalName() + " with args "
+    LOG.info("Running " + JwatMapReduceWarcDemo.class.getCanonicalName() + " with args "
         + Arrays.toString(args));
-    ToolRunner.run(new MapReduceArcDemo(), args);
+    ToolRunner.run(new JwatMapReduceWarcDemo(), args);
   }
 }
