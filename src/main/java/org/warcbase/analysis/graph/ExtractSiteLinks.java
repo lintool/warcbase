@@ -59,7 +59,7 @@ import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
 import org.warcbase.analysis.graph.PrefixMapping.PrefixNode;
 import org.warcbase.data.UrlMapping;
-import org.warcbase.mapreduce.ArcInputFormat;
+import org.warcbase.mapreduce.JwatArcInputFormat;
 
 import com.google.common.base.Joiner;
 
@@ -400,7 +400,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
     if (isHDFSInput) { // HDFS input
       FileInputFormat.setInputPaths(job, new Path(HDFSPath));
 
-      job.setInputFormatClass(ArcInputFormat.class);
+      job.setInputFormatClass(JwatArcInputFormat.class);
       // set map (key,value) output format
       job.setMapOutputKeyClass(IntWritable.class);
       job.setMapOutputValueClass(IntWritable.class);

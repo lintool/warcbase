@@ -19,7 +19,7 @@ import org.apache.pig.data.TupleFactory;
 import org.jwat.common.HttpHeader;
 import org.jwat.common.Payload;
 import org.jwat.warc.WarcRecord;
-import org.warcbase.mapreduce.WarcInputFormat;
+import org.warcbase.mapreduce.JwatWarcInputFormat;
 
 import com.google.common.collect.Lists;
 
@@ -33,8 +33,8 @@ public class WarcLoader extends FileInputLoadFunc {
   }
 
   @Override
-  public WarcInputFormat getInputFormat() throws IOException {
-    return new WarcInputFormat();
+  public JwatWarcInputFormat getInputFormat() throws IOException {
+    return new JwatWarcInputFormat();
   }
 
   @Override

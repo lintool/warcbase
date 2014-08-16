@@ -27,7 +27,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import org.jwat.arc.ArcRecordBase;
-import org.warcbase.mapreduce.ArcInputFormat;
+import org.warcbase.mapreduce.JwatArcInputFormat;
 
 public class FindUrls extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(FindUrls.class);
@@ -119,7 +119,7 @@ public class FindUrls extends Configured implements Tool {
     FileInputFormat.addInputPaths(job, input);
     FileOutputFormat.setOutputPath(job, output);
 
-    job.setInputFormatClass(ArcInputFormat.class);
+    job.setInputFormatClass(JwatArcInputFormat.class);
     job.setOutputFormatClass(TextOutputFormat.class);
     job.setMapperClass(MyMapper.class);
 

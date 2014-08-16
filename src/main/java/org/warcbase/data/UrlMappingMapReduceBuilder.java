@@ -39,7 +39,7 @@ import org.apache.lucene.util.fst.FST.INPUT_TYPE;
 import org.apache.lucene.util.fst.PositiveIntOutputs;
 import org.apache.lucene.util.fst.Util;
 import org.jwat.arc.ArcRecordBase;
-import org.warcbase.mapreduce.ArcInputFormat;
+import org.warcbase.mapreduce.JwatArcInputFormat;
 
 public class UrlMappingMapReduceBuilder extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(UrlMappingMapReduceBuilder.class);
@@ -183,7 +183,7 @@ public class UrlMappingMapReduceBuilder extends Configured implements Tool {
 
     FileInputFormat.setInputPaths(job, new Path(inputPath));
 
-    job.setInputFormatClass(ArcInputFormat.class);
+    job.setInputFormatClass(JwatArcInputFormat.class);
     job.setOutputFormatClass(NullOutputFormat.class); // no output
     // set map (key,value) output format
     job.setMapOutputKeyClass(Text.class);

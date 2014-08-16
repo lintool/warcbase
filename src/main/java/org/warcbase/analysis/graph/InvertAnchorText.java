@@ -50,7 +50,7 @@ import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
 import org.warcbase.data.UrlMapping;
 import org.warcbase.data.UrlUtils;
-import org.warcbase.mapreduce.ArcInputFormat;
+import org.warcbase.mapreduce.JwatArcInputFormat;
 
 import com.google.common.collect.Lists;
 
@@ -336,7 +336,7 @@ public class InvertAnchorText extends Configured implements Tool {
     if (isHdfs) { // HDFS input
       FileInputFormat.setInputPaths(job, new Path(path));
 
-      job.setInputFormatClass(ArcInputFormat.class);
+      job.setInputFormatClass(JwatArcInputFormat.class);
       // set map (key,value) output format
       job.setMapOutputKeyClass(IntWritable.class);
       job.setMapOutputValueClass(Text.class);

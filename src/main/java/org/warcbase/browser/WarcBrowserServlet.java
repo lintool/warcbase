@@ -20,8 +20,9 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
@@ -33,11 +34,9 @@ public class WarcBrowserServlet extends HttpServlet {
   private static final long serialVersionUID = 847405540723915805L;
   private static final Logger LOG = Logger.getLogger(WarcBrowserServlet.class);
 
-  private String tableName;
-
   private final Configuration hbaseConfig;
   private HBaseAdmin hbaseAdmin;
-  private static HTablePool pool = new HTablePool();
+  private HConnection hbaseConnection;
 
   private final Pattern p1 = Pattern.compile("^/([^//]+)/(\\d+)/(http://.*)$");
   private final Pattern p2 = Pattern.compile("^/([^//]+)/\\*/(http://.*)$");
@@ -45,13 +44,11 @@ public class WarcBrowserServlet extends HttpServlet {
   public WarcBrowserServlet() throws MasterNotRunningException, ZooKeeperConnectionException {
     this.hbaseConfig = HBaseConfiguration.create();
     hbaseAdmin = new HBaseAdmin(hbaseConfig);
+    hbaseConnection = HConnectionManager.createConnection(hbaseConfig);
   }
 
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
       throws ServletException, IOException {
-    String query = req.getParameter("query");
-    String d = req.getParameter("date");
-
     String path = req.getPathInfo();
     if (req.getQueryString() != null) {
         path = path + "?" + req.getQueryString();
@@ -64,39 +61,19 @@ public class WarcBrowserServlet extends HttpServlet {
       String url = m1.group(3);
       url = url.replaceAll(" ", "%20");
       writeContent(resp, m1.group(1), url, m1.group(2));
+      return;
     }
 
     Matcher m2 = p2.matcher(path);
     if (m2.find()) {
       String url = m2.group(2);
       url = url.replaceAll(" ", "%20");
-      writeDates(resp, m2.group(1), url);
-    }
-
-    if (req.getPathInfo() == null || req.getPathInfo() == "/") {
-      writeTables(resp);
-      return;
-    }
-    String pathInfo = req.getPathInfo();
-    String[] splits = pathInfo.split("\\/");
-
-    if (splits.length < 2) {
-      writeTables(resp);
-      return;
-    }
-    this.tableName = splits[1];
-
-    // Request has table name, but not URL.
-    if (splits.length == 2 && query == null) {
-      tableSearch(resp, tableName);
+      writeCaptureDates(resp, m2.group(1), url);
       return;
     }
 
-    // If there isn't a date for a URL, print out list of available versions.
-    if (splits.length == 2 && d == null) {
-      writeDates(resp, tableName, query);
-      return;
-    }
+    // Otherwise, just list the dates of the available collections
+    listCollections(resp);
   }
 
   protected void doPost(HttpServletRequest req, HttpServletResponse resp)
@@ -110,46 +87,24 @@ public class WarcBrowserServlet extends HttpServlet {
     out.close();
   }
 
-  public void writeTables(HttpServletResponse resp) throws IOException {
+  public void listCollections(HttpServletResponse resp) throws IOException {
     HTableDescriptor[] htableDescriptors = null;
     htableDescriptors = hbaseAdmin.listTables();
 
-    resp.setContentType("text/html");
+    resp.setContentType("text/plain");
     resp.setStatus(HttpServletResponse.SC_OK);
-    PrintWriter out = null;
-    out = resp.getWriter();
+    PrintWriter out = resp.getWriter();
 
-    out.println("<html>");
-    out.println("<body>");
     for (HTableDescriptor htableDescriptor : htableDescriptors) {
       String tableNameTmp = htableDescriptor.getNameAsString();
-      out.println("<br/>" + tableNameTmp + tableNameTmp + "</a>");
+      out.println(tableNameTmp);
     }
-    out.println("</body>");
-    out.println("</html>");
   }
 
-  public void tableSearch(HttpServletResponse resp, String tableName) throws IOException {
-    resp.setContentType("text/html");
-    resp.setStatus(HttpServletResponse.SC_OK);
-    PrintWriter out = null;
-    out = resp.getWriter();
-
-    out.println("<html>");
-    out.println("<body>");
-    out.println("<p>Enter URL:</p>");
-    out.println("<form method=\"GET\" action=\"\"/>");
-    out.println("<input name=\"query\" type=\"text\" size=\"100\"/><br/><br/>");
-    out.println("<input type=\"submit\" value=\"Submit\" />");
-    out.println("</form>");
-    out.println("</body>");
-    out.println("</html>");
-  }
-
-  public void writeDates(HttpServletResponse resp, String tableName, String query)
+  public void writeCaptureDates(HttpServletResponse resp, String tableName, String query)
       throws IOException {
     String q = UrlUtils.urlToKey(query);
-    HTableInterface table = pool.getTable(tableName);
+    HTableInterface table = hbaseConnection.getTable(tableName);
 
     Get get = new Get(Bytes.toBytes(q));
     get.setMaxVersions(HBaseTableManager.MAX_VERSIONS);
@@ -169,8 +124,7 @@ public class WarcBrowserServlet extends HttpServlet {
 
     resp.setContentType("text/plain");
     resp.setStatus(HttpServletResponse.SC_OK);
-    PrintWriter out = null;
-    out = resp.getWriter();
+    PrintWriter out = resp.getWriter();
 
     for (int i = 0; i < rs.raw().length; i++) {
       String date14digit = ArchiveUtils.get14DigitDate(new Date(dates[i]));
@@ -182,15 +136,14 @@ public class WarcBrowserServlet extends HttpServlet {
   public void writeContent(HttpServletResponse resp, String tableName, String url, String date14digit) 
       throws IOException {
     String key = UrlUtils.urlToKey(url);
-    HTableInterface table = pool.getTable(tableName);
+    HTableInterface table = hbaseConnection.getTable(tableName);
     Get get = new Get(Bytes.toBytes(key));
     try {
       get.setTimeStamp(ArchiveUtils.parse14DigitDate(date14digit).getTime());
     } catch (ParseException e) {
       e.printStackTrace();
     }
-    Result rs = null;
-    rs = table.get(get);
+    Result rs = table.get(get);
 
     if (rs.raw().length == 1) {
       // We should have exactly one result here...
