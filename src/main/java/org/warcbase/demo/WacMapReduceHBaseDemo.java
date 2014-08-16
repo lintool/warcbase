@@ -1,11 +1,6 @@
 package org.warcbase.demo;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Arrays;
 
 import org.apache.commons.cli.CommandLine;
@@ -34,10 +29,8 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
-import org.archive.io.arc.ARCReader;
-import org.archive.io.arc.ARCReaderFactory;
 import org.archive.io.arc.ARCRecord;
-import org.archive.io.arc.ARCRecordMetaData;
+import org.warcbase.data.ArcRecordUtils;
 
 public class WacMapReduceHBaseDemo extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(WacMapReduceHBaseDemo.class);
@@ -56,21 +49,13 @@ public class WacMapReduceHBaseDemo extends Configured implements Tool {
       // set KEY to row key (reversed URL)
       KEY.set(row.get());
       for (KeyValue kv : result.list()) {
-        ARCReader reader = (ARCReader) ARCReaderFactory.get(new String(row.get()),
-            new BufferedInputStream(new ByteArrayInputStream(kv.getValue())), false);
-
-        ARCRecord record = (ARCRecord) reader.get();
-        ARCRecordMetaData meta = record.getMetaData();
-        int bodyOffset = record.getBodyOffset();
         String mimeType = new String(kv.getQualifier());
 
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        DataOutputStream dout = new DataOutputStream(baos);
-        copyStream(record, (int) meta.getLength(), true, dout);
+        ARCRecord record = ArcRecordUtils.getRecord(kv.getValue());
+        byte[] body = ArcRecordUtils.getBodyContent(record);
 
         if (mimeType.startsWith("text")) {
-          String content = new String(baos.toByteArray(), "UTF8").substring(bodyOffset)
-              .replaceFirst("\\s+", "");
+          String content = new String(body, "UTF8").replaceFirst("\\s+", "");
           String excerpt = content.substring(0, Math.min(100, content.length()))
               .replaceAll("[\\n\\r]+", "");
           VALUE.set(mimeType + "\t" + kv.getTimestamp() + "\n" +
@@ -83,27 +68,6 @@ public class WacMapReduceHBaseDemo extends Configured implements Tool {
         context.write(KEY, VALUE);
       }
     }
-
-    protected final byte [] scratchbuffer = new byte[4 * 1024];
-
-    protected long copyStream(final InputStream is, final long recordLength,
-        boolean enforceLength, final DataOutputStream out) throws IOException {
-      int read = scratchbuffer.length;
-      long tot = 0;
-      while ((tot < recordLength) && (read = is.read(scratchbuffer)) != -1) {
-        int write = read;
-        // never write more than enforced length
-        write = (int) Math.min(write, recordLength - tot);
-        tot += read;
-        out.write(scratchbuffer, 0, write);
-      }
-      if (enforceLength && tot != recordLength) {
-        LOG.error("Read " + tot + " bytes but expected " + recordLength + " bytes. Continuing...");
-      }
-
-      return tot;
-    }
-
   }
 
   public WacMapReduceHBaseDemo() {}
