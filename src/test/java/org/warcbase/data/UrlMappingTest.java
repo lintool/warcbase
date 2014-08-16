@@ -17,7 +17,7 @@ import org.junit.Test;
 
 // This class aims to test the PrefixSearch functionality.
 
-public class UriMappingTest {
+public class UrlMappingTest {
   private UrlMapping map;
 
   @Before

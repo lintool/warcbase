@@ -27,7 +27,7 @@ import org.jwat.common.UriProfile;
 import org.jwat.warc.WarcReader;
 import org.jwat.warc.WarcReaderFactory;
 import org.jwat.warc.WarcRecord;
-import org.warcbase.data.UrlUtil;
+import org.warcbase.data.UrlUtils;
 
 public class SearchForUri {
   private static final String DIR_OPTION = "dir";
@@ -54,7 +54,7 @@ public class SearchForUri {
       date = record.getArchiveDateStr();
       type = record.getContentTypeStr();
       content = IOUtils.toByteArray(record.getPayloadContent());
-      key = UrlUtil.urlToKey(url);
+      key = UrlUtils.urlToKey(url);
       if (uri.equals(url)) {
         System.out.println("-----------------------------------");
         System.out.println("Found at " + inputArcFile.getName());
@@ -95,7 +95,7 @@ public class SearchForUri {
 
     while ((warcRecord = warcReader.getNextRecord()) != null) {
       url = warcRecord.header.warcTargetUriStr;
-      key = UrlUtil.urlToKey(url);
+      key = UrlUtils.urlToKey(url);
       Payload payload = warcRecord.getPayload();
       HttpHeader httpHeader = null;
       InputStream payloadStream = null;

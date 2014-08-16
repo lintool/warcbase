@@ -7,6 +7,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -20,7 +21,8 @@ public class HBaseTableManager {
   private static final Logger LOG = Logger.getLogger(HBaseTableManager.class);
 
   private static final String[] FAMILIES = { "c" };
-  private static final int MAX_KEY_VALUE_SIZE = IngestFiles.MAX_CONTENT_SIZE + 200;
+  private static final int MAX_KEY_VALUE_SIZE = IngestFiles.MAX_CONTENT_SIZE + 1024;
+  // Add a bit of padding for headers, etc.
   public static final int MAX_VERSIONS = Integer.MAX_VALUE;
 
   private final HTable table;
@@ -68,7 +70,7 @@ public class HBaseTableManager {
     try {
       long timestamp = ArchiveUtils.parse14DigitDate(date14digits).getTime();
       Put put = new Put(Bytes.toBytes(key));
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(type), timestamp, data);
       table.put(put);
       return true;

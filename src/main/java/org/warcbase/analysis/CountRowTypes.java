@@ -17,7 +17,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.log4j.Logger;
-import org.warcbase.data.UrlUtil;
+import org.warcbase.data.UrlUtils;
 
 import tl.lin.data.SortableEntries.Order;
 import tl.lin.data.fd.Object2IntFrequencyDistribution;
@@ -70,9 +70,9 @@ public class CountRowTypes {
       byte[] key = rr.getRow();
       String url = new String(key, "UTF8");
       count++;
-      domainCounter.increment(UrlUtil.getDomain(url));
+      domainCounter.increment(UrlUtils.getDomain(url));
 
-      String fileType = UrlUtil.getFileType(url);
+      String fileType = UrlUtils.getFileType(url);
       if (fileType.equals("")) {
         fileType = "unknown";
       }

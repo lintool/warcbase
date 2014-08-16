@@ -19,7 +19,7 @@ import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import org.warcbase.browser.WarcBrowser;
-import org.warcbase.data.UrlUtil;
+import org.warcbase.data.UrlUtils;
 
 import tl.lin.data.SortableEntries.Order;
 import tl.lin.data.fd.Object2IntFrequencyDistribution;
@@ -79,8 +79,8 @@ public class PrintAllUris {
     for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
       byte[] key = rr.getRow();
       url = new String(key, "UTF8");
-      url = UrlUtil.getDomain(url);
-      url = UrlUtil.reverseHostname(url);
+      url = UrlUtils.getDomain(url);
+      url = UrlUtils.reverseHostname(url);
       domainCounter.increment(url);
     }
 

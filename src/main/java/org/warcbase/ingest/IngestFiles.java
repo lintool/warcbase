@@ -21,7 +21,7 @@ import org.archive.io.arc.ARCReaderFactory;
 import org.archive.io.arc.ARCRecord;
 import org.archive.io.arc.ARCRecordMetaData;
 import org.warcbase.data.HBaseTableManager;
-import org.warcbase.data.UrlUtil;
+import org.warcbase.data.UrlUtils;
 
 public class IngestFiles {
   private static final String CREATE_OPTION = "create";
@@ -32,7 +32,7 @@ public class IngestFiles {
 
   private static final Logger LOG = Logger.getLogger(IngestFiles.class);
 
-  public static final int MAX_CONTENT_SIZE = 1024 * 1024;
+  public static final int MAX_CONTENT_SIZE = 10 * 1024 * 1024;
 
   private int cnt = 0;
   private int errors = 0;
@@ -59,8 +59,7 @@ public class IngestFiles {
       out.write(scratchbuffer, 0, write);
     }
     if (enforceLength && tot != recordLength) {
-      // throw exception if desired for read vs. declared mismatches
-      throw new IOException("Read " + tot + " but expected " + recordLength);
+      LOG.error("Read " + tot + " bytes but expected " + recordLength + " bytes. Continuing...");
     }
 
     return tot;
@@ -101,7 +100,7 @@ public class IngestFiles {
         dout.write("\n".getBytes());
         copyStream(r, (int) meta.getLength(), true, dout);
 
-        String key = UrlUtil.urlToKey(meta.getUrl());
+        String key = UrlUtils.urlToKey(meta.getUrl());
         String type = meta.getMimetype();
 
         if (key == null) {
@@ -125,12 +124,15 @@ public class IngestFiles {
         }
 
         if (cnt % 10000 == 0 && cnt > 0) {
-          LOG.info("Ingested " + cnt + " records into Hbase.");
+          LOG.info("Ingested " + cnt + " records into HBase.");
         }
       }
     } catch (Exception e) {
       LOG.error("Error ingesting file: " + inputArcFile);
       e.printStackTrace();
+    } catch (OutOfMemoryError e) {
+      LOG.error("Encountered OutOfMemoryError ingesting file: " + inputArcFile);
+      LOG.error("Attempting to continue...");
     } finally {
       if (reader != null)
         try {

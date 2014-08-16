@@ -7,7 +7,7 @@ import java.util.Arrays;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
-public class UrlUtil {
+public class UrlUtils {
   private static final Joiner JOINER =  Joiner.on(".");
 
   public static String urlToKey(String in) {
@@ -44,8 +44,8 @@ public class UrlUtil {
   }
 
   public static String keyToUrl(String reverse) {
-    String domain = UrlUtil.getDomain(reverse);
-    domain = UrlUtil.reverseHostname(domain);
+    String domain = UrlUtils.getDomain(reverse);
+    domain = UrlUtils.reverseHostname(domain);
     String[] splits = reverse.split("\\/");
     if (splits.length < 2) {
       return domain;
@@ -54,6 +54,7 @@ public class UrlUtil {
     return "http://" + domain + file;
   }
 
+  // This method doesn't really make sense... should really be going with MIME types
   public static String getFileType(String url) {
     if (url.length() > 0 && url.charAt(url.length() - 1) == '/')
       return "";
@@ -74,13 +75,5 @@ public class UrlUtil {
   public static String getDomain(String url) {
     String[] splits = url.split("\\/");
     return splits[0];
-  }
-
-  public static String getUriExtension(String thisTargetURI) {
-    if (thisTargetURI.length() > 3) {
-      return thisTargetURI.substring(thisTargetURI.length() - 3, thisTargetURI.length());
-    }
-
-    return "";
   }
 }
