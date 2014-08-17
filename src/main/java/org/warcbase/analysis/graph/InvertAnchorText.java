@@ -3,7 +3,6 @@ package org.warcbase.analysis.graph;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.DateFormat;
@@ -21,16 +20,9 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
-import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -39,7 +31,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
@@ -49,7 +40,6 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
 import org.warcbase.data.UrlMapping;
-import org.warcbase.data.UrlUtils;
 import org.warcbase.mapreduce.JwatArcInputFormat;
 
 import com.google.common.collect.Lists;
@@ -164,63 +154,6 @@ public class InvertAnchorText extends Configured implements Tool {
     }
   }
 
-  public static class InvertAnchorTextHBaseMapper extends TableMapper<IntWritable, Text>{
-    private final IntWritable key = new IntWritable();
-    private final Text value = new Text();
-
-    private UrlMapping fst;
-
-    @Override
-    public void setup(Context context) {
-      try {
-        Configuration conf = context.getConfiguration();
-        @SuppressWarnings("deprecation")
-        Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
-
-        // load FST UriMapping from file
-        fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
-        fst.loadMapping(localFiles[0].toString());
-      } catch (Exception e) {
-        e.printStackTrace();
-        throw new RuntimeException("Error Initializing UriMapping");
-      }
-    }
-
-    @Override
-    public void map(ImmutableBytesWritable row, Result result, Context context)
-        throws IOException, InterruptedException {
-      String url = UrlUtils.keyToUrl(new String(row.get()));
-
-      int srcId = fst.getID(url);
-      if ( srcId == -1) {
-        return;
-      }
-
-      for (KeyValue kv : result.list()) {
-        String type = new String(kv.getQualifier());
-
-        context.getCounter(MyCounters.RECORDS).increment(1);
-
-        if (!type.equals("text/html")) {
-          continue;
-        }
-
-        context.getCounter(MyCounters.HTML_PAGES).increment(1);
-
-        InputStream content = new ByteArrayInputStream(kv.getValue());
-        Int2ObjectMap<List<String>> anchors = InvertAnchorText.extractLinks(content, url, fst);
-        for (Int2ObjectMap.Entry<List<String>> entry : anchors.int2ObjectEntrySet()) {
-          key.set(entry.getIntKey());
-          for (String s : entry.getValue()) {
-            value.set(srcId + "\t" + s);
-            context.write(key, value);
-          }
-          context.getCounter(MyCounters.LINKS).increment(entry.getValue().size());
-        }
-      }
-    }
-  }
-
   /**
    * Creates an instance of this tool.
    */
@@ -229,7 +162,7 @@ public class InvertAnchorText extends Configured implements Tool {
   private static final String HDFS = "hdfs";
   private static final String HBASE = "hbase";
   private static final String OUTPUT = "output";
-  private static final String URI_MAPPING = "uriMapping";
+  private static final String URI_MAPPING = "urlMapping";
   private static final String BEGIN = "begin";
   private static final String END = "end";
   private static final String NUM_REDUCERS = "numReducers";
@@ -343,23 +276,7 @@ public class InvertAnchorText extends Configured implements Tool {
 
       job.setMapperClass(InvertAnchorTextHdfsMapper.class);
     } else { // HBase input
-      Scan scan = new Scan();
-      scan.addFamily("c".getBytes());
-      // Very conservative settings because a single row might not fit in memory
-      // if we have many captured version of a URL.
-      scan.setCaching(1);            // Controls the number of rows to pre-fetch
-      scan.setBatch(10);             // Controls the number of columns to fetch on a per row basis
-      scan.setCacheBlocks(false);    // Don't set to true for MR jobs
-      scan.setMaxVersions();         // We want all versions
-
-      TableMapReduceUtil.initTableMapperJob(
-        table,                  // input HBase table name
-        scan,                              // Scan instance to control CF and attribute selection
-        InvertAnchorTextHBaseMapper.class, // mapper
-        IntWritable.class,                 // mapper output key
-        Text.class,                        // mapper output value
-        job);
-      job.setOutputFormatClass(TextOutputFormat.class); // set output format
+      throw new UnsupportedOperationException("HBase not supported yet!");
     }
 
     FileOutputFormat.setOutputPath(job, new Path(outputPath));
