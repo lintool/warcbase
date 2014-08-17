@@ -1,7 +1,7 @@
 Warcbase
 ========
 
-Warcbase is an open-source platform for managing web archives built on HBase. The platform provides a flexible data model for storing and managing raw content as well as metadata and extracted knowledge. Tight integration with Hadoop provides powerful tools for analytics and data processing.
+Warcbase is an open-source platform for managing web archives built on Hadoop and HBase. The platform provides a flexible data model for storing and managing raw content as well as metadata and extracted knowledge. Tight integration with Hadoop provides powerful tools for analytics and data processing.
 
 
 Getting Started
@@ -97,12 +97,12 @@ There are two ways to build the URL mapping, the first of which is via a MapRedu
 ```
 $ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
    org.warcbase.data.UrlMappingMapReduceBuilder \
-   -input /hdfs/path/to/data -output fst
+   -input /hdfs/path/to/data -output fst.dat
 ```
 
 The FST data in this case will be written to HDFS. The potential issue with this approach is that building the FST is relatively memory hungry, and cluster memory is sometimes scarce.
 
-The alternative is to build the mapping locally on a machine with ample amounts of memory. To do this, first run a MapReduce job to extract all the unique URLs:
+The alternative is to build the mapping locally on a machine with sufficient memory. To do this, first run a MapReduce job to extract all the unique URLs:
 
 ```
 $ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
@@ -113,10 +113,10 @@ $ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
 Now copy the `urls/` directory out of HDFS and then run the following program:
 
 ```
-sh target/appassembler/bin/UrlMappingBuilder -input urls -output fst
+sh target/appassembler/bin/UrlMappingBuilder -input urls -output fst.dat
 ```
 
-Where `urls` is the output directory from above and `fst` is the name of the FST data file. We can examine the FST data with the following utility program:
+Where `urls` is the output directory from above and `fst.dat` is the name of the FST data file. We can examine the FST data with the following utility program:
 
 ```
 # Lookup by URL, fetches the integer id
@@ -138,18 +138,33 @@ We can use the mapping data (from above) to extract the webgraph and at the same
 ```
 $ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
    org.warcbase.data.ExtractLinks \
-   -input inputDir -output outputDir -uriMapping fstData -numReducers 1
+   -input /hdfs/path/to/data -output output -urlMapping fst.dat -numReducers 1
 ```
 
-Finally, instead of extracting links between individual URLs, we can extract the site-level webgraph by merging all URLs with common prefix into a "supernode". Link counts between supernodes represent the total number of links between their sub-URLs. In order to do this, following input files are required:
+Finally, instead of extracting links between individual URLs, we can extract the site-level webgraph by aggregating all URLs with common prefix into a "supernode". Link counts between supernodes represent the total number of links between individual URLs. In order to do this, following input files are needed:
 
 + a prefix file providing URL prefixes for each supernode (comma-delimited: id, URL prefix);
 + an FST mapping file to map individual URLs to unique integer ids (from above);
-+ a directory containing the original link graph (which can be extracted from the previous step).
 
-Then run this program:
+Then run this MapReduce program:
 
 ```
-$ sh target/appassembler/bin/ExtractSiteLinks -prefixfile prefix.data 
-  -fstfile fst.data -linkdir extract-links-data  -output sitelinks.data
+$ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
+   org.warcbase.data.ExtractSiteLinks \
+   -input /hdfs/path/to/data -output output \
+   -numReducers 1 -urlMapping fst.dat -prefixFile prefix.csv
 ```
+
+You'll find site-level webgraph in `output` on HDFS.
+
+
+License
+-------
+
+Licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+
+Acknowledgments
+---------------
+
+This work is supported in part by the National Science Foundation and by the Mellon Foundation (via Columbia University). Any opinions, findings, and conclusions or recommendations expressed are those of the researchers and do not necessarily reflect the views of the Sponsors.
