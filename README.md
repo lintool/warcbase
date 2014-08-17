@@ -155,7 +155,7 @@ $ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
    -numReducers 1 -urlMapping fst.dat -prefixFile prefix.csv
 ```
 
-You'll find site-level webgraph in `output` on HDFS.
+You'll find site-level webgraph in `output/` on HDFS.
 
 
 License
@@ -167,4 +167,4 @@ Licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/
 Acknowledgments
 ---------------
 
-This work is supported in part by the National Science Foundation and by the Mellon Foundation (via Columbia University). Any opinions, findings, and conclusions or recommendations expressed are those of the researchers and do not necessarily reflect the views of the Sponsors.
+This work is supported in part by the National Science Foundation and by the Mellon Foundation (via Columbia University). Any opinions, findings, and conclusions or recommendations expressed are those of the researchers and do not necessarily reflect the views of the sponsors.
