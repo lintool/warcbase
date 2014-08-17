@@ -6,11 +6,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
-import java.util.NavigableMap;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -21,27 +18,17 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
-import org.apache.hadoop.hbase.mapreduce.TableMapper;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
@@ -50,7 +37,6 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
-import org.warcbase.analysis.graph.PrefixMapping.PrefixNode;
 import org.warcbase.data.UrlMapping;
 import org.warcbase.mapreduce.JwatArcInputFormat;
 
@@ -63,24 +49,26 @@ public class ExtractLinks extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ExtractLinks.class);
   
   private static enum Records {
-    TOTAL, LINK_COUNT
+    RECORDS, LINKS
   };
 
-  public static class ExtractLinksHDFSMapper extends
+  public static class ExtractLinksHdfsMapper extends
       Mapper<LongWritable, ArcRecordBase, IntWritable, Text> {
-    private static final Joiner JOINER = Joiner.on(",");
-    public static final IntWritable KEY = new IntWritable();
-    private static final Text VALUE = new Text();
+    private final Joiner joiner = Joiner.on(",");
+    private final IntWritable outKey = new IntWritable();
+    private final Text outValue = new Text();
     
-    private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
-    private static UrlMapping fst;
-    private static String beginDate, endDate;
+    private final DateFormat df = new SimpleDateFormat("yyyyMMdd");
+    private UrlMapping fst;
+    private String beginDate, endDate;
+
     @Override
     public void setup(Context context) {
       try {
         Configuration conf = context.getConfiguration();
         beginDate = conf.get("beginDate");
         endDate = conf.get("endDate");
+
         // There appears to be a bug in getCacheFiles() which returns null,
         // even though getLocalCacheFiles is deprecated...
         @SuppressWarnings("deprecation")
@@ -93,8 +81,6 @@ public class ExtractLinks extends Configured implements Tool {
         fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());
         // simply assume only one file in distributed cache.
-        
-        
       } catch (Exception e) {
         e.printStackTrace();
         throw new RuntimeException("Error Initializing UriMapping");
@@ -102,9 +88,9 @@ public class ExtractLinks extends Configured implements Tool {
     }
 
     @Override
-    public void map(LongWritable key, ArcRecordBase record, Context context)
+    public void map(LongWritable k, ArcRecordBase record, Context context)
         throws IOException, InterruptedException {
-      context.getCounter(Records.TOTAL).increment(1);
+      context.getCounter(Records.RECORDS).increment(1);
       String url = record.getUrlStr();
       String type = record.getContentTypeStr();
       Date date = record.getArchiveDate();
@@ -128,106 +114,44 @@ public class ExtractLinks extends Configured implements Tool {
           return;
         }
       }
-      
+
       if (!type.equals("text/html")) {
         return;
       }
 
-      Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
-      Elements links = doc.select("a[href]"); // empty if none match
-
-      if (fst.getID(url) != -1) { // the url is already indexed in UriMapping
-        KEY.set(fst.getID(url));
-        IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
-        if (links != null) {
-          for (Element link : links) {
-            String linkUrl = link.attr("abs:href");
-            if (fst.getID(linkUrl) != -1) { // link already exists
-              linkUrlSet.add(fst.getID(linkUrl));
-            }
-          }
-
-          if (linkUrlSet.size() == 0) {
-            // Emit empty entry even if there aren't any outgoing links
-            VALUE.set("");
-            context.write(KEY, VALUE);
-            return;
-          }
-
-          VALUE.set(JOINER.join(linkUrlSet));
-          context.getCounter(Records.LINK_COUNT).increment(linkUrlSet.size());
-          context.write(KEY, VALUE);
-        }
-      }
-    }
-  }
-  
-  public static class ExtractLinksHBaseMapper extends TableMapper<IntWritable, Text>{
-    public static final byte[] COLUMN_FAMILY = Bytes.toBytes("links");
-    private static final Joiner JOINER = Joiner.on(",");
-    public static final IntWritable KEY = new IntWritable();
-    private static final Text VALUE = new Text();
-    
-    private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
-    private static UrlMapping fst;
-    
-    @Override
-    public void setup(Context context) {
-      try {
-        Configuration conf = context.getConfiguration();
-        @SuppressWarnings("deprecation")
-        Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
-
-        // load FST UriMapping from file
-        fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
-        fst.loadMapping(localFiles[0].toString());
-      } catch (Exception e) {
-        e.printStackTrace();
-        throw new RuntimeException("Error Initializing UriMapping");
-      }
-    }
-    
-    @Override
-    public void map(ImmutableBytesWritable row, Result result, Context context)
-        throws IOException, InterruptedException {
-      context.getCounter(Records.TOTAL).increment(1);
-      
-      int sourceFstId = fst.getID(new String(row.get()));
-      // rowkey(url) is not indexed in FST
-      if ( sourceFstId == -1) {
-        return; 
-      }
-      
-      KEY.set(sourceFstId);
-      IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
-      
-      // Assume HBase Table Format
-      // Row : sourceUrl
-      // Column Family : links
-      // Column Qualifier: targetUrl
-      // Value: 1 (1 denotes the existence of this link)
-      NavigableMap<byte[],byte[]> familyMap = result.getFamilyMap(COLUMN_FAMILY);
-      for(byte[] column: familyMap.keySet()){
-        //byte[] value = familyMap.get(column);
-        int targetFstId = fst.getID(new String(column));
-        if (targetFstId != -1){
-          linkUrlSet.add(targetFstId);
-        }
-      }
-      
-      if (linkUrlSet.size() == 0) {
-        // Emit empty entry even if there aren't any outgoing links
-        VALUE.set("");
-        context.write(KEY, VALUE);
+      if (fst.getID(url) == -1) {
         return;
       }
 
-      VALUE.set(JOINER.join(linkUrlSet));
-      context.getCounter(Records.LINK_COUNT).increment(linkUrlSet.size());
-      context.write(KEY, VALUE);
+      Document doc = Jsoup.parse(content, "ISO-8859-1", url);
+      Elements links = doc.select("a[href]");
+
+      if (links == null) {
+        return;
+      }
+      
+      outKey.set(fst.getID(url));
+      IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
+      for (Element link : links) {
+        String linkUrl = link.attr("abs:href");
+        if (fst.getID(linkUrl) != -1) { // link already exists
+          linkUrlSet.add(fst.getID(linkUrl));
+        }
+      }
+
+      if (linkUrlSet.size() == 0) {
+        // Emit empty entry even if there aren't any outgoing links
+        outValue.set("");
+        context.write(outKey, outValue);
+        return;
+      }
+
+      outValue.set(joiner.join(linkUrlSet));
+      context.getCounter(Records.LINKS).increment(linkUrlSet.size());
+      context.write(outKey, outValue);
     }
   }
-  
+
   /**
    * Creates an instance of this tool.
    */
@@ -236,7 +160,7 @@ public class ExtractLinks extends Configured implements Tool {
   private static final String HDFS = "hdfs";
   private static final String HBASE = "hbase";
   private static final String OUTPUT = "output";
-  private static final String URI_MAPPING = "uriMapping";
+  private static final String URI_MAPPING = "urlMapping";
   private static final String BEGIN = "begin";
   private static final String END = "end";
   private static String beginDate = null, endDate = null;
@@ -347,24 +271,9 @@ public class ExtractLinks extends Configured implements Tool {
       job.setMapOutputKeyClass(IntWritable.class);
       job.setMapOutputValueClass(Text.class);
   
-      job.setMapperClass(ExtractLinksHDFSMapper.class);
+      job.setMapperClass(ExtractLinksHdfsMapper.class);
     } else { // HBase input
-      Scan scan = new Scan();
-      // Very conservative settings because a single row might not fit in memory
-      // if we have many captured version of a URL.
-      scan.setCaching(1);            // Controls the number of rows to pre-fetch
-      scan.setBatch(10);             // Controls the number of columns to fetch on a per row basis
-      scan.setCacheBlocks(false);    // Don't set to true for MR jobs
-      scan.setMaxVersions();         // We want all versions
-
-      TableMapReduceUtil.initTableMapperJob(
-        HBaseTableName,                  // input HBase table name
-        scan,                            // Scan instance to control CF and attribute selection
-        ExtractLinksHBaseMapper.class,   // mapper 
-        IntWritable.class,               // mapper output key
-        Text.class,                      // mapper output value
-        job);
-      job.setOutputFormatClass(TextOutputFormat.class); // set output format
+      throw new UnsupportedOperationException("HBase not supported yet!");
     }
     
     FileOutputFormat.setOutputPath(job, new Path(outputPath));
@@ -377,8 +286,8 @@ public class ExtractLinks extends Configured implements Tool {
     LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
 
     Counters counters = job.getCounters();
-    int numRecords = (int) counters.findCounter(Records.TOTAL).getValue();
-    int numLinks = (int) counters.findCounter(Records.LINK_COUNT).getValue();
+    int numRecords = (int) counters.findCounter(Records.RECORDS).getValue();
+    int numLinks = (int) counters.findCounter(Records.LINKS).getValue();
     LOG.info("Read " + numRecords + " records.");
     LOG.info("Extracts " + numLinks + " links.");
 

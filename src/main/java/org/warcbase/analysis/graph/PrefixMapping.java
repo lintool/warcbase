@@ -60,7 +60,6 @@ public class PrefixMapping {
     ArrayList<PrefixNode> prefixes = new ArrayList<PrefixNode>();
     CSVReader reader = new CSVReader(new FileReader(prefixFile), ',');
     reader.readNext();
-    String line;
     String[] record = null;
     while ((record = reader.readNext()) != null) {
       int id = Integer.valueOf(record[0]);
