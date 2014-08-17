@@ -29,10 +29,10 @@ import org.jwat.warc.WarcReaderFactory;
 import org.jwat.warc.WarcRecord;
 import org.warcbase.data.UrlUtils;
 
-public class SearchForUri {
+public class SearchForUrl {
   private static final String DIR_OPTION = "dir";
   private static final String URI_OPTION = "uri";
-  private static final Logger LOG = Logger.getLogger(SearchForUri.class);
+  private static final Logger LOG = Logger.getLogger(SearchForUrl.class);
   private static final UriProfile uriProfile = UriProfile.RFC3986_ABS_16BIT_LAX;
   private static final boolean bBlockDigestEnabled = true;
   private static final boolean bPayloadDigestEnabled = true;
@@ -174,7 +174,7 @@ public class SearchForUri {
     String uri = cmdline.getOptionValue(URI_OPTION);
     File inputFolder = new File(path);
 
-    SearchForUri search = new SearchForUri();
+    SearchForUrl search = new SearchForUrl();
     search.searchFolder(inputFolder, uri);
   }
 }
