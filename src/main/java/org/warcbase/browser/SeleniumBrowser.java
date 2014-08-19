@@ -10,21 +10,21 @@ import org.openqa.selenium.firefox.FirefoxDriver;
 
 import com.google.common.collect.Lists;
 
+// Hard-coded currently for the Congress108 collection; should parameterize.
 public class SeleniumBrowser {
+  // These make for interesting starting points for browsing.
   private static final String[] jumpTargets = new String[] {
-    //"http://localhost:9090/wayback/*/http://www.house.gov/",
-    //"http://localhost:9090/wayback/*/http://www.senate.gov/",
-    "http://localhost:9090/wayback/*/http://www.house.gov/house/MemberWWW.html",
-    "http://localhost:9090/wayback/*/http://www.house.gov/house/CommitteeWWW.html",
     "http://localhost:9090/wayback/*/http://www.senate.gov/general/contact_information/senators_cfm.cfm",
-    "http://localhost:9090/wayback/*/http://www.senate.gov/pagelayout/committees/d_three_sections_with_teasers/committees_home.htm"
+    "http://localhost:9090/wayback/*/http://www.house.gov/house/MemberWWW.html",
+    "http://localhost:9090/wayback/*/http://www.senate.gov/pagelayout/committees/d_three_sections_with_teasers/committees_home.htm",
+    "http://localhost:9090/wayback/*/http://www.house.gov/house/CommitteeWWW.html",
   };
 
   public static void main(String[] args) throws InterruptedException {
     WebDriver driver = new FirefoxDriver();
     Random r = new Random(System.currentTimeMillis());
 
-    driver.get("http://localhost:9090/wayback/*/http://www.house.gov/");
+    driver.get(jumpTargets[r.nextInt(jumpTargets.length)]);
 
     for (int i = 0; i < 1000; i++) {
       List<WebElement> links = driver.findElements(By.tagName("a"));
