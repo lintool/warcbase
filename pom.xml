@@ -147,6 +147,10 @@
               <mainClass>org.warcbase.analysis.DetectDuplicates</mainClass>
               <name>DetectDuplicates</name>
             </program>
+            <program>
+              <mainClass>org.warcbase.browser.SeleniumBrowser</mainClass>
+              <name>SeleniumBrowser</name>
+            </program>
           </programs>
         </configuration>
       </plugin>
@@ -438,6 +442,17 @@
       <version>0.0.2-SNAPSHOT</version>
     </dependency>
     -->
+
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>2.42.2</version>
+      <exclusions>
+        <exclusion><groupId>org.seleniumhq.selenium</groupId><artifactId>selenium-htmlunit-driver</artifactId></exclusion>
+        <exclusion><groupId>org.seleniumhq.selenium</groupId><artifactId>selenium-ie-driver</artifactId></exclusion>
+        <exclusion><groupId>org.webbitserver</groupId><artifactId>webbit</artifactId></exclusion>
+      </exclusions>
+    </dependency>
 
   </dependencies>
 </project>
