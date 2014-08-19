@@ -1,8 +1,11 @@
 package org.warcbase.wayback;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -77,7 +80,6 @@ public class WarcbaseResourceIndex extends LocalResourceIndex {
 
   protected List<CaptureFilterGroup> getRequestFilterGroups(WaybackRequest r)
       throws BadQueryException {
-
     ArrayList<CaptureFilterGroup> groups = new ArrayList<CaptureFilterGroup>();
     for (FilterGroupFactory f : fgFactories) {
       groups.add(f.getGroup(r, canonicalizer, this));
@@ -86,9 +88,7 @@ public class WarcbaseResourceIndex extends LocalResourceIndex {
   }
 
   public CaptureSearchResults doCaptureQuery(WaybackRequest wbRequest, int type)
-      throws ResourceIndexNotAvailableException, ResourceNotInArchiveException, BadQueryException,
-      AccessControlException {
-
+      throws ResourceIndexNotAvailableException, ResourceNotInArchiveException, BadQueryException, AccessControlException {
     wbRequest.setResultsPerPage(100);
     String urlKey;
     try {
@@ -96,8 +96,6 @@ public class WarcbaseResourceIndex extends LocalResourceIndex {
     } catch (IOException e) {
       throw new BadQueryException("Bad URL(" + wbRequest.getRequestUrl() + ")");
     }
-
-    System.out.println(">>> Searching for " + urlKey + " " + wbRequest.getReplayTimestamp());
 
     CaptureSearchResults results = new CaptureSearchResults();
     ObjectFilterChain<CaptureSearchResult> filters = new ObjectFilterChain<CaptureSearchResult>();
@@ -136,20 +134,16 @@ public class WarcbaseResourceIndex extends LocalResourceIndex {
 
     window.annotateResults(results);
 
-    for (CaptureSearchResult r : results) {
-      System.out.println(">>> " + r.getOriginalUrl() + " " + r.getCaptureTimestamp());
-    }
     return results;
   }
 
   public CloseableIterator<CaptureSearchResult> getIterator(final String url, final String urlKey)
       throws ResourceNotInArchiveException, ResourceIndexNotAvailableException {
-
     final String resourceUrl = "http://" + host + ":" + port + "/" + table + "/*/" + url;
-    System.out.println(">>> fetching resource url: " + resourceUrl);
+
     List<String> lines = null;
     try {
-      byte[] bytes = WarcbaseResourceStore.getAsByteArray(new URL(resourceUrl));
+      byte[] bytes = fetchUrl(new URL(resourceUrl));
       if (bytes.length == 0) {
         throw new ResourceNotInArchiveException("No entries found in: " + resourceUrl);
       }
@@ -193,6 +187,32 @@ public class WarcbaseResourceIndex extends LocalResourceIndex {
 
       @Override public void close() throws IOException {}
     };
+  }
+
+  private static byte[] fetchUrl(URL url) throws IOException {
+    URLConnection connection = url.openConnection();
+    InputStream in = connection.getInputStream();
+    int contentLength = connection.getContentLength();
+
+    ByteArrayOutputStream tmpOut;
+    if (contentLength != -1) {
+      tmpOut = new ByteArrayOutputStream(contentLength);
+    } else {
+      tmpOut = new ByteArrayOutputStream(16384);
+    }
+
+    byte[] buf = new byte[512];
+    while (true) {
+      int len = in.read(buf);
+      if (len == -1) {
+        break;
+      }
+      tmpOut.write(buf, 0, len);
+    }
+    in.close();
+    tmpOut.close(); // Does nothing, but good hygiene
+
+    return tmpOut.toByteArray();
   }
 
   public void setMaxRecords(int maxRecords) {
