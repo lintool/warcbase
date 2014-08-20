@@ -21,6 +21,10 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -44,15 +48,14 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jwat.arc.ArcRecordBase;
-import org.warcbase.mapreduce.ArcInputFormat;
-
-import bsh.Console;
+import org.warcbase.mapreduce.JwatArcInputFormat;
+import org.warcbase.data.UrlMapping;
 
 import com.google.common.base.Joiner;
 
 public class IngestWebGraph extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(IngestWebGraph.class);
-  
+
   private static enum Records {
     TOTAL, LINK_COUNT
   };
@@ -62,10 +65,11 @@ public class IngestWebGraph extends Configured implements Tool {
     private static final Joiner JOINER = Joiner.on(",");
     public static final Text KEY = new Text();
     private static final Text VALUE = new Text();
-    
+
     private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
-    private static UriMapping fst;
+    private static UrlMapping fst;
     private static String beginDate, endDate;
+
     @Override
     public void setup(Context context) {
       try {
@@ -81,11 +85,10 @@ public class IngestWebGraph extends Configured implements Tool {
         System.out.println("cache contents: " + Arrays.toString(localFiles));
 
         // load FST UriMapping from file
-        fst = (UriMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        fst = (UrlMapping) Class.forName(conf.get("UrlMappingClass")).newInstance();
         fst.loadMapping(localFiles[0].toString());
         // simply assume only one file in distributed cache.
-        
-        
+
       } catch (Exception e) {
         e.printStackTrace();
         throw new RuntimeException("Error Initializing UriMapping");
@@ -93,8 +96,8 @@ public class IngestWebGraph extends Configured implements Tool {
     }
 
     @Override
-    public void map(LongWritable key, ArcRecordBase record, Context context)
-        throws IOException, InterruptedException {
+    public void map(LongWritable key, ArcRecordBase record, Context context) throws IOException,
+        InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
       String url = record.getUrlStr();
       String type = record.getContentTypeStr();
@@ -104,9 +107,9 @@ public class IngestWebGraph extends Configured implements Tool {
       }
       String time = df.format(date);
       long epoch = date.getTime();
-      
+
       InputStream content = record.getPayloadContent();
-      
+
       if (beginDate != null && endDate != null) {
         if (time.compareTo(beginDate) < 0 || time.compareTo(endDate) > 0) {
           return;
@@ -120,7 +123,7 @@ public class IngestWebGraph extends Configured implements Tool {
           return;
         }
       }
-      
+
       if (!type.equals("text/html")) {
         return;
       }
@@ -129,7 +132,7 @@ public class IngestWebGraph extends Configured implements Tool {
       Elements links = doc.select("a[href]"); // empty if none match
 
       if (fst.getID(url) != -1) { // the url is already indexed in UriMapping
-        KEY.set(url+","+epoch);
+        KEY.set(url + "," + epoch);
         IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
         if (links != null) {
           for (Element link : links) {
@@ -145,7 +148,7 @@ public class IngestWebGraph extends Configured implements Tool {
             context.write(KEY, VALUE);
             return;
           }
- 
+
           VALUE.set(JOINER.join(linkUrlSet));
           context.getCounter(Records.LINK_COUNT).increment(linkUrlSet.size());
           context.write(KEY, VALUE);
@@ -153,29 +156,69 @@ public class IngestWebGraph extends Configured implements Tool {
       }
     }
   }
-  
-  public static class IngestWebGraphHBaseReducer extends 
-      TableReducer<Text, IntWritable, ImmutableBytesWritable> {
-    public static final byte[] CF = "links".getBytes();
-    public static ImmutableBytesWritable ROWKEY = new ImmutableBytesWritable();
-    
-    public void reduce(Text key, Iterable<Text> values, Context context) throws Exception {
-      String[] groups = new String(key.getBytes()).split(",");
+
+  public static class IngestWebGraphHBaseReducer extends
+      TableReducer<Text, Text, ImmutableBytesWritable> {
+
+    @Override
+    public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,
+        InterruptedException {
+      LOG.info(key.toString() + " " + new String(key.getBytes()));
+      String[] groups = key.toString().split(",");
       String sourceUrl = groups[0];
       String timestamp = groups[1];
-      ROWKEY.set(sourceUrl.getBytes());
-      Put p = new Put(sourceUrl.getBytes());
-      for(Text target_ids: values){
-        LOG.info(sourceUrl+" "+timestamp+" "+target_ids.toString());
+      String reverseUrl = reversedUrl(sourceUrl);
+      Put p = new Put(reverseUrl.getBytes());
+      for (Text target_ids : values) {
         p.add(CF, timestamp.getBytes(), target_ids.getBytes());
       }
-      context.write(ROWKEY, p);
+      context.write(null, p);
     }
   }
+
   /**
    * Creates an instance of this tool.
    */
+  public static String reversedUrl(String url) {
+    // url: http://www.bbc.com/dir/index.php
+    // hostname: www.bbc.com
+    int beginIndex = url.indexOf("://");
+    String tmp = url.replace("://", "");
+    int endIndex = tmp.indexOf("/");
+    String hostname = tmp.substring(beginIndex, endIndex);
+    String[] arr = hostname.split("\\.");
+    String reverseHostName = "";
+    for (int i = arr.length - 1; i > 0; i--) {
+      reverseHostName += arr[i] + ".";
+    }
+    reverseHostName += arr[0];
+    return url.replace(hostname, reverseHostName);
+  }
+
+  public static void CreateTable(Configuration conf, String tableName) throws IOException,
+      ZooKeeperConnectionException {
+    HBaseAdmin hbase = new HBaseAdmin(conf);
+    HTableDescriptor[] wordcounts = hbase.listTables(tableName);
+
+    if (wordcounts.length != 0) { // Drop Table if Exists
+      hbase.disableTable(tableName);
+      hbase.deleteTable(tableName);
+    }
+
+    HTableDescriptor wordcount = new HTableDescriptor(tableName);
+    hbase.createTable(wordcount);
+    // Cannot edit a stucture on an active table.
+    hbase.disableTable(tableName);
+    HColumnDescriptor columnFamily = new HColumnDescriptor(CF);
+    hbase.addColumn(tableName, columnFamily);
+    hbase.enableTable(tableName);
+
+    hbase.close();
+  }
+
   public IngestWebGraph() {}
+
+  public static final byte[] CF = "links".getBytes();
 
   private static final String HDFS = "hdfs";
   private static final String OUTPUT = "output";
@@ -216,8 +259,7 @@ public class IngestWebGraph extends Configured implements Tool {
       return -1;
     }
 
-    if ( !cmdline.hasOption(HDFS) || !cmdline.hasOption(OUTPUT) 
-        || !cmdline.hasOption(URI_MAPPING)) {
+    if (!cmdline.hasOption(HDFS) || !cmdline.hasOption(OUTPUT) || !cmdline.hasOption(URI_MAPPING)) {
       System.out.println("args: " + Arrays.toString(args));
       HelpFormatter formatter = new HelpFormatter();
       formatter.setWidth(120);
@@ -235,7 +277,7 @@ public class IngestWebGraph extends Configured implements Tool {
     LOG.info(" - HDFS input path: " + HDFSPath);
     LOG.info(" - HBase output path: " + HBaseTableName);
     LOG.info(" - mapping file path: " + mappingPath);
-    
+
     int numReducers = DEFAULT_NUM_REDUCERS;
     if (cmdline.hasOption(NUM_REDUCERS)) {
       numReducers = Integer.parseInt(cmdline.getOptionValue(NUM_REDUCERS));
@@ -253,36 +295,36 @@ public class IngestWebGraph extends Configured implements Tool {
     if (!fs.exists(mappingPath)) {
       throw new Exception("mappingPath doesn't exist: " + mappingPath);
     }
-    
-    Configuration conf = getConf();
+
+    Configuration conf = HBaseConfiguration.create(getConf());
     conf.set("hbase.zookeeper.quorum", "bespinrm.umiacs.umd.edu");
     // passing global variable values to individual nodes
-    if(beginDate != null) {
+    if (beginDate != null) {
       conf.set("beginDate", beginDate);
     }
-    if(endDate != null) {
+    if (endDate != null) {
       conf.set("endDate", endDate);
     }
-      
+    CreateTable(conf, HBaseTableName);
     Job job = Job.getInstance(conf, IngestWebGraph.class.getSimpleName());
     job.setJarByClass(IngestWebGraph.class);
 
-    job.getConfiguration().set("UriMappingClass", UriMapping.class.getCanonicalName());
+    job.getConfiguration().set("UrlMappingClass", UrlMapping.class.getCanonicalName());
     // Put the mapping file in the distributed cache so each map worker will have it.
     job.addCacheFile(mappingPath.toUri());
-    
+
     FileInputFormat.setInputPaths(job, new Path(HDFSPath));
-  
-    job.setInputFormatClass(ArcInputFormat.class);
+
+    job.setInputFormatClass(JwatArcInputFormat.class);
     // set map (key,value) output format
-    job.setMapOutputKeyClass(IntWritable.class);
+    job.setMapOutputKeyClass(Text.class);
     job.setMapOutputValueClass(Text.class);
-    job.setNumReduceTasks(numReducers); // no reducers
-  
+    job.setNumReduceTasks(numReducers);
+
     job.setMapperClass(IngestWebGraphHDFSMapper.class);
-    TableMapReduceUtil.initTableReducerJob(
-        HBaseTableName,        // output table
-        IngestWebGraphHBaseReducer.class,    // reducer class
+    // set HBase Reducer output
+    TableMapReduceUtil.initTableReducerJob(HBaseTableName, // output table
+        IngestWebGraphHBaseReducer.class, // reducer class
         job);
 
     long startTime = System.currentTimeMillis();
