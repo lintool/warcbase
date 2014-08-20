@@ -51,6 +51,8 @@ import org.jwat.arc.ArcRecordBase;
 import org.warcbase.mapreduce.JwatArcInputFormat;
 import org.warcbase.data.UrlMapping;
 
+import tl.lin.data.pair.PairOfStringLong;
+
 import com.google.common.base.Joiner;
 
 public class IngestWebGraph extends Configured implements Tool {
@@ -61,9 +63,9 @@ public class IngestWebGraph extends Configured implements Tool {
   };
 
   public static class IngestWebGraphHDFSMapper extends
-      Mapper<LongWritable, ArcRecordBase, Text, Text> {
+      Mapper<LongWritable, ArcRecordBase, PairOfStringLong, Text> {
     private static final Joiner JOINER = Joiner.on(",");
-    public static final Text KEY = new Text();
+    private static final PairOfStringLong KEY = new PairOfStringLong();
     private static final Text VALUE = new Text();
 
     private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
@@ -106,7 +108,7 @@ public class IngestWebGraph extends Configured implements Tool {
         return;
       }
       String time = df.format(date);
-      long epoch = date.getTime();
+      Long epoch = date.getTime();
 
       InputStream content = record.getPayloadContent();
 
@@ -132,7 +134,7 @@ public class IngestWebGraph extends Configured implements Tool {
       Elements links = doc.select("a[href]"); // empty if none match
 
       if (fst.getID(url) != -1) { // the url is already indexed in UriMapping
-        KEY.set(url + "," + epoch);
+        KEY.set(url, epoch);
         IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
         if (links != null) {
           for (Element link : links) {
@@ -143,9 +145,7 @@ public class IngestWebGraph extends Configured implements Tool {
           }
 
           if (linkUrlSet.size() == 0) {
-            // Emit empty entry even if there aren't any outgoing links
-            VALUE.set("");
-            context.write(KEY, VALUE);
+            // skip if there aren't any outgoing links
             return;
           }
 
@@ -158,19 +158,17 @@ public class IngestWebGraph extends Configured implements Tool {
   }
 
   public static class IngestWebGraphHBaseReducer extends
-      TableReducer<Text, Text, ImmutableBytesWritable> {
+      TableReducer<PairOfStringLong, Text, ImmutableBytesWritable> {
 
     @Override
-    public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,
+    public void reduce(PairOfStringLong key, Iterable<Text> values, Context context) throws IOException,
         InterruptedException {
-      LOG.info(key.toString() + " " + new String(key.getBytes()));
-      String[] groups = key.toString().split(",");
-      String sourceUrl = groups[0];
-      String timestamp = groups[1];
-      String reverseUrl = reversedUrl(sourceUrl);
+      String url = key.getLeftElement();
+      Long epoch = key.getRightElement();
+      String reverseUrl = UrlUtils.urlToKey(url);
       Put p = new Put(reverseUrl.getBytes());
       for (Text target_ids : values) {
-        p.add(CF, timestamp.getBytes(), target_ids.getBytes());
+        p.add(CF, epoch.toString().getBytes(), target_ids.getBytes());
       }
       context.write(null, p);
     }
@@ -179,34 +177,19 @@ public class IngestWebGraph extends Configured implements Tool {
   /**
    * Creates an instance of this tool.
    */
-  public static String reversedUrl(String url) {
-    // url: http://www.bbc.com/dir/index.php
-    // hostname: www.bbc.com
-    int beginIndex = url.indexOf("://");
-    String tmp = url.replace("://", "");
-    int endIndex = tmp.indexOf("/");
-    String hostname = tmp.substring(beginIndex, endIndex);
-    String[] arr = hostname.split("\\.");
-    String reverseHostName = "";
-    for (int i = arr.length - 1; i > 0; i--) {
-      reverseHostName += arr[i] + ".";
-    }
-    reverseHostName += arr[0];
-    return url.replace(hostname, reverseHostName);
-  }
 
   public static void CreateTable(Configuration conf, String tableName) throws IOException,
       ZooKeeperConnectionException {
     HBaseAdmin hbase = new HBaseAdmin(conf);
-    HTableDescriptor[] wordcounts = hbase.listTables(tableName);
+    HTableDescriptor[] tableDescriptors = hbase.listTables(tableName);
 
-    if (wordcounts.length != 0) { // Drop Table if Exists
+    if (tableDescriptors.length != 0) { // Drop Table if Exists
       hbase.disableTable(tableName);
       hbase.deleteTable(tableName);
     }
 
-    HTableDescriptor wordcount = new HTableDescriptor(tableName);
-    hbase.createTable(wordcount);
+    HTableDescriptor table = new HTableDescriptor(tableName);
+    hbase.createTable(table);
     // Cannot edit a stucture on an active table.
     hbase.disableTable(tableName);
     HColumnDescriptor columnFamily = new HColumnDescriptor(CF);
@@ -218,7 +201,7 @@ public class IngestWebGraph extends Configured implements Tool {
 
   public IngestWebGraph() {}
 
-  public static final byte[] CF = "links".getBytes();
+  private static final byte[] CF = "links".getBytes();
 
   private static final String HDFS = "hdfs";
   private static final String OUTPUT = "output";
@@ -317,7 +300,7 @@ public class IngestWebGraph extends Configured implements Tool {
 
     job.setInputFormatClass(JwatArcInputFormat.class);
     // set map (key,value) output format
-    job.setMapOutputKeyClass(Text.class);
+    job.setMapOutputKeyClass(PairOfStringLong.class);
     job.setMapOutputValueClass(Text.class);
     job.setNumReduceTasks(numReducers);
 
