@@ -48,6 +48,7 @@ public class JwatArcInputFormat extends FileInputFormat<LongWritable, ArcRecordB
     private Decompressor decompressor;
     private DataInputStream in;
 
+    @Override
     public void initialize(InputSplit genericSplit, TaskAttemptContext context) throws IOException {
       FileSplit split = (FileSplit) genericSplit;
       Configuration job = context.getConfiguration();
@@ -88,6 +89,7 @@ public class JwatArcInputFormat extends FileInputFormat<LongWritable, ArcRecordB
       return retVal;
     }
 
+    @Override
     public boolean nextKeyValue() throws IOException {
       if (key == null) {
         key = new LongWritable();
@@ -111,9 +113,7 @@ public class JwatArcInputFormat extends FileInputFormat<LongWritable, ArcRecordB
       return value;
     }
 
-    /**
-     * Get the progress within the split
-     */
+    @Override
     public float getProgress() throws IOException {
       if (start == end) {
         return 0.0f;
@@ -122,6 +122,7 @@ public class JwatArcInputFormat extends FileInputFormat<LongWritable, ArcRecordB
       }
     }
 
+    @Override
     public synchronized void close() throws IOException {
       try {
         if (in != null) {
