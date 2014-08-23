@@ -94,6 +94,7 @@ public class ExtractLinksWac extends Configured implements Tool {
     public void map(LongWritable k, ArcRecordWritable r, Context context)
         throws IOException, InterruptedException {
       context.getCounter(Counts.RECORDS).increment(1);
+
       ARCRecord record = r.getRecord();
       ARCRecordMetaData meta = record.getMetaData();
       String url = meta.getUrl();

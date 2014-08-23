@@ -4,7 +4,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -34,13 +33,17 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
+import org.archive.io.arc.ARCRecord;
+import org.archive.io.arc.ARCRecordMetaData;
+import org.archive.util.ArchiveUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.jwat.arc.ArcRecordBase;
+import org.warcbase.data.ArcRecordUtils;
 import org.warcbase.data.UrlMapping;
-import org.warcbase.mapreduce.JwatArcInputFormat;
+import org.warcbase.io.ArcRecordWritable;
+import org.warcbase.mapreduce.WacArcInputFormat;
 
 import com.google.common.collect.Lists;
 
@@ -54,9 +57,9 @@ public class InvertAnchorText extends Configured implements Tool {
     RECORDS, HTML_PAGES, LINKS
   };
 
-  private static Int2ObjectMap<List<String>> extractLinks(InputStream content, String url, UrlMapping fst)
+  private static Int2ObjectMap<List<String>> extractLinks(String content, String url, UrlMapping fst)
       throws IOException {
-    Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
+    Document doc = Jsoup.parse(content, url);
     Elements links = doc.select("a[href]");
 
     // Note that if there are outgoing links to the same destination page, we retain all copies
@@ -81,7 +84,7 @@ public class InvertAnchorText extends Configured implements Tool {
   }
 
   public static class InvertAnchorTextMapper extends
-      Mapper<LongWritable, ArcRecordBase, IntWritable, Text> {
+      Mapper<LongWritable, ArcRecordWritable, IntWritable, Text> {
     private final DateFormat df = new SimpleDateFormat("yyyyMMdd");
     private final IntWritable key = new IntWritable();
     private final Text value = new Text();
@@ -111,15 +114,25 @@ public class InvertAnchorText extends Configured implements Tool {
     }
 
     @Override
-    public void map(LongWritable k, ArcRecordBase record, Context context)
+    public void map(LongWritable k, ArcRecordWritable r, Context context)
         throws IOException, InterruptedException {
       context.getCounter(Counts.RECORDS).increment(1);
 
-      String url = record.getUrlStr();
-      String type = record.getContentTypeStr();
-      Date date = record.getArchiveDate();
+      ARCRecord record = r.getRecord();
+      ARCRecordMetaData meta = record.getMetaData();
+      String url = meta.getUrl();
+      String type = meta.getMimetype();
+      Date date = null;
+      try {
+        date = ArchiveUtils.parse14DigitDate(meta.getDate());
+      } catch (java.text.ParseException e) {
+        e.printStackTrace();
+      }
+
+      if (date == null) {
+        return;
+      }
       String time = df.format(date);
-      InputStream content = record.getPayloadContent();
 
       if (beginDate != null && endDate != null) {
         if (time.compareTo(beginDate) < 0 || time.compareTo(endDate) > 0) {
@@ -142,7 +155,8 @@ public class InvertAnchorText extends Configured implements Tool {
 
       context.getCounter(Counts.HTML_PAGES).increment(1);
 
-      Int2ObjectMap<List<String>> anchors = InvertAnchorText.extractLinks(content, url, fst);
+      byte[] bytes = ArcRecordUtils.getBodyContent(record);
+      Int2ObjectMap<List<String>> anchors = InvertAnchorText.extractLinks(new String(bytes, "UTF8"), url, fst);
       for (Int2ObjectMap.Entry<List<String>> entry : anchors.int2ObjectEntrySet()) {
         key.set(entry.getIntKey());
         for (String s : entry.getValue()) {
@@ -269,7 +283,7 @@ public class InvertAnchorText extends Configured implements Tool {
     if (isHdfs) { // HDFS input
       FileInputFormat.setInputPaths(job, new Path(path));
 
-      job.setInputFormatClass(JwatArcInputFormat.class);
+      job.setInputFormatClass(WacArcInputFormat.class);
       // set map (key,value) output format
       job.setMapOutputKeyClass(IntWritable.class);
       job.setMapOutputValueClass(Text.class);

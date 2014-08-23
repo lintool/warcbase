@@ -3,7 +3,6 @@ package org.warcbase.analysis.graph;
 import it.unimi.dsi.fastutil.ints.Int2IntAVLTreeMap;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -37,14 +36,18 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
+import org.archive.io.arc.ARCRecord;
+import org.archive.io.arc.ARCRecordMetaData;
+import org.archive.util.ArchiveUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.jwat.arc.ArcRecordBase;
 import org.warcbase.analysis.graph.PrefixMapping.PrefixNode;
+import org.warcbase.data.ArcRecordUtils;
 import org.warcbase.data.UrlMapping;
-import org.warcbase.mapreduce.JwatArcInputFormat;
+import org.warcbase.io.ArcRecordWritable;
+import org.warcbase.mapreduce.WacArcInputFormat;
 
 public class ExtractSiteLinks extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ExtractSiteLinks.class);
@@ -54,7 +57,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
   };
 
   public static class ExtractSiteLinksMapper extends
-      Mapper<LongWritable, ArcRecordBase, IntWritable, IntWritable> {
+      Mapper<LongWritable, ArcRecordWritable, IntWritable, IntWritable> {
     private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
     private static String beginDate, endDate;
     private static final IntWritable KEY = new IntWritable();
@@ -88,17 +91,23 @@ public class ExtractSiteLinks extends Configured implements Tool {
     }
 
     @Override
-    public void map(LongWritable key, ArcRecordBase record, Context context)
+    public void map(LongWritable key, ArcRecordWritable r, Context context)
         throws IOException, InterruptedException {
       context.getCounter(Counts.RECORDS).increment(1);
-      String url = record.getUrlStr();
-      String type = record.getContentTypeStr();
-      Date date = record.getArchiveDate();
+      ARCRecord record = r.getRecord();
+      ARCRecordMetaData meta = record.getMetaData();
+      String url = meta.getUrl();
+      String type = meta.getMimetype();
+      Date date = null;
+      try {
+        date = ArchiveUtils.parse14DigitDate(meta.getDate());
+      } catch (java.text.ParseException e) {
+        e.printStackTrace();
+      }
       if (date == null) {
         return;
       }
       String time = df.format(date);
-      InputStream content = record.getPayloadContent();
 
       if (beginDate != null && endDate != null) {
         if (time.compareTo(beginDate) < 0 || time.compareTo(endDate) > 0) {
@@ -119,8 +128,9 @@ public class ExtractSiteLinks extends Configured implements Tool {
       }
 
       context.getCounter(Counts.HTML_PAGES).increment(1);
+      byte[] bytes = ArcRecordUtils.getBodyContent(record);
+      Document doc = Jsoup.parse(new String(bytes, "UTF8"), url);
 
-      Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
       Elements links = doc.select("a[href]"); // empty if none match
       if (links == null) {
         return;
@@ -309,7 +319,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
     if (isHDFSInput) { // HDFS input
       FileInputFormat.setInputPaths(job, new Path(HDFSPath));
 
-      job.setInputFormatClass(JwatArcInputFormat.class);
+      job.setInputFormatClass(WacArcInputFormat.class);
       // set map (key,value) output format
       job.setMapOutputKeyClass(IntWritable.class);
       job.setMapOutputValueClass(IntWritable.class);
