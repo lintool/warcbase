@@ -53,7 +53,7 @@ public class WacMapReduceHBaseDemo extends Configured implements Tool {
 
         String mimeType = new String(kv.getQualifier());
 
-        ARCRecord record = ArcRecordUtils.getRecord(kv.getValue());
+        ARCRecord record = ArcRecordUtils.fromBytes(kv.getValue());
         byte[] body = ArcRecordUtils.getBodyContent(record);
 
         if (mimeType.startsWith("text")) {
