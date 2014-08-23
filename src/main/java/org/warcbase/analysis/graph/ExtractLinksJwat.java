@@ -45,11 +45,11 @@ import com.google.common.base.Joiner;
 /**
  * Program for extracting links from ARC files.
  */
-public class ExtractLinks extends Configured implements Tool {
-  private static final Logger LOG = Logger.getLogger(ExtractLinks.class);
+public class ExtractLinksJwat extends Configured implements Tool {
+  private static final Logger LOG = Logger.getLogger(ExtractLinksJwat.class);
   
-  private static enum Records {
-    RECORDS, LINKS
+  private static enum Counts {
+    RECORDS, LINKS, HTML_PAGES
   };
 
   public static class ExtractLinksHdfsMapper extends
@@ -90,7 +90,7 @@ public class ExtractLinks extends Configured implements Tool {
     @Override
     public void map(LongWritable k, ArcRecordBase record, Context context)
         throws IOException, InterruptedException {
-      context.getCounter(Records.RECORDS).increment(1);
+      context.getCounter(Counts.RECORDS).increment(1);
       String url = record.getUrlStr();
       String type = record.getContentTypeStr();
       Date date = record.getArchiveDate();
@@ -123,6 +123,8 @@ public class ExtractLinks extends Configured implements Tool {
         return;
       }
 
+      context.getCounter(Counts.HTML_PAGES).increment(1);
+
       Document doc = Jsoup.parse(content, "ISO-8859-1", url);
       Elements links = doc.select("a[href]");
 
@@ -147,7 +149,7 @@ public class ExtractLinks extends Configured implements Tool {
       }
 
       outValue.set(joiner.join(linkUrlSet));
-      context.getCounter(Records.LINKS).increment(linkUrlSet.size());
+      context.getCounter(Counts.LINKS).increment(linkUrlSet.size());
       context.write(outKey, outValue);
     }
   }
@@ -155,7 +157,7 @@ public class ExtractLinks extends Configured implements Tool {
   /**
    * Creates an instance of this tool.
    */
-  public ExtractLinks() {}
+  public ExtractLinksJwat() {}
 
   private static final String HDFS = "hdfs";
   private static final String HBASE = "hbase";
@@ -217,7 +219,7 @@ public class ExtractLinks extends Configured implements Tool {
     String outputPath = cmdline.getOptionValue(OUTPUT);
     Path mappingPath = new Path(cmdline.getOptionValue(URI_MAPPING));
 
-    LOG.info("Tool: " + ExtractLinks.class.getSimpleName());
+    LOG.info("Tool: " + ExtractLinksJwat.class.getSimpleName());
     if (isHDFSInput) {
       LOG.info(" - HDFS input path: " + HDFSPath);
     } else {
@@ -254,8 +256,8 @@ public class ExtractLinks extends Configured implements Tool {
       conf.set("hbase.zookeeper.quorum", "bespinrm.umiacs.umd.edu");
     }
       
-    Job job = Job.getInstance(conf, ExtractLinks.class.getSimpleName());
-    job.setJarByClass(ExtractLinks.class);
+    Job job = Job.getInstance(conf, ExtractLinksJwat.class.getSimpleName());
+    job.setJarByClass(ExtractLinksJwat.class);
 
     job.getConfiguration().set("UriMappingClass", UrlMapping.class.getCanonicalName());
     // Put the mapping file in the distributed cache so each map worker will have it.
@@ -286,10 +288,9 @@ public class ExtractLinks extends Configured implements Tool {
     LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
 
     Counters counters = job.getCounters();
-    int numRecords = (int) counters.findCounter(Records.RECORDS).getValue();
-    int numLinks = (int) counters.findCounter(Records.LINKS).getValue();
-    LOG.info("Read " + numRecords + " records.");
-    LOG.info("Extracts " + numLinks + " links.");
+    LOG.info("Read " + counters.findCounter(Counts.RECORDS).getValue() + " records.");
+    LOG.info("Processed " + counters.findCounter(Counts.HTML_PAGES).getValue() + " HTML pages.");
+    LOG.info("Extracted " + counters.findCounter(Counts.LINKS).getValue() + " links.");
 
     return 0;
   }
@@ -298,6 +299,6 @@ public class ExtractLinks extends Configured implements Tool {
    * Dispatches command-line arguments to the tool via the {@code ToolRunner}.
    */
   public static void main(String[] args) throws Exception {
-    ToolRunner.run(new ExtractLinks(), args);
+    ToolRunner.run(new ExtractLinksJwat(), args);
   }
 }

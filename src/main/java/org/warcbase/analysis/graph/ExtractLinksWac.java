@@ -1,14 +1,12 @@
 package org.warcbase.analysis.graph;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -45,56 +43,35 @@ import org.warcbase.data.UrlMapping;
 import org.warcbase.io.ArcRecordWritable;
 import org.warcbase.mapreduce.WacArcInputFormat;
 
-import com.google.common.collect.Lists;
+import com.google.common.base.Joiner;
 
 /**
- * Program for extracting links from ARC files or HBase.
+ * Program for extracting links from ARC files.
  */
-public class InvertAnchorText extends Configured implements Tool {
-  private static final Logger LOG = Logger.getLogger(InvertAnchorText.class);
-
+public class ExtractLinksWac extends Configured implements Tool {
+  private static final Logger LOG = Logger.getLogger(ExtractLinksWac.class);
+  
   private static enum Counts {
     RECORDS, HTML_PAGES, LINKS
   };
 
-  private static Int2ObjectMap<List<String>> extractLinks(String content, String url, UrlMapping fst)
-      throws IOException {
-    Document doc = Jsoup.parse(content, url);
-    Elements links = doc.select("a[href]");
-
-    // Note that if there are outgoing links to the same destination page, we retain all copies
-    // (and their anchor texts). This behavior is explicitly different from that of ExtractLinks,
-    // which de-duplicates outgoing links to the same destination.
-    Int2ObjectMap<List<String>> anchors = new Int2ObjectOpenHashMap<List<String>>();
-    if (links != null) {
-      for (Element link : links) {
-        String linkUrl = link.attr("abs:href");
-        int id = fst.getID(linkUrl);
-        if (id != -1) {
-          if (anchors.containsKey(id)) {
-            anchors.get(id).add(link.text());
-          } else {
-            anchors.put(id, Lists.newArrayList(link.text()));
-          }
-        }
-      }
-    }
-
-    return anchors;
-  }
-
-  public static class InvertAnchorTextMapper extends
+  public static class ExtractLinksHdfsMapper extends
       Mapper<LongWritable, ArcRecordWritable, IntWritable, Text> {
+    private final Joiner joiner = Joiner.on(",");
+    private final IntWritable outKey = new IntWritable();
+    private final Text outValue = new Text();
+    
     private final DateFormat df = new SimpleDateFormat("yyyyMMdd");
-    private final IntWritable key = new IntWritable();
-    private final Text value = new Text();
-
     private UrlMapping fst;
+    private String beginDate, endDate;
 
     @Override
     public void setup(Context context) {
       try {
         Configuration conf = context.getConfiguration();
+        beginDate = conf.get("beginDate");
+        endDate = conf.get("endDate");
+
         // There appears to be a bug in getCacheFiles() which returns null,
         // even though getLocalCacheFiles is deprecated...
         @SuppressWarnings("deprecation")
@@ -133,7 +110,7 @@ public class InvertAnchorText extends Configured implements Tool {
         return;
       }
       String time = df.format(date);
-
+            
       if (beginDate != null && endDate != null) {
         if (time.compareTo(beginDate) < 0 || time.compareTo(endDate) > 0) {
           return;
@@ -148,30 +125,50 @@ public class InvertAnchorText extends Configured implements Tool {
         }
       }
 
-      int srcId = fst.getID(url);
-      if (!type.equals("text/html") || srcId == -1) {
+      if (!type.equals("text/html")) {
+        return;
+      }
+
+      if (fst.getID(url) == -1) {
         return;
       }
 
       context.getCounter(Counts.HTML_PAGES).increment(1);
 
       byte[] bytes = ArcRecordUtils.getBodyContent(record);
-      Int2ObjectMap<List<String>> anchors = InvertAnchorText.extractLinks(new String(bytes, "UTF8"), url, fst);
-      for (Int2ObjectMap.Entry<List<String>> entry : anchors.int2ObjectEntrySet()) {
-        key.set(entry.getIntKey());
-        for (String s : entry.getValue()) {
-          value.set(srcId + "\t" + s);
-          context.write(key, value);
-        }
-        context.getCounter(Counts.LINKS).increment(entry.getValue().size());
+      Document doc = Jsoup.parse(new String(bytes, "UTF8"), url);
+      Elements links = doc.select("a[href]");
+
+      if (links == null) {
+        return;
       }
+      
+      outKey.set(fst.getID(url));
+      IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
+      for (Element link : links) {
+        String linkUrl = link.attr("abs:href");
+        if (fst.getID(linkUrl) != -1) { // link already exists
+          linkUrlSet.add(fst.getID(linkUrl));
+        }
+      }
+
+      if (linkUrlSet.size() == 0) {
+        // Emit empty entry even if there aren't any outgoing links
+        outValue.set("");
+        context.write(outKey, outValue);
+        return;
+      }
+
+      outValue.set(joiner.join(linkUrlSet));
+      context.getCounter(Counts.LINKS).increment(linkUrlSet.size());
+      context.write(outKey, outValue);
     }
   }
 
   /**
    * Creates an instance of this tool.
    */
-  public InvertAnchorText() {}
+  public ExtractLinksWac() {}
 
   private static final String HDFS = "hdfs";
   private static final String HBASE = "hbase";
@@ -179,8 +176,6 @@ public class InvertAnchorText extends Configured implements Tool {
   private static final String URI_MAPPING = "urlMapping";
   private static final String BEGIN = "begin";
   private static final String END = "end";
-  private static final String NUM_REDUCERS = "numReducers";
-
   private static String beginDate = null, endDate = null;
 
   /**
@@ -202,8 +197,6 @@ public class InvertAnchorText extends Configured implements Tool {
         .withDescription("begin date (optional)").create(BEGIN));
     options.addOption(OptionBuilder.withArgName("path").hasArg()
         .withDescription("end date (optional)").create(END));
-    options.addOption(OptionBuilder.withArgName("num").hasArg()
-        .withDescription("number of reducers").create(NUM_REDUCERS));
 
     CommandLine cmdline;
     CommandLineParser parser = new GnuParser();
@@ -226,23 +219,22 @@ public class InvertAnchorText extends Configured implements Tool {
     }
 
     FileSystem fs = FileSystem.get(getConf());
-    String path = null, table = null;
-    boolean isHdfs;
+    String HDFSPath = null, HBaseTableName = null;
+    boolean isHDFSInput = true; // set default as HDFS input
     if (cmdline.hasOption(HDFS)) {
-      path = cmdline.getOptionValue(HDFS);
-      isHdfs = true;
+      HDFSPath = cmdline.getOptionValue(HDFS);
     } else {
-      table = cmdline.getOptionValue(HBASE);
-      isHdfs = false;
+      HBaseTableName = cmdline.getOptionValue(HBASE);
+      isHDFSInput = false;
     }
     String outputPath = cmdline.getOptionValue(OUTPUT);
     Path mappingPath = new Path(cmdline.getOptionValue(URI_MAPPING));
 
-    LOG.info("Tool: " + InvertAnchorText.class.getSimpleName());
-    if (isHdfs) {
-      LOG.info(" - HDFS input path: " + path);
+    LOG.info("Tool: " + ExtractLinksWac.class.getSimpleName());
+    if (isHDFSInput) {
+      LOG.info(" - HDFS input path: " + HDFSPath);
     } else {
-      LOG.info(" - HBase table name: " + table);
+      LOG.info(" - HBase table name: " + HBaseTableName);
     }
     LOG.info(" - output path: " + outputPath);
     LOG.info(" - mapping file path: " + mappingPath);
@@ -259,40 +251,44 @@ public class InvertAnchorText extends Configured implements Tool {
     if (!fs.exists(mappingPath)) {
       throw new Exception("mappingPath doesn't exist: " + mappingPath);
     }
-
+    
     Configuration conf;
-    if (isHdfs) {
+    if (isHDFSInput) {
       conf = getConf();
+      // passing global variable values to individual nodes
+      if(beginDate != null) {
+        conf.set("beginDate", beginDate);
+      }
+      if(endDate != null) {
+        conf.set("endDate", endDate);
+      }
     } else {
       conf = HBaseConfiguration.create(getConf());
       conf.set("hbase.zookeeper.quorum", "bespinrm.umiacs.umd.edu");
     }
-
-    Job job = Job.getInstance(conf, InvertAnchorText.class.getSimpleName() +
-        (isHdfs ? ":HDFS:" + path : ":HBase:" + table));
-    job.setJarByClass(InvertAnchorText.class);
+      
+    Job job = Job.getInstance(conf, ExtractLinksWac.class.getSimpleName());
+    job.setJarByClass(ExtractLinksWac.class);
 
     job.getConfiguration().set("UriMappingClass", UrlMapping.class.getCanonicalName());
     // Put the mapping file in the distributed cache so each map worker will have it.
     job.addCacheFile(mappingPath.toUri());
 
-    int numReducers = cmdline.hasOption(NUM_REDUCERS) ?
-        Integer.parseInt(cmdline.getOptionValue(NUM_REDUCERS)) : 100;
-    job.setNumReduceTasks(numReducers);
-
-    if (isHdfs) { // HDFS input
-      FileInputFormat.setInputPaths(job, new Path(path));
-
+    job.setNumReduceTasks(0); // no reducers
+    
+    if (isHDFSInput) { // HDFS input
+      FileInputFormat.setInputPaths(job, new Path(HDFSPath));
+  
       job.setInputFormatClass(WacArcInputFormat.class);
       // set map (key,value) output format
       job.setMapOutputKeyClass(IntWritable.class);
       job.setMapOutputValueClass(Text.class);
-
-      job.setMapperClass(InvertAnchorTextMapper.class);
+  
+      job.setMapperClass(ExtractLinksHdfsMapper.class);
     } else { // HBase input
       throw new UnsupportedOperationException("HBase not supported yet!");
     }
-
+    
     FileOutputFormat.setOutputPath(job, new Path(outputPath));
     // Delete the output directory if it exists already.
     Path outputDir = new Path(outputPath);
@@ -314,6 +310,6 @@ public class InvertAnchorText extends Configured implements Tool {
    * Dispatches command-line arguments to the tool via the {@code ToolRunner}.
    */
   public static void main(String[] args) throws Exception {
-    ToolRunner.run(new InvertAnchorText(), args);
+    ToolRunner.run(new ExtractLinksWac(), args);
   }
 }

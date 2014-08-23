@@ -26,20 +26,22 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import org.archive.io.arc.ARCRecord;
 import org.archive.io.arc.ARCRecordMetaData;
+import org.warcbase.io.ArcRecordWritable;
 import org.warcbase.mapreduce.WacArcInputFormat;
 
 public class WacMapReduceArcDemo extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(WacMapReduceArcDemo.class);
 
-  private static enum Records { TOTAL };
+  public static enum Records { TOTAL };
 
-  private static class MyMapper
-      extends Mapper<LongWritable, ARCRecord, Text, Text> {
+  public static class MyMapper
+      extends Mapper<LongWritable, ArcRecordWritable, Text, Text> {
     @Override
-    public void map(LongWritable key, ARCRecord record, Context context)
+    public void map(LongWritable key, ArcRecordWritable r, Context context)
         throws IOException, InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
 
+      ARCRecord record = r.getRecord();
       ARCRecordMetaData meta = record.getMetaData();
       String url = meta.getUrl();
       String date = meta.getDate();
