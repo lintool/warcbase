@@ -50,7 +50,7 @@ import com.google.common.collect.Lists;
 public class InvertAnchorText extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(InvertAnchorText.class);
 
-  private static enum MyCounters {
+  private static enum Counts {
     RECORDS, HTML_PAGES, LINKS
   };
 
@@ -80,7 +80,7 @@ public class InvertAnchorText extends Configured implements Tool {
     return anchors;
   }
 
-  public static class InvertAnchorTextHdfsMapper extends
+  public static class InvertAnchorTextMapper extends
       Mapper<LongWritable, ArcRecordBase, IntWritable, Text> {
     private final DateFormat df = new SimpleDateFormat("yyyyMMdd");
     private final IntWritable key = new IntWritable();
@@ -113,7 +113,7 @@ public class InvertAnchorText extends Configured implements Tool {
     @Override
     public void map(LongWritable k, ArcRecordBase record, Context context)
         throws IOException, InterruptedException {
-      context.getCounter(MyCounters.RECORDS).increment(1);
+      context.getCounter(Counts.RECORDS).increment(1);
 
       String url = record.getUrlStr();
       String type = record.getContentTypeStr();
@@ -140,7 +140,7 @@ public class InvertAnchorText extends Configured implements Tool {
         return;
       }
 
-      context.getCounter(MyCounters.HTML_PAGES).increment(1);
+      context.getCounter(Counts.HTML_PAGES).increment(1);
 
       Int2ObjectMap<List<String>> anchors = InvertAnchorText.extractLinks(content, url, fst);
       for (Int2ObjectMap.Entry<List<String>> entry : anchors.int2ObjectEntrySet()) {
@@ -149,7 +149,7 @@ public class InvertAnchorText extends Configured implements Tool {
           value.set(srcId + "\t" + s);
           context.write(key, value);
         }
-        context.getCounter(MyCounters.LINKS).increment(entry.getValue().size());
+        context.getCounter(Counts.LINKS).increment(entry.getValue().size());
       }
     }
   }
@@ -274,7 +274,7 @@ public class InvertAnchorText extends Configured implements Tool {
       job.setMapOutputKeyClass(IntWritable.class);
       job.setMapOutputValueClass(Text.class);
 
-      job.setMapperClass(InvertAnchorTextHdfsMapper.class);
+      job.setMapperClass(InvertAnchorTextMapper.class);
     } else { // HBase input
       throw new UnsupportedOperationException("HBase not supported yet!");
     }
@@ -289,10 +289,9 @@ public class InvertAnchorText extends Configured implements Tool {
     LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
 
     Counters counters = job.getCounters();
-    int numRecords = (int) counters.findCounter(MyCounters.RECORDS).getValue();
-    int numLinks = (int) counters.findCounter(MyCounters.LINKS).getValue();
-    LOG.info("Read " + numRecords + " records.");
-    LOG.info("Extracts " + numLinks + " links.");
+    LOG.info("Read " + counters.findCounter(Counts.RECORDS).getValue() + " records.");
+    LOG.info("Processed " + counters.findCounter(Counts.HTML_PAGES).getValue() + " HTML pages.");
+    LOG.info("Extracted " + counters.findCounter(Counts.LINKS).getValue() + " links.");
 
     return 0;
   }

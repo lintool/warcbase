@@ -49,11 +49,11 @@ import org.warcbase.mapreduce.JwatArcInputFormat;
 public class ExtractSiteLinks extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ExtractSiteLinks.class);
 
-  private static enum Records {
-    TOTAL, LINK_COUNT
+  private static enum Counts {
+    RECORDS, HTML_PAGES, LINKS
   };
 
-  public static class ExtractSiteLinksHDFSMapper extends
+  public static class ExtractSiteLinksMapper extends
       Mapper<LongWritable, ArcRecordBase, IntWritable, IntWritable> {
     private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
     private static String beginDate, endDate;
@@ -88,10 +88,9 @@ public class ExtractSiteLinks extends Configured implements Tool {
     }
 
     @Override
-    public void map(LongWritable key, ArcRecordBase record, Context context) throws IOException,
-        InterruptedException {
-
-      context.getCounter(Records.TOTAL).increment(1);
+    public void map(LongWritable key, ArcRecordBase record, Context context)
+        throws IOException, InterruptedException {
+      context.getCounter(Counts.RECORDS).increment(1);
       String url = record.getUrlStr();
       String type = record.getContentTypeStr();
       Date date = record.getArchiveDate();
@@ -118,6 +117,9 @@ public class ExtractSiteLinks extends Configured implements Tool {
       if (!type.equals("text/html")) {
         return;
       }
+
+      context.getCounter(Counts.HTML_PAGES).increment(1);
+
       Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
       Elements links = doc.select("a[href]"); // empty if none match
       if (links == null) {
@@ -165,7 +167,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
         }
       }
 
-      context.getCounter(Records.LINK_COUNT).increment(links.entrySet().size());
+      context.getCounter(Counts.LINKS).increment(links.entrySet().size());
       for (Entry<Integer, Integer> link : links.entrySet()) {
         String outputValue = String.valueOf(link.getKey()) + "," + String.valueOf(link.getValue());
         context.write(key, new Text(outputValue));
@@ -312,7 +314,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
       job.setMapOutputKeyClass(IntWritable.class);
       job.setMapOutputValueClass(IntWritable.class);
 
-      job.setMapperClass(ExtractSiteLinksHDFSMapper.class);
+      job.setMapperClass(ExtractSiteLinksMapper.class);
     } else { // HBase input
       throw new UnsupportedOperationException("HBase not supported yet!");
     }
@@ -331,10 +333,9 @@ public class ExtractSiteLinks extends Configured implements Tool {
     LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
 
     Counters counters = job.getCounters();
-    int numRecords = (int) counters.findCounter(Records.TOTAL).getValue();
-    int numLinks = (int) counters.findCounter(Records.LINK_COUNT).getValue();
-    LOG.info("Read " + numRecords + " records.");
-    LOG.info("Extracts " + numLinks + " links.");
+    LOG.info("Read " + counters.findCounter(Counts.RECORDS).getValue() + " records.");
+    LOG.info("Processed " + counters.findCounter(Counts.HTML_PAGES).getValue() + " HTML pages.");
+    LOG.info("Extracted " + counters.findCounter(Counts.LINKS).getValue() + " links.");
 
     return 0;
   }

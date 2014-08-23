@@ -52,7 +52,7 @@ public class ExtractLinksWac extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ExtractLinksWac.class);
   
   private static enum Counts {
-    RECORDS, LINKS, HTML_PAGES
+    RECORDS, HTML_PAGES, LINKS
   };
 
   public static class ExtractLinksHdfsMapper extends
