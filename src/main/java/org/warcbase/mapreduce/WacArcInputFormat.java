@@ -21,10 +21,11 @@ import org.archive.io.arc.ARCReader;
 import org.archive.io.arc.ARCReaderFactory;
 import org.archive.io.arc.ARCReaderFactory.CompressedARCReader;
 import org.archive.io.arc.ARCRecord;
+import org.warcbase.io.ArcRecordWritable;
 
-public class WacArcInputFormat extends FileInputFormat<LongWritable, ARCRecord> {
+public class WacArcInputFormat extends FileInputFormat<LongWritable, ArcRecordWritable> {
   @Override
-  public RecordReader<LongWritable, ARCRecord> createRecordReader(InputSplit split,
+  public RecordReader<LongWritable, ArcRecordWritable> createRecordReader(InputSplit split,
       TaskAttemptContext context) throws IOException, InterruptedException {
     return new ARCRecordReader();
   }
@@ -34,13 +35,13 @@ public class WacArcInputFormat extends FileInputFormat<LongWritable, ARCRecord> 
     return false;
   }
 
-  public class ARCRecordReader extends RecordReader<LongWritable, ARCRecord> {
+  public class ARCRecordReader extends RecordReader<LongWritable, ArcRecordWritable> {
     private ARCReader reader;
     private long start;
     private long pos;
     private long end;
     private LongWritable key = null;
-    private ARCRecord value = null;
+    private ArcRecordWritable value = null;
     private Seekable filePosition;
     private Iterator<ArchiveRecord> iter;
 
@@ -89,10 +90,16 @@ public class WacArcInputFormat extends FileInputFormat<LongWritable, ARCRecord> 
       }
       key.set(pos);
 
-      value = (ARCRecord) iter.next();
-      if (value == null) {
+      ARCRecord record = (ARCRecord) iter.next();
+      if (record == null) {
         return false;
       }
+
+      if (value == null) {
+        value = new ArcRecordWritable();
+      }
+      value.setRecord(record);
+
       return true;
     }
 
@@ -102,7 +109,7 @@ public class WacArcInputFormat extends FileInputFormat<LongWritable, ARCRecord> 
     }
 
     @Override
-    public ARCRecord getCurrentValue() {
+    public ArcRecordWritable getCurrentValue() {
       return value;
     }
 

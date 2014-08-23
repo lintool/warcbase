@@ -29,10 +29,25 @@ public class ArcRecordUtils {
    * @return parsed {@code ARCRecord}
    * @throws IOException
    */
-  public static ARCRecord getRecord(byte[] bytes) throws IOException {
+  public static ARCRecord fromBytes(byte[] bytes) throws IOException {
     ARCReader reader = (ARCReader) ARCReaderFactory.get("",
         new BufferedInputStream(new ByteArrayInputStream(bytes)), false);
     return (ARCRecord) reader.get();
+  }
+
+  public static byte[] toBytes(ARCRecord record) throws IOException {
+    ARCRecordMetaData meta = record.getMetaData();
+
+    String metaline = meta.getUrl() + " " + meta.getIp() + " " + meta.getDate() + " "
+        + meta.getMimetype() + " " + (int) meta.getLength();
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream dout = new DataOutputStream(baos);
+    dout.write(metaline.getBytes());
+    dout.write("\n".getBytes());
+    copyStream(record, (int) meta.getLength(), true, dout);
+
+    return baos.toByteArray();
   }
 
   /**

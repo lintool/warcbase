@@ -35,37 +35,39 @@ import org.warcbase.data.ArcRecordUtils;
 public class WacMapReduceHBaseDemo extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(WacMapReduceHBaseDemo.class);
 
-  private static enum Records { TOTAL };
+  private static enum Counts { ROWS, RECORDS };
 
   private static class MyMapper extends TableMapper<Text, Text> {
-    private final Text KEY = new Text();
-    private final Text VALUE = new Text();
+    private final Text keyOut = new Text();
+    private final Text valueOut = new Text();
 
     @Override
     public void map(ImmutableBytesWritable row, Result result, Context context)
         throws IOException, InterruptedException {
-      context.getCounter(Records.TOTAL).increment(1);
+      context.getCounter(Counts.ROWS).increment(1);
 
       // set KEY to row key (reversed URL)
-      KEY.set(row.get());
+      keyOut.set(row.get());
       for (KeyValue kv : result.list()) {
+        context.getCounter(Counts.RECORDS).increment(1);
+
         String mimeType = new String(kv.getQualifier());
 
-        ARCRecord record = ArcRecordUtils.getRecord(kv.getValue());
+        ARCRecord record = ArcRecordUtils.fromBytes(kv.getValue());
         byte[] body = ArcRecordUtils.getBodyContent(record);
 
         if (mimeType.startsWith("text")) {
           String content = new String(body, "UTF8").replaceFirst("\\s+", "");
           String excerpt = content.substring(0, Math.min(100, content.length()))
               .replaceAll("[\\n\\r]+", "");
-          VALUE.set(mimeType + "\t" + kv.getTimestamp() + "\n" +
+          valueOut.set(mimeType + "\t" + kv.getTimestamp() + "\n" +
               record.getHeaderString() + "\n" + excerpt + "...\n");
         } else {
-          VALUE.set(mimeType + "\t" + kv.getTimestamp() + "\n"
+          valueOut.set(mimeType + "\t" + kv.getTimestamp() + "\n"
               + record.getHeaderString() + "\n");
         }
 
-        context.write(KEY, VALUE);
+        context.write(keyOut, valueOut);
       }
     }
   }
@@ -150,8 +152,8 @@ public class WacMapReduceHBaseDemo extends Configured implements Tool {
     job.waitForCompletion(true);
 
     Counters counters = job.getCounters();
-    int numDocs = (int) counters.findCounter(Records.TOTAL).getValue();
-    LOG.info("Read " + numDocs + " rows.");
+    LOG.info("Read " + counters.findCounter(Counts.ROWS).getValue() + " rows.");
+    LOG.info("Read " + counters.findCounter(Counts.RECORDS).getValue() + " records.");
 
     return 0;
   }
