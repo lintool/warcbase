@@ -32,9 +32,9 @@ import org.warcbase.mapreduce.WacArcInputFormat;
 public class WacMapReduceArcDemo extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(WacMapReduceArcDemo.class);
 
-  private static enum Records { TOTAL };
+  public static enum Records { TOTAL };
 
-  private static class MyMapper
+  public static class MyMapper
       extends Mapper<LongWritable, ArcRecordWritable, Text, Text> {
     @Override
     public void map(LongWritable key, ArcRecordWritable r, Context context)

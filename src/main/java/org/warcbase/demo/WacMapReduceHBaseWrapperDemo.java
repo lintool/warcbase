@@ -1,6 +1,5 @@
 package org.warcbase.demo;
 
-import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.commons.cli.CommandLine;
@@ -15,7 +14,6 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -24,48 +22,19 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
-import org.archive.io.arc.ARCRecord;
-import org.warcbase.data.ArcRecordUtils;
+import org.warcbase.io.ArcRecordWritable;
+import org.warcbase.mapreduce.lib.HBaseRowToArcRecordWritableMapper;
 import org.warcbase.mapreduce.lib.TableChainMapper;
 
 public class WacMapReduceHBaseWrapperDemo extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(WacMapReduceHBaseDemo.class);
 
-  private static enum Records {
-    ROWS, URLS
-  };
-
-  private static class MyMapper1 extends Mapper<ImmutableBytesWritable, Result, LongWritable, Text> {
-    @Override
-    public void map(ImmutableBytesWritable row, Result result, Context context)
-        throws IOException, InterruptedException {
-      context.getCounter(Records.ROWS).increment(1);
-
-      for (KeyValue kv : result.list()) {
-        ARCRecord record = ArcRecordUtils.getRecord(kv.getValue());
-        context.write(new LongWritable(0), new Text(record.getMetaData().getUrl()));
-      }
-    }
-  }
-
-  private static class MyMapper2 extends Mapper<LongWritable, Text, Text, Text> {
-    @Override
-    public void map(LongWritable key, Text url, Context context) throws IOException,
-        InterruptedException {
-      context.getCounter(Records.URLS).increment(1);
-
-      context.write(new Text(url), new Text(""));
-    }
-  }
-
-  public WacMapReduceHBaseWrapperDemo() {
-  }
+  public WacMapReduceHBaseWrapperDemo() {}
 
   public static final String INPUT_OPTION = "input";
   public static final String OUTPUT_OPTION = "output";
@@ -77,10 +46,10 @@ public class WacMapReduceHBaseWrapperDemo extends Configured implements Tool {
   public int run(String[] args) throws Exception {
     Options options = new Options();
 
-    options.addOption(OptionBuilder.withArgName("path").hasArg().withDescription("input path")
-        .create(INPUT_OPTION));
-    options.addOption(OptionBuilder.withArgName("path").hasArg().withDescription("output path")
-        .create(OUTPUT_OPTION));
+    options.addOption(OptionBuilder.withArgName("path")
+        .hasArg().withDescription("input path").create(INPUT_OPTION));
+    options.addOption(OptionBuilder.withArgName("path")
+        .hasArg().withDescription("output path").create(OUTPUT_OPTION));
 
     CommandLine cmdline;
     CommandLineParser parser = new GnuParser();
@@ -132,10 +101,11 @@ public class WacMapReduceHBaseWrapperDemo extends Configured implements Tool {
         Text.class, // mapper output value
         job);
 
-    TableChainMapper.addMapper(job, MyMapper1.class, ImmutableBytesWritable.class, Result.class,
-        LongWritable.class, Text.class, job.getConfiguration());
-    TableChainMapper.addMapper(job, MyMapper2.class, LongWritable.class, Text.class,
-        Text.class, Text.class, job.getConfiguration());
+    TableChainMapper.addMapper(job, HBaseRowToArcRecordWritableMapper.class,
+        ImmutableBytesWritable.class, Result.class, LongWritable.class,
+        ArcRecordWritable.class, job.getConfiguration());
+    TableChainMapper.addMapper(job, WacMapReduceArcDemo.MyMapper.class, LongWritable.class,
+        ArcRecordWritable.class, Text.class, Text.class, job.getConfiguration());
 
     job.setNumReduceTasks(0);
     FileOutputFormat.setOutputPath(job, output);
@@ -149,8 +119,10 @@ public class WacMapReduceHBaseWrapperDemo extends Configured implements Tool {
     job.waitForCompletion(true);
 
     Counters counters = job.getCounters();
-    LOG.info("Read " + (int) counters.findCounter(Records.ROWS).getValue() + " rows.");
-    LOG.info("Read " + (int) counters.findCounter(Records.URLS).getValue() + " URLs.");
+    LOG.info("Read " +
+        counters.findCounter(HBaseRowToArcRecordWritableMapper.Rows.TOTAL).getValue() + " rows.");
+    LOG.info("Read " +
+        counters.findCounter(WacMapReduceArcDemo.Records.TOTAL).getValue() + " records.");
 
     return 0;
   }
