@@ -1,7 +1,8 @@
 package org.warcbase.mapreduce;
 
-import java.io.DataInputStream;
+import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -9,25 +10,23 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.compress.CodecPool;
-import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.io.compress.CompressionCodecFactory;
-import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
-import org.jwat.arc.ArcReader;
-import org.jwat.arc.ArcReaderFactory;
-import org.jwat.arc.ArcRecordBase;
+import org.archive.io.ArchiveRecord;
+import org.archive.io.arc.ARCReader;
+import org.archive.io.arc.ARCReaderFactory;
+import org.archive.io.arc.ARCReaderFactory.CompressedARCReader;
+import org.archive.io.arc.ARCRecord;
 
-public class JwatArcInputFormat extends FileInputFormat<LongWritable, ArcRecordBase> {
+public class WacArcInputFormat extends FileInputFormat<LongWritable, ARCRecord> {
   @Override
-  public RecordReader<LongWritable, ArcRecordBase> createRecordReader(InputSplit split,
+  public RecordReader<LongWritable, ARCRecord> createRecordReader(InputSplit split,
       TaskAttemptContext context) throws IOException, InterruptedException {
-    return new ArcRecordReader();
+    return new ARCRecordReader();
   }
 
   @Override
@@ -35,18 +34,15 @@ public class JwatArcInputFormat extends FileInputFormat<LongWritable, ArcRecordB
     return false;
   }
 
-  public class ArcRecordReader extends RecordReader<LongWritable, ArcRecordBase> {
-    private CompressionCodecFactory compressionCodecs = null;
-    private ArcReader reader;
+  public class ARCRecordReader extends RecordReader<LongWritable, ARCRecord> {
+    private ARCReader reader;
     private long start;
     private long pos;
     private long end;
     private LongWritable key = null;
-    private ArcRecordBase value = null;
+    private ARCRecord value = null;
     private Seekable filePosition;
-    private CompressionCodec codec;
-    private Decompressor decompressor;
-    private DataInputStream in;
+    private Iterator<ArchiveRecord> iter;
 
     @Override
     public void initialize(InputSplit genericSplit, TaskAttemptContext context) throws IOException {
@@ -55,28 +51,21 @@ public class JwatArcInputFormat extends FileInputFormat<LongWritable, ArcRecordB
       start = split.getStart();
       end = start + split.getLength();
       final Path file = split.getPath();
-      compressionCodecs = new CompressionCodecFactory(job);
-      codec = compressionCodecs.getCodec(file);
 
-      // open the file and seek to the start of the split
       FileSystem fs = file.getFileSystem(job);
       FSDataInputStream fileIn = fs.open(split.getPath());
 
-      if (isCompressedInput()) {
-        in = new DataInputStream(codec.createInputStream(fileIn, decompressor));
-        filePosition = fileIn;
-      } else {
-        fileIn.seek(start);
-        in = fileIn;
-        filePosition = fileIn;
-      }
+      reader = (ARCReader) ARCReaderFactory.get(split.getPath().toString(),
+          new BufferedInputStream(fileIn), true);
 
-      reader = ArcReaderFactory.getReader(in);
+      iter = reader.iterator();
+      //reader = (ARCReader) ARCReaderFactory.get(split.getPath().toString(), fileIn, true);
+
       this.pos = start;
     }
 
     private boolean isCompressedInput() {
-      return (codec != null);
+      return reader instanceof CompressedARCReader;
     }
 
     private long getFilePosition() throws IOException {
@@ -91,12 +80,16 @@ public class JwatArcInputFormat extends FileInputFormat<LongWritable, ArcRecordB
 
     @Override
     public boolean nextKeyValue() throws IOException {
+      if (!iter.hasNext()) {
+        return false;
+      }
+
       if (key == null) {
         key = new LongWritable();
       }
       key.set(pos);
 
-      value = reader.getNextRecord();
+      value = (ARCRecord) iter.next();
       if (value == null) {
         return false;
       }
@@ -109,7 +102,7 @@ public class JwatArcInputFormat extends FileInputFormat<LongWritable, ArcRecordB
     }
 
     @Override
-    public ArcRecordBase getCurrentValue() {
+    public ARCRecord getCurrentValue() {
       return value;
     }
 
@@ -124,15 +117,7 @@ public class JwatArcInputFormat extends FileInputFormat<LongWritable, ArcRecordB
 
     @Override
     public synchronized void close() throws IOException {
-      try {
-        if (in != null) {
-          in.close();
-        }
-      } finally {
-        if (decompressor != null) {
-          CodecPool.returnDecompressor(decompressor);
-        }
-      }
+      reader.close();
     }
   }
 }

@@ -7,23 +7,18 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.jwat.arc.ArcReader;
 import org.jwat.arc.ArcReaderFactory;
 import org.jwat.arc.ArcRecordBase;
 
-import com.google.common.io.Files;
 import com.google.common.io.Resources;
 
-public class TestJwatArcLoader {
-  private static final Log LOG = LogFactory.getLog(TestJwatArcLoader.class);
-  private File tempDir;
+public class JwatArcLoaderTest {
+  private static final Log LOG = LogFactory.getLog(JwatArcLoaderTest.class);
 
   @Test
   public void testCountLinks() throws Exception {
@@ -51,19 +46,5 @@ public class TestJwatArcLoader {
 
     LOG.info(cnt + " records read!");
     assertEquals(300, cnt);
-  }
-
-  @Before
-  public void setUp() throws Exception {
-    // create a random file location
-    tempDir = Files.createTempDir();
-    LOG.info("Output can be found in " + tempDir.getPath());
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    // cleanup
-    FileUtils.deleteDirectory(tempDir);
-    LOG.info("Removing tmp files in " + tempDir.getPath());
   }
 }
