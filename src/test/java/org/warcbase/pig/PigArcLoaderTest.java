@@ -18,14 +18,13 @@ import org.junit.Test;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
 
-public class TestArcLoaderPig {
-  private static final Log LOG = LogFactory.getLog(TestArcLoaderPig.class);
+public class PigArcLoaderTest {
+  private static final Log LOG = LogFactory.getLog(PigArcLoaderTest.class);
   private File tempDir;
 
   @Test
   public void testCountLinks() throws Exception {
     String arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
-    //String arcTestDataFile = Resources.getResource("arc/sb.arc").getPath();
 
     String pigFile = Resources.getResource("scripts/TestCountLinks.pig").getPath();
     String location = tempDir.getPath().replaceAll("\\\\", "/"); // make it work on windows
@@ -46,7 +45,6 @@ public class TestArcLoaderPig {
   @Test
   public void testArcLoader() throws Exception {
     String arcTestDataFile = Resources.getResource("arc/example.arc.gz").getPath();
-    //String arcTestDataFile = Resources.getResource("arc/sb.arc").getPath();
 
     String pigFile = Resources.getResource("scripts/TestArcLoader.pig").getPath();
     String location = tempDir.getPath().replaceAll("\\\\", "/"); // make it work on windows
