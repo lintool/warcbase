@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.archive.io.warc.WARCRecord;
@@ -16,6 +17,20 @@ public class WarcRecordUtils {
 
   // TODO: these methods work fine, but there's a lot of unnecessary buffer copying, which is
   // terrible from a performance perspective.
+
+  public static byte[] toBytes(WARCRecord record) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream dout = new DataOutputStream(baos);
+
+    dout.write(new String("WARC/0.17\n").getBytes());
+    for (Map.Entry<String, Object> entry : record.getHeader().getHeaderFields().entrySet()) {
+      dout.write(new String(entry.getKey() + ": " + entry.getValue().toString() + "\n").getBytes());
+    }
+    dout.write(new String("\n").getBytes());
+    record.dump(dout);
+
+    return baos.toByteArray();
+  }
 
   /**
    * Extracts raw contents from an {@code WARCRecord} (including HTTP headers).
