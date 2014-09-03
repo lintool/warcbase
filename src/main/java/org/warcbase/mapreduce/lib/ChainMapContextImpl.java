@@ -197,10 +197,10 @@ class ChainMapContextImpl<KEYIN, VALUEIN, KEYOUT, VALUEOUT> implements
     return base.getJobName();
   }
 
-  @Override
-  public boolean userClassesTakesPrecedence() {
-    return base.userClassesTakesPrecedence();
-  }
+  //@Override
+  //public boolean userClassesTakesPrecedence() {
+  //  return base.userClassesTakesPrecedence();
+  //}
 
   @Override
   public boolean getJobSetupCleanupNeeded() {
