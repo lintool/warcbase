@@ -107,7 +107,9 @@ public class JwatMapReduceWarcDemo extends Configured implements Tool {
       fs.delete(output, true);
     }
 
+    long startTime = System.currentTimeMillis();
     job.waitForCompletion(true);
+    LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
 
     Counters counters = job.getCounters();
     int numDocs = (int) counters.findCounter(Records.TOTAL).getValue();
