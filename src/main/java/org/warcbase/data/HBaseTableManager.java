@@ -7,6 +7,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -43,7 +44,7 @@ public class HBaseTableManager {
         admin.deleteTable(name);
       }
 
-      HTableDescriptor tableDesc = new HTableDescriptor(name);
+      HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf(name));
       for (int i = 0; i < FAMILIES.length; i++) {
         HColumnDescriptor hColumnDesc = new HColumnDescriptor(FAMILIES[i]);
         hColumnDesc.setMaxVersions(MAX_VERSIONS);
