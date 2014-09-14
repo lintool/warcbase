@@ -5,8 +5,8 @@
   <artifactId>warcbase</artifactId>
   <packaging>jar</packaging>
   <version>0.1.0-SNAPSHOT</version>
-  <name>warcbase</name>
-  <description>WARC + HBase</description>
+  <name>Warcbase</name>
+  <description>An open-source platform for managing web archives built on Hadoop and HBase</description>
   <url>http://warcbase.org/</url>
 
   <licenses>
@@ -213,64 +213,8 @@
       <version>${hbase.version}</version>
       <exclusions>
         <exclusion><groupId>org.apache.hadoop</groupId><artifactId>hadoop-core</artifactId></exclusion>
-
-        <!--exclusion><groupId>slf4j-api</groupId><artifactId>slf4j-api</artifactId></exclusion>
-        <exclusion><groupId>org.slf4j</groupId><artifactId>slf4j-api</artifactId></exclusion>
-        <exclusion><groupId>org.slf4j</groupId><artifactId>slf4j-api-1.4.3</artifactId></exclusion>
-        <exclusion><groupId>jsp-api</groupId><artifactId>jsp-api</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jsp-api</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jsp-api-2.1</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>servlet-api-2.5</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>servlet-api</artifactId></exclusion>
-        <exclusion><groupId>servlet-api</groupId><artifactId>servlet-api</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jetty</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jetty-util</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jsp-2.1</artifactId></exclusion>
-        <exclusion><groupId>org.jruby</groupId><artifactId>jruby-complete</artifactId></exclusion>
-        <exclusion><groupId>tomcat</groupId><artifactId>jasper-runtime</artifactId></exclusion>
-        <exclusion><groupId>tomcat</groupId><artifactId>jasper-compiler</artifactId></exclusion>
-        <exclusion><groupId>io.netty</groupId><artifactId>netty</artifactId></exclusion>
-        <exclusion><groupId>org.apache.thrift</groupId><artifactId>libthrift</artifactId></exclusion>
-        <exclusion><groupId>commons-cli</groupId><artifactId>commons-cli</artifactId></exclusion>
-        <exclusion><groupId>commons-configuration</groupId><artifactId>commons-configuration</artifactId></exclusion>
-        <exclusion><groupId>commons-httpclient</groupId><artifactId>commons-httpclient</artifactId></exclusion>
-        <exclusion><groupId>commons-io</groupId><artifactId>commons-io</artifactId></exclusion>
-        <exclusion><groupId>commons-lang</groupId><artifactId>commons-lang</artifactId></exclusion>
-        <exclusion><groupId>commons-logging</groupId><artifactId>commons-logging</artifactId></exclusion-->
       </exclusions>
     </dependency>
-
-    <!--dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-hadoop2-compat</artifactId>
-      <version>${hbase.version}</version>
-      <exclusions>
-        <exclusion><groupId>slf4j-api</groupId><artifactId>slf4j-api</artifactId></exclusion>
-        <exclusion><groupId>org.slf4j</groupId><artifactId>slf4j-api</artifactId></exclusion>
-        <exclusion><groupId>org.slf4j</groupId><artifactId>slf4j-api-1.4.3</artifactId></exclusion>
-        <exclusion><groupId>jsp-api</groupId><artifactId>jsp-api</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jsp-api</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jsp-api-2.1</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>servlet-api-2.5</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>servlet-api</artifactId></exclusion>
-        <exclusion><groupId>servlet-api</groupId><artifactId>servlet-api</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jetty</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jetty-util</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jsp-2.1</artifactId></exclusion>
-        <exclusion><groupId>org.jruby</groupId><artifactId>jruby-complete</artifactId></exclusion>
-        <exclusion><groupId>tomcat</groupId><artifactId>jasper-runtime</artifactId></exclusion>
-        <exclusion><groupId>tomcat</groupId><artifactId>jasper-compiler</artifactId></exclusion>
-        <exclusion><groupId>io.netty</groupId><artifactId>netty</artifactId></exclusion>
-        <exclusion><groupId>org.apache.thrift</groupId><artifactId>libthrift</artifactId></exclusion>
-        <exclusion><groupId>commons-cli</groupId><artifactId>commons-cli</artifactId></exclusion>
-        <exclusion><groupId>commons-configuration</groupId><artifactId>commons-configuration</artifactId></exclusion>
-        <exclusion><groupId>commons-httpclient</groupId><artifactId>commons-httpclient</artifactId></exclusion>
-        <exclusion><groupId>commons-io</groupId><artifactId>commons-io</artifactId></exclusion>
-        <exclusion><groupId>commons-lang</groupId><artifactId>commons-lang</artifactId></exclusion>
-        <exclusion><groupId>commons-logging</groupId><artifactId>commons-logging</artifactId></exclusion>
-      </exclusions>
-    </dependency-->
-
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
@@ -279,30 +223,6 @@
         <exclusion><groupId>org.apache.hadoop</groupId><artifactId>hadoop-core</artifactId></exclusion>
         <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>servlet-api-2.5</artifactId></exclusion>
         <exclusion><groupId>javax.servlet</groupId><artifactId>servlet-api</artifactId></exclusion>
-
-        <!--exclusion><groupId>slf4j-api</groupId><artifactId>slf4j-api</artifactId></exclusion>
-        <exclusion><groupId>org.slf4j</groupId><artifactId>slf4j-api</artifactId></exclusion>
-        <exclusion><groupId>org.slf4j</groupId><artifactId>slf4j-api-1.4.3</artifactId></exclusion>
-        <exclusion><groupId>jsp-api</groupId><artifactId>jsp-api</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jsp-api</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jsp-api-2.1</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>servlet-api-2.5</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>servlet-api</artifactId></exclusion>
-        <exclusion><groupId>servlet-api</groupId><artifactId>servlet-api</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jetty</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jetty-util</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jsp-2.1</artifactId></exclusion>
-        <exclusion><groupId>org.jruby</groupId><artifactId>jruby-complete</artifactId></exclusion>
-        <exclusion><groupId>tomcat</groupId><artifactId>jasper-runtime</artifactId></exclusion>
-        <exclusion><groupId>tomcat</groupId><artifactId>jasper-compiler</artifactId></exclusion>
-        <exclusion><groupId>io.netty</groupId><artifactId>netty</artifactId></exclusion>
-        <exclusion><groupId>org.apache.thrift</groupId><artifactId>libthrift</artifactId></exclusion>
-        <exclusion><groupId>commons-cli</groupId><artifactId>commons-cli</artifactId></exclusion>
-        <exclusion><groupId>commons-configuration</groupId><artifactId>commons-configuration</artifactId></exclusion>
-        <exclusion><groupId>commons-httpclient</groupId><artifactId>commons-httpclient</artifactId></exclusion>
-        <exclusion><groupId>commons-io</groupId><artifactId>commons-io</artifactId></exclusion>
-        <exclusion><groupId>commons-lang</groupId><artifactId>commons-lang</artifactId></exclusion>
-        <exclusion><groupId>commons-logging</groupId><artifactId>commons-logging</artifactId></exclusion-->
       </exclusions>
     </dependency>
 
@@ -316,58 +236,10 @@
       </exclusions>
     </dependency>
 
-<!--
-
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-common</artifactId>
-      <version>${hadoop.version}</version>
-      <exclusions>
-        <exclusion><groupId>com.sun.jersey.jersey-test-framework</groupId><artifactId>jersey-test-framework-grizzly2</artifactId></exclusion>
-        <exclusion><groupId>org.slf4j</groupId><artifactId>slf4j-api</artifactId></exclusion>
-        <exclusion><groupId>org.jboss.netty</groupId><artifactId>netty</artifactId></exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-core</artifactId>
-      <version>${hadoop.version}</version>
-      <exclusions>
-        <exclusion><groupId>commons-cli</groupId><artifactId>commons-cli</artifactId></exclusion>
-        <exclusion><groupId>commons-httpclient</groupId><artifactId>commons-httpclient</artifactId></exclusion>
-        <exclusion><groupId>commons-io</groupId><artifactId>commons-io</artifactId></exclusion>
-        <exclusion><groupId>commons-lang</groupId><artifactId>commons-lang</artifactId></exclusion>
-        <exclusion><groupId>commons-logging</groupId><artifactId>commons-logging</artifactId></exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
-      <version>${hadoop.version}</version>
-      <exclusions>
-        <exclusion><groupId>javax.servlet</groupId><artifactId>servlet-api</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jetty</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jetty-util</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jsp-2.1</artifactId></exclusion>
-        <exclusion><groupId>tomcat</groupId><artifactId>jasper-runtime</artifactId></exclusion>
-        <exclusion><groupId>tomcat</groupId><artifactId>jasper-compiler</artifactId></exclusion>
-        <exclusion><groupId>commons-cli</groupId><artifactId>commons-cli</artifactId></exclusion>
-        <exclusion><groupId>commons-configuration</groupId><artifactId>commons-configuration</artifactId></exclusion>
-        <exclusion><groupId>commons-httpclient</groupId><artifactId>commons-httpclient</artifactId></exclusion>
-        <exclusion><groupId>commons-io</groupId><artifactId>commons-io</artifactId></exclusion>
-        <exclusion><groupId>commons-lang</groupId><artifactId>commons-lang</artifactId></exclusion>
-        <exclusion><groupId>commons-logging</groupId><artifactId>commons-logging</artifactId></exclusion>
-      </exclusions>
-    </dependency>
--->
-
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
       <version>${zookeeper.version}</version>
-      <!--exclusions>
-        <exclusion><groupId>jline</groupId><artifactId>jline</artifactId></exclusion>
-      </exclusions-->
     </dependency>
 
     <dependency>
@@ -378,25 +250,6 @@
         <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>servlet-api-2.5</artifactId></exclusion>
         <exclusion><groupId>javax.servlet</groupId><artifactId>servlet-api</artifactId></exclusion>
       </exclusions>
-
-
-
-      <!--exclusions>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jetty</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jetty-util</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jsp-2.1</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jsp-api</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>jsp-api-2.1</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>servlet-api-2.5</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>servlet-api</artifactId></exclusion>
-        <exclusion><groupId>org.python</groupId><artifactId>jython-standalone</artifactId></exclusion>
-        <exclusion><groupId>org.apache.hbase</groupId><artifactId>hbase</artifactId></exclusion>
-        <exclusion><groupId>tomcat</groupId><artifactId>jasper-runtime</artifactId></exclusion>
-        <exclusion><groupId>tomcat</groupId><artifactId>jasper-compiler</artifactId></exclusion>
-        <exclusion><groupId>commons-cli</groupId><artifactId>commons-cli</artifactId></exclusion>
-        <exclusion><groupId>commons-httpclient</groupId><artifactId>commons-httpclient</artifactId></exclusion>
-        <exclusion><groupId>commons-lang</groupId><artifactId>commons-lang</artifactId></exclusion>
-      </exclusions-->
     </dependency>
     <dependency>
       <groupId>org.apache.pig</groupId>
