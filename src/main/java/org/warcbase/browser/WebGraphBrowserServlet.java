@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
@@ -33,8 +34,6 @@ import org.archive.util.ArchiveUtils;
 import org.warcbase.data.HBaseTableManager;
 import org.warcbase.data.UrlMapping;
 import org.warcbase.data.UrlUtils;
-
-import com.sun.org.apache.bcel.internal.generic.NEW;
 
 public class WebGraphBrowserServlet extends HttpServlet {
   private static final long serialVersionUID = 847405540723915805L;
@@ -96,7 +95,7 @@ public class WebGraphBrowserServlet extends HttpServlet {
     LOG.info("key:" + key);
     HTableInterface table = hbaseConnection.getTable(TABLE_NAME);
     
-    Get get = new Get(Bytes.toBytes(url));
+    Get get = new Get(Bytes.toBytes(key));
     get.addFamily(Bytes.toBytes(COLUMN_FAMILY));
     Result rs = table.get(get);
     LOG.info("result size:" + rs.size());
@@ -118,17 +117,21 @@ public class WebGraphBrowserServlet extends HttpServlet {
       Long epoch = Bytes.toLong(column);
       String time = df.format(new Date(epoch));
       String targetIds = Bytes.toString(value);
-      out.println("<b> Time: </b>" + time);
-      out.println("<ul>");
+      out.println("<br><b> Time: </b>" + time +"</br>");
+      out.println("<ol>");
       for (String targetId : targetIds.split(",")) {
-        String targetUrl = fst.getUrl(Integer.parseInt(targetId));
-        String completeUrl = path + "?url=" + targetUrl;
-        out.println("<li> <a href=" + completeUrl + ">"
-            + targetUrl + "</a> </li>");
+        try {
+          String targetUrl = fst.getUrl(Integer.parseInt(targetId));
+          String completeUrl = path + "?url=" + targetUrl;
+          out.println("<li> <a href=" + completeUrl + ">"
+              + targetUrl + "</a> </li>");
+        } catch(Exception e) {
+          continue;
+        }
       }
-      out.println("</ul>");
+      out.println("</ol>");
     }
     out.println("</body></html>");
   }
-
+  
 }

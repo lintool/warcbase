@@ -144,6 +144,10 @@
               <name>WarcBrowser</name>
             </program>
             <program>
+              <mainClass>org.warcbase.browser.WebGraphBrowser</mainClass>
+              <name>WebGraphBrowser</name>
+            </program>
+            <program>
               <mainClass>org.warcbase.analysis.DetectDuplicates</mainClass>
               <name>DetectDuplicates</name>
             </program>
@@ -184,11 +188,6 @@
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
       <version>1.8</version>
-    </dependency>
-    <dependency>
-      <groupId>tl.lin</groupId>
-      <artifactId>lintools-lucene</artifactId>
-      <version>0.1.0</version>
     </dependency>
     <dependency>
       <groupId>org.jsoup</groupId>
