@@ -14,8 +14,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -48,22 +49,21 @@ public class WacMapReduceHBaseDemo extends Configured implements Tool {
 
       // set KEY to row key (reversed URL)
       keyOut.set(row.get());
-      for (KeyValue kv : result.list()) {
+      for (Cell cell : result.listCells()) {
         context.getCounter(Counts.RECORDS).increment(1);
 
-        String mimeType = new String(kv.getQualifier());
+        String mimeType = new String(CellUtil.cloneQualifier(cell));
 
-        ARCRecord record = ArcRecordUtils.fromBytes(kv.getValue());
+        ARCRecord record = ArcRecordUtils.fromBytes(CellUtil.cloneValue(cell));
         byte[] body = ArcRecordUtils.getBodyContent(record);
 
         if (mimeType.startsWith("text")) {
           String content = new String(body, "UTF8").replaceFirst("\\s+", "");
-          String excerpt = content.substring(0, Math.min(100, content.length()))
-              .replaceAll("[\\n\\r]+", "");
-          valueOut.set(mimeType + "\t" + kv.getTimestamp() + "\n" +
+          String excerpt = content.substring(0, Math.min(100, content.length())).replaceAll("[\\n\\r]+", "");
+          valueOut.set(mimeType + "\t" + cell.getTimestamp() + "\n" +
               record.getHeaderString() + "\n" + excerpt + "...\n");
         } else {
-          valueOut.set(mimeType + "\t" + kv.getTimestamp() + "\n"
+          valueOut.set(mimeType + "\t" + cell.getTimestamp() + "\n"
               + record.getHeaderString() + "\n");
         }
 
@@ -149,7 +149,9 @@ public class WacMapReduceHBaseDemo extends Configured implements Tool {
       fs.delete(output, true);
     }
 
+    long startTime = System.currentTimeMillis();
     job.waitForCompletion(true);
+    LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
 
     Counters counters = job.getCounters();
     LOG.info("Read " + counters.findCounter(Counts.ROWS).getValue() + " rows.");
