@@ -10,11 +10,19 @@
 
   <servlet>
     <servlet-name>Warcbase</servlet-name>
-    <servlet-class>org.warcbase.browser.servlet.WarcbaseServlet</servlet-class>
+    <servlet-class>org.warcbase.browser.WarcBrowserServlet</servlet-class>
+  </servlet>
+  <servlet>
+    <servlet-name>Webgraph</servlet-name>
+    <servlet-class>org.warcbase.browser.WebgraphBrowserServlet</servlet-class>
   </servlet>
 
   <servlet-mapping>
     <servlet-name>Warcbase</servlet-name>
     <url-pattern>/warcbase/*</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>Webgraph</servlet-name>
+    <url-pattern>/webgraph/*</url-pattern>
   </servlet-mapping>
 </web-app>

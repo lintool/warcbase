@@ -20,14 +20,18 @@ public class WarcBrowser {
 
   private final Server server;
 
-  public WarcBrowser(int runningPort) throws Exception {
+  public WarcBrowser(int runningPort, String fstPath) throws Exception {
     server = new Server(runningPort);
 
     ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
     context.setContextPath("/");
     server.setHandler(context);
-    context.addServlet(new ServletHolder(new WarcBrowserServlet()), "/*");
-
+    if (fstPath == null) {
+      context.addServlet(new ServletHolder(new WarcBrowserServlet()), "/*");
+    } else {
+      context.addServlet(new ServletHolder(new WebGraphBrowserServlet(fstPath)), "/*");
+    }
+    
     ServletHolder holder = context.addServlet(DefaultServlet.class, "/warcbase/*");
     holder.setInitParameter("resourceBase", "src/main/webapp/");
     holder.setInitParameter("pathInfoOnly", "true");
@@ -51,6 +55,7 @@ public class WarcBrowser {
   }
 
   private static final String PORT_OPTION = "port";
+  private static final String FST_OPTION = "fst";
 
   @SuppressWarnings("static-access")
   public static void main(String[] args) throws Exception {
@@ -58,6 +63,8 @@ public class WarcBrowser {
 
     options.addOption(OptionBuilder.withArgName("num")
         .hasArg().withDescription("port to serve on").create(PORT_OPTION));
+    options.addOption(OptionBuilder.withArgName("path")
+        .hasArg().withDescription("fst path").create(FST_OPTION));
 
     CommandLine cmdline = null;
     CommandLineParser parser = new GnuParser();
@@ -77,12 +84,13 @@ public class WarcBrowser {
       ToolRunner.printGenericCommandUsage(System.out);
       System.exit(-1);
     }
-
+    
     int port = Integer.parseInt(cmdline.getOptionValue(PORT_OPTION));
+    String fstPath = cmdline.getOptionValue(FST_OPTION);
 
     LOG.info("Starting server on port " + port);
     LOG.setLevel(Level.OFF);
-    WarcBrowser browser = new WarcBrowser(port);
+    WarcBrowser browser = new WarcBrowser(port, fstPath);
 
     browser.start();
   }
