@@ -55,6 +55,11 @@ public class UrlMappingMapReduceBuilder extends Configured implements Tool {
     public void map(LongWritable key, ArcRecordBase record, Context context) throws IOException,
         InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
+      String type = record.getContentTypeStr();
+      if (!type.equals("text/html")) {
+        return;
+      }
+      
       if (record.getUrlStr().startsWith("http://")) {
         KEY.set(record.getUrlStr());
         context.write(KEY, VALUE);
@@ -174,7 +179,7 @@ public class UrlMappingMapReduceBuilder extends Configured implements Tool {
 
     Configuration conf = getConf();
     conf.set("PATH", outputPath);
-    conf.set("mapreduce.reduce.java.opts", "-Xmx5120m");
+    conf.set("mapreduce.reduce.java.opts", "-Xmx10240m");
     Job job = Job.getInstance(conf, UrlMappingMapReduceBuilder.class.getSimpleName());
     job.setJarByClass(UrlMappingMapReduceBuilder.class);
 

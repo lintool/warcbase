@@ -133,7 +133,8 @@ public class IngestWebGraph extends Configured implements Tool {
 
       Document doc = Jsoup.parse(content, "ISO-8859-1", url); // parse in ISO-8859-1 format
       Elements links = doc.select("a[href]"); // empty if none match
-
+      LOG.info(fst.getID(url)+":"+url);
+      
       if (fst.getID(url) != -1) { // the url is already indexed in UriMapping
         KEY.set(url, epoch);
         IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
@@ -147,6 +148,7 @@ public class IngestWebGraph extends Configured implements Tool {
 
           if (linkUrlSet.size() == 0) {
             // skip if there aren't any outgoing links
+            LOG.info("empty url:" + url);
             return;
           }
 
@@ -169,8 +171,8 @@ public class IngestWebGraph extends Configured implements Tool {
       String reverseUrl = UrlUtils.urlToKey(url);
       Put p = new Put(reverseUrl.getBytes());
       for (Text target_ids : values) {
-        LOG.info(url + ":" + target_ids);
-        p.add(CF, epoch.toString().getBytes(), target_ids.getBytes());
+        LOG.info(url + ":" + target_ids.toString());
+        p.add(CF, epoch.toString().getBytes(), target_ids.toString().getBytes());
       }
       context.write(null, p);
     }

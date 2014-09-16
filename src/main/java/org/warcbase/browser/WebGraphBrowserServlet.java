@@ -115,7 +115,7 @@ public class WebGraphBrowserServlet extends HttpServlet {
     for(byte[] column : familyMap.keySet()) {
       byte[] value = familyMap.get(column);
       Long epoch = Bytes.toLong(column);
-      String time = df.format(new Date(epoch));
+      String time = df.format(new Date(epoch/1000));
       String targetIds = Bytes.toString(value);
       out.println("<br><b> Time: </b>" + time +"</br>");
       out.println("<ol>");
