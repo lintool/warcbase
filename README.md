@@ -44,7 +44,7 @@ You can find some sample data [here](https://archive.org/details/ExampleArcAndWa
 
 ```
 $ setenv CLASSPATH_PREFIX "/etc/hbase/conf/"
-$ sh target/appassembler/bin/IngestWarcFiles \
+$ sh target/appassembler/bin/IngestFiles \
     -dir /path/to/warc/dir/ -name archive_name -create
 ```
 
