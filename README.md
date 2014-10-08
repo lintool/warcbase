@@ -120,13 +120,13 @@ Where `urls` is the output directory from above and `fst.dat` is the name of the
 
 ```
 # Lookup by URL, fetches the integer id
-$ sh target/appassembler/bin/UriMapping -data fst.dat -getId http://www.foo.com/
+$ sh target/appassembler/bin/UrlMapping -data fst.dat -getId http://www.foo.com/
 
 # Lookup by id, fetches the URL
-$ sh target/appassembler/bin/UriMapping -data fst.dat -getUrl 42
+$ sh target/appassembler/bin/UrlMapping -data fst.dat -getUrl 42
 
 # Fetches all URLs with the prefix
-$ sh target/appassembler/bin/UriMapping -data fst.dat -getPrefix http://www.foo.com/
+$ sh target/appassembler/bin/UrlMapping -data fst.dat -getPrefix http://www.foo.com/
 ```
 
 
