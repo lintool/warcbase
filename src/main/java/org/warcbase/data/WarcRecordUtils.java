@@ -10,7 +10,7 @@ import org.apache.log4j.Logger;
 import org.archive.io.warc.WARCRecord;
 
 /**
- * Utilities for working with {@code ARCRecord}s.
+ * Utilities for working with {@code WARCRecord}s (from archive.org APIs).
  */
 public class WarcRecordUtils {
   private static final Logger LOG = Logger.getLogger(WarcRecordUtils.class);
