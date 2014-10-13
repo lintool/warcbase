@@ -129,6 +129,10 @@ $ sh target/appassembler/bin/UrlMapping -data fst.dat -getUrl 42
 $ sh target/appassembler/bin/UrlMapping -data fst.dat -getPrefix http://www.foo.com/
 ```
 
+Now copy the fst.dat file into HDFS for use in the next step.
+```
+$ hadoop fs -copyFromLocal fst.dat path
+```
 
 Extracting the Webgraph
 -----------------------
@@ -137,8 +141,8 @@ We can use the mapping data (from above) to extract the webgraph and at the same
 
 ```
 $ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
-    org.warcbase.data.ExtractLinks \
-    -input /hdfs/path/to/data -output output -urlMapping fst.dat -numReducers 1
+    org.warcbase.analysis.graph.ExtractLinksWac \
+    -input /hdfs/path/to/data -output output -urlMapping fst.dat
 ```
 
 Finally, instead of extracting links between individual URLs, we can extract the site-level webgraph by aggregating all URLs with common prefix into a "supernode". Link counts between supernodes represent the total number of links between individual URLs. In order to do this, following input files are needed:
