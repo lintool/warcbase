@@ -129,9 +129,10 @@ $ sh target/appassembler/bin/UrlMapping -data fst.dat -getUrl 42
 $ sh target/appassembler/bin/UrlMapping -data fst.dat -getPrefix http://www.foo.com/
 ```
 
-Now copy the fst.dat file into HDFS for use in the next step.
+Now copy the fst.dat file into HDFS for use in the next step:
+
 ```
-$ hadoop fs -copyFromLocal fst.dat path
+$ hadoop fs -put fst.dat /hdfs/path/
 ```
 
 Extracting the Webgraph
