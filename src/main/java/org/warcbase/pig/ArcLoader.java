@@ -1,7 +1,5 @@
 package org.warcbase.pig;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
 
@@ -18,6 +16,7 @@ import org.apache.pig.data.DataByteArray;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.archive.io.arc.ARCRecordMetaData;
+import org.warcbase.data.ArcRecordUtils;
 import org.warcbase.io.ArcRecordWritable;
 import org.warcbase.mapreduce.WacArcInputFormat;
 
@@ -54,11 +53,7 @@ public class ArcLoader extends FileInputLoadFunc {
       protoTuple.add(meta.getMimetype());
 
       try {
-        ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
-        DataOutputStream dataOut = new DataOutputStream(bytesOut);
-        r.write(dataOut);
-
-        protoTuple.add(new DataByteArray(bytesOut.toByteArray()));
+        protoTuple.add(new DataByteArray(ArcRecordUtils.getBodyContent(r.getRecord())));
       } catch (OutOfMemoryError e) {
         // When we get a corrupt record, this will happen...
         // Try to recover and move on...
