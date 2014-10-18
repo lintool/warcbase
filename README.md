@@ -163,6 +163,29 @@ $ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
 You'll find site-level webgraph in `output/` on HDFS.
 
 
+Pig Integration
+---------------
+
+Warcbase comes with Pig integration for manipulating web archive data. Start the `Grunt` shell by typing `pig`. You should then be able to run the following Pig script to extract links:
+
+```
+register 'target/warcbase-0.1.0-SNAPSHOT-fatjar.jar';
+
+DEFINE ArcLoader org.warcbase.pig.ArcLoader();
+DEFINE ExtractLinks org.warcbase.pig.piggybank.ExtractLinks();
+
+raw = load '/hdfs/path/to/data' using ArcLoader as
+  (url: chararray, date: chararray, mime: chararray, content: bytearray);
+
+a = filter raw by mime == 'text/html';
+b = foreach a generate url, FLATTEN(ExtractLinks((chararray) content));
+
+store b into '/output/path/';
+```
+
+In the output directory, you should find data output files with source URL, target URL, and anchor text.
+
+
 License
 -------
 
