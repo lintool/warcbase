@@ -120,15 +120,20 @@ Where `urls` is the output directory from above and `fst.dat` is the name of the
 
 ```
 # Lookup by URL, fetches the integer id
-$ sh target/appassembler/bin/UriMapping -data fst.dat -getId http://www.foo.com/
+$ sh target/appassembler/bin/UrlMapping -data fst.dat -getId http://www.foo.com/
 
 # Lookup by id, fetches the URL
-$ sh target/appassembler/bin/UriMapping -data fst.dat -getUrl 42
+$ sh target/appassembler/bin/UrlMapping -data fst.dat -getUrl 42
 
 # Fetches all URLs with the prefix
-$ sh target/appassembler/bin/UriMapping -data fst.dat -getPrefix http://www.foo.com/
+$ sh target/appassembler/bin/UrlMapping -data fst.dat -getPrefix http://www.foo.com/
 ```
 
+Now copy the fst.dat file into HDFS for use in the next step:
+
+```
+$ hadoop fs -put fst.dat /hdfs/path/
+```
 
 Extracting the Webgraph
 -----------------------
@@ -137,8 +142,8 @@ We can use the mapping data (from above) to extract the webgraph and at the same
 
 ```
 $ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
-    org.warcbase.data.ExtractLinks \
-    -input /hdfs/path/to/data -output output -urlMapping fst.dat -numReducers 1
+    org.warcbase.analysis.graph.ExtractLinksWac \
+    -input /hdfs/path/to/data -output output -urlMapping fst.dat
 ```
 
 Finally, instead of extracting links between individual URLs, we can extract the site-level webgraph by aggregating all URLs with common prefix into a "supernode". Link counts between supernodes represent the total number of links between individual URLs. In order to do this, following input files are needed:
@@ -156,6 +161,29 @@ $ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
 ```
 
 You'll find site-level webgraph in `output/` on HDFS.
+
+
+Pig Integration
+---------------
+
+Warcbase comes with Pig integration for manipulating web archive data. Start the `Grunt` shell by typing `pig`. You should then be able to run the following Pig script to extract links:
+
+```
+register 'target/warcbase-0.1.0-SNAPSHOT-fatjar.jar';
+
+DEFINE ArcLoader org.warcbase.pig.ArcLoader();
+DEFINE ExtractLinks org.warcbase.pig.piggybank.ExtractLinks();
+
+raw = load '/hdfs/path/to/data' using ArcLoader as
+  (url: chararray, date: chararray, mime: chararray, content: bytearray);
+
+a = filter raw by mime == 'text/html';
+b = foreach a generate url, FLATTEN(ExtractLinks((chararray) content));
+
+store b into '/output/path/';
+```
+
+In the output directory, you should find data output files with source URL, target URL, and anchor text.
 
 
 License

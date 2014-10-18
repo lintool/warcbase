@@ -1,36 +1,40 @@
 package org.warcbase.pig;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.List;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.log4j.Logger;
 import org.apache.pig.FileInputLoadFunc;
 import org.apache.pig.PigException;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.backend.hadoop.executionengine.mapReduceLayer.PigSplit;
+import org.apache.pig.data.DataByteArray;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
-import org.jwat.arc.ArcRecordBase;
-import org.warcbase.mapreduce.JwatArcInputFormat;
+import org.archive.io.arc.ARCRecordMetaData;
+import org.warcbase.data.ArcRecordUtils;
+import org.warcbase.io.ArcRecordWritable;
+import org.warcbase.mapreduce.WacArcInputFormat;
 
 import com.google.common.collect.Lists;
 
 public class ArcLoader extends FileInputLoadFunc {
+  private static final Logger LOG = Logger.getLogger(ArcLoader.class);
+
   private static final TupleFactory TUPLE_FACTORY = TupleFactory.getInstance();
 
-  private RecordReader<LongWritable, ArcRecordBase> in;
+  private RecordReader<LongWritable, ArcRecordWritable> in;
 
   public ArcLoader() {
   }
 
   @Override
-  public JwatArcInputFormat getInputFormat() throws IOException {
-    return new JwatArcInputFormat();
+  public WacArcInputFormat getInputFormat() throws IOException {
+    return new WacArcInputFormat();
   }
 
   @Override
@@ -40,16 +44,22 @@ public class ArcLoader extends FileInputLoadFunc {
         return null;
       }
 
-      ArcRecordBase record = in.getCurrentValue();
-      String type = record.getContentTypeStr();
+      ArcRecordWritable r = in.getCurrentValue();
+      ARCRecordMetaData meta = r.getRecord().getMetaData();
 
-      List<String> protoTuple = Lists.newArrayList();
-      protoTuple.add(record.getUrlStr());
-      protoTuple.add(record.getArchiveDateStr());
-      protoTuple.add(type);
+      List<Object> protoTuple = Lists.newArrayList();
+      protoTuple.add(meta.getUrl());
+      protoTuple.add(meta.getDate());
+      protoTuple.add(meta.getMimetype());
 
-      // TODO don't know how robust this is but it works — for now.
-      protoTuple.add(new String(IOUtils.toByteArray(record.getPayloadContent()), Charset.forName("UTF-8")));
+      try {
+        protoTuple.add(new DataByteArray(ArcRecordUtils.getBodyContent(r.getRecord())));
+      } catch (OutOfMemoryError e) {
+        // When we get a corrupt record, this will happen...
+        // Try to recover and move on...
+        LOG.error("Encountered OutOfMemoryError ingesting " + meta.getUrl());
+        LOG.error("Attempting to continue...");
+      }
 
       return TUPLE_FACTORY.newTupleNoCopy(protoTuple);
     } catch (InterruptedException e) {

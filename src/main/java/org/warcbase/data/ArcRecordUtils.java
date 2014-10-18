@@ -14,7 +14,7 @@ import org.archive.io.arc.ARCRecord;
 import org.archive.io.arc.ARCRecordMetaData;
 
 /**
- * Utilities for working with {@code ARCRecord}s.
+ * Utilities for working with {@code ARCRecord}s (from archive.org APIs).
  */
 public class ArcRecordUtils {
   private static final Logger LOG = Logger.getLogger(ArcRecordUtils.class);
