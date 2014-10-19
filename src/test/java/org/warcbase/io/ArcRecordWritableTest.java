@@ -60,6 +60,7 @@ public class ArcRecordWritableTest {
       assertEquals(record.getRecord().getMetaData().getUrl(),
           reconstructed.getRecord().getMetaData().getUrl());
     }
+
     assertEquals(300, cnt);
   }
 }

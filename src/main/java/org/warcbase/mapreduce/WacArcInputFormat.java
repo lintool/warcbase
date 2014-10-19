@@ -27,7 +27,7 @@ public class WacArcInputFormat extends FileInputFormat<LongWritable, ArcRecordWr
   @Override
   public RecordReader<LongWritable, ArcRecordWritable> createRecordReader(InputSplit split,
       TaskAttemptContext context) throws IOException, InterruptedException {
-    return new ARCRecordReader();
+    return new ArcRecordReader();
   }
 
   @Override
@@ -35,7 +35,7 @@ public class WacArcInputFormat extends FileInputFormat<LongWritable, ArcRecordWr
     return false;
   }
 
-  public class ARCRecordReader extends RecordReader<LongWritable, ArcRecordWritable> {
+  public class ArcRecordReader extends RecordReader<LongWritable, ArcRecordWritable> {
     private ARCReader reader;
     private long start;
     private long pos;
