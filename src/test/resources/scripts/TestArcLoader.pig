@@ -2,8 +2,8 @@
 
 DEFINE ArcLoader org.warcbase.pig.ArcLoader();
 
-raw = load '$testArcFolder' using ArcLoader()
-        as (url:chararray, date:chararray, mime:chararray, content:bytearray);
+raw = load '$testArcFolder' using ArcLoader();
+-- schema is (url:chararray, date:chararray, mime:chararray, content:bytearray);
 
 store raw into '$experimentfolder/raw' using PigStorage();
 
