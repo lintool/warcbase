@@ -1,5 +1,7 @@
 package org.warcbase.data;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -7,6 +9,8 @@ import java.io.InputStream;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.archive.io.warc.WARCReader;
+import org.archive.io.warc.WARCReaderFactory;
 import org.archive.io.warc.WARCRecord;
 
 /**
@@ -17,6 +21,12 @@ public class WarcRecordUtils {
 
   // TODO: these methods work fine, but there's a lot of unnecessary buffer copying, which is
   // terrible from a performance perspective.
+
+  public static WARCRecord fromBytes(byte[] bytes) throws IOException {
+    WARCReader reader = (WARCReader) WARCReaderFactory.get("",
+        new BufferedInputStream(new ByteArrayInputStream(bytes)), false);
+    return (WARCRecord) reader.get();
+  }
 
   public static byte[] toBytes(WARCRecord record) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
