@@ -7,6 +7,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 import org.archive.io.warc.WARCReader;
@@ -40,6 +42,25 @@ public class WarcRecordUtils {
     record.dump(dout);
 
     return baos.toByteArray();
+  }
+
+  /**
+   * Extracts the MIME type of WARC response records (i.e., "WARC-Type" is "response").
+   * Note that this is different from the "Content-Type" in the WARC header.
+   *
+   * @param contents raw contents of the WARC response record
+   * @return MIME type
+   */
+  public static String getWarcResponseMimeType(byte[] contents) {
+    // This is a somewhat janky way to get the MIME type of the response.
+    // Note that this is different from the "Content-Type" in the WARC header.
+    Pattern pattern = Pattern.compile("Content-Type: ([^\\s]+)");
+    Matcher matcher = pattern.matcher(new String(contents));
+    if (matcher.find()) {
+      return matcher.group(1).replaceAll(";$", "");
+    }
+
+    return null;
   }
 
   /**
