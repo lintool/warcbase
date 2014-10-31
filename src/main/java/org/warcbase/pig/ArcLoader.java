@@ -54,7 +54,7 @@ public class ArcLoader extends FileInputLoadFunc implements LoadMetadata {
 
       List<Object> protoTuple = Lists.newArrayList();
       protoTuple.add(meta.getUrl());
-      protoTuple.add(meta.getDate());
+      protoTuple.add(meta.getDate());  // These are the standard 14-digit dates.
       protoTuple.add(meta.getMimetype());
 
       try {
