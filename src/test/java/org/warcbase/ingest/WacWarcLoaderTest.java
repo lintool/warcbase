@@ -9,8 +9,6 @@ import java.io.File;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Iterator;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,6 +38,9 @@ public class WacWarcLoaderTest {
     Object2IntFrequencyDistribution<String> types =
         new Object2IntFrequencyDistributionEntry<String>();
 
+    Object2IntFrequencyDistribution<String> responseTypes =
+        new Object2IntFrequencyDistributionEntry<String>();
+
     int cnt = 0;
     for (Iterator<ArchiveRecord> ii = reader.iterator(); ii.hasNext();) {
       WARCRecord r = (WARCRecord) ii.next();
@@ -55,16 +56,9 @@ public class WacWarcLoaderTest {
       @SuppressWarnings("unused")
       String digit14Date = ArchiveUtils.get14DigitDate(DATE_WARC.parse(header.getDate()));
 
-      // This is a somewhat janky way to get the MIME type of the response.
-      // Note that this is different from the "Content-Type" in the WARC header.
       if (header.getHeaderValue("WARC-Type").equals("response") &&
           header.getUrl().startsWith("http://")) {
-        Pattern pattern = Pattern.compile("Content-Type: ([^\\s]+)");
-        Matcher matcher = pattern.matcher(new String(contents));
-        if (matcher.find()) {
-          @SuppressWarnings("unused")
-          String mimeType = matcher.group(1).replaceAll(";$", "");
-        }
+        responseTypes.increment(WarcRecordUtils.getWarcResponseMimeType(contents));
       }
 
       cnt++;
@@ -75,11 +69,22 @@ public class WacWarcLoaderTest {
     assertEquals(822, cnt);
 
     assertEquals(299, types.get("response"));
-    assertEquals(1, types.get("warcinfo"));
+    assertEquals(  1, types.get("warcinfo"));
     assertEquals(261, types.get("request"));
     assertEquals(261, types.get("metadata"));
-    assertEquals(4, types.getNumberOfEvents());
+    assertEquals(  4, types.getNumberOfEvents());
     assertEquals(822, types.getSumOfCounts());
+
+    assertEquals(  8, responseTypes.get("application/x-javascript"));
+    assertEquals(  4, responseTypes.get("text/css"));
+    assertEquals(  8, responseTypes.get("application/x-shockwave-flash"));
+    assertEquals(  9, responseTypes.get("text/xml"));
+    assertEquals(  8, responseTypes.get("image/png"));
+    assertEquals( 18, responseTypes.get("image/jpeg"));
+    assertEquals( 29, responseTypes.get("image/gif"));
+    assertEquals( 36, responseTypes.get("text/plain"));
+    assertEquals(140, responseTypes.get("text/html"));
+    assertEquals(260, responseTypes.getSumOfCounts());
   }
 
   @Test
