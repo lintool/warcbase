@@ -2,7 +2,11 @@ package org.warcbase.ingest;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.File;
+import java.io.InputStream;
 import java.util.Iterator;
 
 import org.apache.commons.logging.Log;
@@ -13,6 +17,7 @@ import org.archive.io.arc.ARCReaderFactory;
 import org.archive.io.arc.ARCRecord;
 import org.archive.io.arc.ARCRecordMetaData;
 import org.junit.Test;
+import org.warcbase.data.ArcRecordUtils;
 
 import com.google.common.io.Resources;
 
@@ -20,7 +25,7 @@ public class WacArcLoaderTest {
   private static final Log LOG = LogFactory.getLog(WacArcLoaderTest.class);
 
   @Test
-  public void testInputFormat() throws Exception {
+  public void testReader() throws Exception {
     String[] urls = new String[] {
         "filedesc://IAH-20080430204825-00000-blackbook.arc",
         "dns:www.archive.org",
@@ -39,6 +44,36 @@ public class WacArcLoaderTest {
       if (cnt < urls.length) {
         assertEquals(urls[cnt], meta.getUrl());
       }
+      cnt++;
+    }
+    reader.close();
+
+    LOG.info(cnt + " records read!");
+    assertEquals(300, cnt);
+  }
+
+  @Test
+  public void testReadFromStream() throws Exception {
+    String arcFile = Resources.getResource("arc/example.arc.gz").getPath();
+    ARCReader reader = ARCReaderFactory.get(new File(arcFile));
+
+    int cnt = 0;
+    for (Iterator<ArchiveRecord> ii = reader.iterator(); ii.hasNext();) {
+      ARCRecord r = (ARCRecord) ii.next();
+      // Skip the file header.
+      if (cnt == 0) {
+        cnt++;
+        continue;
+      }
+
+      String h = r.getHeaderString();
+      InputStream in = new DataInputStream(new ByteArrayInputStream(ArcRecordUtils.toBytes(r)));
+
+      ARCReader nr = (ARCReader) ARCReaderFactory.get("",
+          new BufferedInputStream(in), false);
+      ARCRecord r2 = (ARCRecord) nr.get();
+
+      assertEquals(h, r2.getHeaderString());
       cnt++;
     }
     reader.close();

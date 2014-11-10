@@ -19,33 +19,36 @@ import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Test;
-import org.warcbase.mapreduce.WacArcInputFormat;
+import org.warcbase.mapreduce.WacWarcInputFormat;
 
 import com.google.common.io.Resources;
 
-public class ArcRecordWritableTest {
+public class WarcRecordWritableTest {
   @Test
   public void testInputFormat() throws Exception {
-    String arcFile = Resources.getResource("arc/example.arc.gz").getPath();
+    String warcFile = Resources.getResource("warc/example.warc.gz").getPath();
 
     Configuration conf = new Configuration(false);
     conf.set("fs.defaultFS", "file:///");
 
-    File testFile = new File(arcFile);
+    File testFile = new File(warcFile);
     Path path = new Path(testFile.getAbsoluteFile().toURI());
     FileSplit split = new FileSplit(path, 0, testFile.length(), null);
 
-    InputFormat<LongWritable, ArcRecordWritable> inputFormat = ReflectionUtils.newInstance(
-        WacArcInputFormat.class, conf);
+    InputFormat<LongWritable, WarcRecordWritable> inputFormat = ReflectionUtils.newInstance(
+        WacWarcInputFormat.class, conf);
     TaskAttemptContext context = new TaskAttemptContextImpl(conf, new TaskAttemptID());
-    RecordReader<LongWritable, ArcRecordWritable> reader = inputFormat.createRecordReader(split,
+    RecordReader<LongWritable, WarcRecordWritable> reader = inputFormat.createRecordReader(split,
         context);
 
     reader.initialize(split, context);
 
     int cnt = 0;
     while (reader.nextKeyValue()) {
-      ArcRecordWritable record = reader.getCurrentValue();
+      WarcRecordWritable record = reader.getCurrentValue();
+      //System.out.println(record.getRecord().getHeader().getUrl() + " " +
+      //  record.getRecord().getHeader().getHeaderValue("WARC-Type"));
+
       cnt++;
 
       ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
@@ -53,14 +56,16 @@ public class ArcRecordWritableTest {
 
       record.write(dataOut);
 
-      ArcRecordWritable reconstructed = new ArcRecordWritable();
+      WarcRecordWritable reconstructed = new WarcRecordWritable();
 
       reconstructed.readFields(new DataInputStream(new ByteArrayInputStream(bytesOut.toByteArray())));
 
-      assertEquals(record.getRecord().getMetaData().getUrl(),
-          reconstructed.getRecord().getMetaData().getUrl());
+      assertEquals(record.getRecord().getHeader().getUrl(),
+          reconstructed.getRecord().getHeader().getUrl());
+      assertEquals(record.getRecord().getHeader().getContentLength(),
+          reconstructed.getRecord().getHeader().getContentLength());
     }
 
-    assertEquals(300, cnt);
+    assertEquals(822, cnt);
   }
 }
