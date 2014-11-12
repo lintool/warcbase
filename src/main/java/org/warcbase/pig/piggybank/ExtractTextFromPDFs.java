@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.apache.pig.EvalFunc;
+import org.apache.pig.data.DataByteArray;
 import org.apache.pig.data.Tuple;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
@@ -25,11 +26,15 @@ public class ExtractTextFromPDFs extends EvalFunc<String> {
       if (input == null || input.size() == 0 || input.get(0) == null) {
           return "N/A";
       }
-      String content = (String) input.get(0);
       
-      if (content.isEmpty()) return "EMPTY";
+      DataByteArray dba = (DataByteArray)input.get(0);
       
-      InputStream is = new ByteArrayInputStream(content.getBytes());
+     // String content = (String) input.get(0); //failed due to being unable to cast DataByteArray to String
+      
+      //if (content.isEmpty()) return "EMPTY";
+      
+      //InputStream is = new ByteArrayInputStream(content.getBytes());
+      InputStream is = new ByteArrayInputStream(dba.get());
       ContentHandler contenthandler = new BodyContentHandler();
       Metadata metadata = new Metadata();
       Parser pdfparser = new AutoDetectParser();
