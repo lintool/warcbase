@@ -77,12 +77,17 @@ public class ExtractLinksWac extends Configured implements Tool {
         @SuppressWarnings("deprecation")
         Path[] localFiles = context.getLocalCacheFiles();
 
+
         LOG.info("cache contents: " + Arrays.toString(localFiles));
         System.out.println("cache contents: " + Arrays.toString(localFiles));
 
         // load FST UriMapping from file
         fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
-        fst.loadMapping(localFiles[0].toString());
+	String fstFileName = localFiles[0].toString();
+	if (fstFileName.startsWith("file:")) {
+		fstFileName = fstFileName.substring(5, fstFileName.length());
+	}
+        fst.loadMapping(fstFileName);
         // simply assume only one file in distributed cache.
       } catch (Exception e) {
         e.printStackTrace();
