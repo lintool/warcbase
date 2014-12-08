@@ -42,6 +42,7 @@ public class WarcBrowserServlet extends HttpServlet {
   private final Pattern p2 = Pattern.compile("^/([^//]+)/\\*/(http://.*)$");
 
   public WarcBrowserServlet() throws
+      IOException, MasterNotRunningException, ZooKeeperConnectionException {
     this.hbaseConfig = HBaseConfiguration.create();
     hbaseAdmin = new HBaseAdmin(hbaseConfig);
     hbaseConnection = HConnectionManager.createConnection(hbaseConfig);
