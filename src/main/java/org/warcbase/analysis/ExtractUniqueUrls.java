@@ -132,7 +132,9 @@ public class ExtractUniqueUrls extends Configured implements Tool {
       fs.delete(output, true);
     }
 
+    long startTime = System.currentTimeMillis();
     job.waitForCompletion(true);
+    LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
 
     Counters counters = job.getCounters();
     LOG.info("Read " + counters.findCounter(Records.TOTAL).getValue() + " total URLs.");

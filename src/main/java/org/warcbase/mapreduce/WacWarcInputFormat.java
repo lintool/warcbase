@@ -17,17 +17,17 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.archive.io.ArchiveRecord;
-import org.archive.io.arc.ARCReader;
-import org.archive.io.arc.ARCReaderFactory;
-import org.archive.io.arc.ARCReaderFactory.CompressedARCReader;
-import org.archive.io.arc.ARCRecord;
-import org.warcbase.io.ArcRecordWritable;
+import org.archive.io.warc.WARCReader;
+import org.archive.io.warc.WARCReaderFactory;
+import org.archive.io.warc.WARCReaderFactory.CompressedWARCReader;
+import org.archive.io.warc.WARCRecord;
+import org.warcbase.io.WarcRecordWritable;
 
-public class WacArcInputFormat extends FileInputFormat<LongWritable, ArcRecordWritable> {
+public class WacWarcInputFormat extends FileInputFormat<LongWritable, WarcRecordWritable> {
   @Override
-  public RecordReader<LongWritable, ArcRecordWritable> createRecordReader(InputSplit split,
+  public RecordReader<LongWritable, WarcRecordWritable> createRecordReader(InputSplit split,
       TaskAttemptContext context) throws IOException, InterruptedException {
-    return new ArcRecordReader();
+    return new WarcRecordReader();
   }
 
   @Override
@@ -35,13 +35,13 @@ public class WacArcInputFormat extends FileInputFormat<LongWritable, ArcRecordWr
     return false;
   }
 
-  public class ArcRecordReader extends RecordReader<LongWritable, ArcRecordWritable> {
-    private ARCReader reader;
+  public class WarcRecordReader extends RecordReader<LongWritable, WarcRecordWritable> {
+    private WARCReader reader;
     private long start;
     private long pos;
     private long end;
     private LongWritable key = null;
-    private ArcRecordWritable value = null;
+    private WarcRecordWritable value = null;
     private Seekable filePosition;
     private Iterator<ArchiveRecord> iter;
 
@@ -56,7 +56,7 @@ public class WacArcInputFormat extends FileInputFormat<LongWritable, ArcRecordWr
       FileSystem fs = file.getFileSystem(job);
       FSDataInputStream fileIn = fs.open(split.getPath());
 
-      reader = (ARCReader) ARCReaderFactory.get(split.getPath().toString(),
+      reader = (WARCReader) WARCReaderFactory.get(split.getPath().toString(),
           new BufferedInputStream(fileIn), true);
 
       iter = reader.iterator();
@@ -66,7 +66,7 @@ public class WacArcInputFormat extends FileInputFormat<LongWritable, ArcRecordWr
     }
 
     private boolean isCompressedInput() {
-      return reader instanceof CompressedARCReader;
+      return reader instanceof CompressedWARCReader;
     }
 
     private long getFilePosition() throws IOException {
@@ -90,13 +90,13 @@ public class WacArcInputFormat extends FileInputFormat<LongWritable, ArcRecordWr
       }
       key.set(pos);
 
-      ARCRecord record = (ARCRecord) iter.next();
+      WARCRecord record = (WARCRecord) iter.next();
       if (record == null) {
         return false;
       }
 
       if (value == null) {
-        value = new ArcRecordWritable();
+        value = new WarcRecordWritable();
       }
       value.setRecord(record);
 
@@ -109,7 +109,7 @@ public class WacArcInputFormat extends FileInputFormat<LongWritable, ArcRecordWr
     }
 
     @Override
-    public ArcRecordWritable getCurrentValue() {
+    public WarcRecordWritable getCurrentValue() {
       return value;
     }
 

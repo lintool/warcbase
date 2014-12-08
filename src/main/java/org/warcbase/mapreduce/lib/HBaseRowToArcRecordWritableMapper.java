@@ -2,7 +2,8 @@ package org.warcbase.mapreduce.lib;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -22,8 +23,8 @@ public class HBaseRowToArcRecordWritableMapper
       throws IOException, InterruptedException {
     context.getCounter(Rows.TOTAL).increment(1);
 
-    for (KeyValue kv : result.list()) {
-      valueOut.setRecord(ArcRecordUtils.fromBytes(kv.getValue()));
+    for (Cell kv : result.listCells()) {
+      valueOut.setRecord(ArcRecordUtils.fromBytes(CellUtil.cloneValue(kv)));
       context.write(keyOut, valueOut);
     }
   }
