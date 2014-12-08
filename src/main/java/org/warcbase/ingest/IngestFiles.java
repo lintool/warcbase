@@ -5,7 +5,12 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -16,12 +21,19 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 import org.archive.io.ArchiveRecord;
+import org.archive.io.ArchiveRecordHeader;
 import org.archive.io.arc.ARCReader;
 import org.archive.io.arc.ARCReaderFactory;
 import org.archive.io.arc.ARCRecord;
 import org.archive.io.arc.ARCRecordMetaData;
+import org.archive.io.warc.WARCConstants;
+import org.archive.io.warc.WARCReader;
+import org.archive.io.warc.WARCReaderFactory; 
+import org.archive.io.warc.WARCRecord; 
+import org.archive.util.ArchiveUtils;
 import org.warcbase.data.HBaseTableManager;
 import org.warcbase.data.UrlUtils;
+import org.warcbase.data.WarcRecordUtils;
 
 public class IngestFiles {
   private static final String CREATE_OPTION = "create";
@@ -143,8 +155,104 @@ public class IngestFiles {
     }
   }
 
-  private void ingestWarcFile(File inputWarcFile) throws IOException {
-    throw new UnsupportedOperationException("WARC files not supported yet!");
+  private void ingestWarcFile(File inputWarcFile) {
+    WARCReader reader = null;
+
+    DateFormat iso8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
+    Pattern pattern = Pattern.compile("Content-Type: ([^\\s]+)");	// n.b. RFC2616 sec. 4.2 says HTTP header field names are actually case-insensitive
+
+    // Per file trapping of exceptions so a corrupt file doesn't blow up entire ingest.
+    try {
+      reader = WARCReaderFactory.get(inputWarcFile);
+
+      // The following snippet of code was adapted from the dump method in ARCReader.
+      boolean firstRecord = true;
+      for (Iterator<ArchiveRecord> ii = reader.iterator(); ii.hasNext();) {
+        WARCRecord r = (WARCRecord) ii.next();
+	ArchiveRecordHeader h = r.getHeader();
+        if (firstRecord) {
+          firstRecord = false;
+          while (r.available() > 0) {
+            r.read();
+          }
+          continue;
+        }
+
+
+        // Only store WARC 'response' records
+        // Would it be useful to store 'request' and 'metadata' records too?
+        if (!h.getHeaderValue(WARCConstants.HEADER_KEY_TYPE).equals("response")) {
+            continue;
+        }
+
+        if (h.getUrl().startsWith("dns:")) {
+            invalidUrls++;
+            continue;
+        }
+
+        Date d = iso8601.parse(h.getDate());
+        String date = ArchiveUtils.get14DigitDate(d);
+        byte[] dbRecord = WarcRecordUtils.toBytes(r);
+	String type = null;
+
+        // WarcRecordUtils.getWarcResponseMimeType() returns first 'Content-Type'
+        // match, which would be appropriate if we were dealing with just the
+        // HTTP response portion of the WARC record. However, since the WARC
+        // header also specifies a separate (different) Content-Type, we want
+        // the second match. I didn't want to change the functionality of any
+        // WarcRecordUtils methods, so for the moment I put the type-fetching
+        // code here.
+        //   An alternative using WarcRecordUtils methods as-is, is to create
+        // a new WARCRecord with fromBytes(), get a byte stream of the HTTP
+        // response (including headers) with getContet(), and then call 
+        // getWarcResponseMimeType(), but this is a waste of resources.
+        Matcher matcher = pattern.matcher(new String(dbRecord));
+        if (matcher.find()) {
+		if (matcher.find()) {
+			type = matcher.group(1).replaceAll(";$", "");
+		}
+	}
+
+        String key = UrlUtils.urlToKey(h.getUrl());
+
+        if (key == null) {
+          LOG.error("Invalid URL: " + h.getUrl());
+          invalidUrls++;
+          continue;
+        }
+
+        if (type == null) {
+          type = "text/plain";
+        }
+
+        if ((int) h.getLength() > MAX_CONTENT_SIZE) {
+          toolarge++;
+        } else {
+          if (hbaseManager.insertRecord(key, date, dbRecord, type)) {
+            cnt++;
+          } else {
+            errors++;
+          }
+        }
+
+        if (cnt % 10000 == 0 && cnt > 0) {
+          LOG.info("Ingested " + cnt + " records into HBase.");
+        }
+      }
+    } catch (Exception e) {
+      LOG.error("Error ingesting file: " + inputWarcFile);
+      e.printStackTrace();
+    } catch (OutOfMemoryError e) {
+      LOG.error("Encountered OutOfMemoryError ingesting file: " + inputWarcFile);
+      LOG.error("Attempting to continue...");
+    } finally {
+      if (reader != null)
+        try {
+          reader.close();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+    }
   }
 
   private void ingestFolder(File inputFolder, int i) throws Exception {
