@@ -16,7 +16,9 @@ import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -25,6 +27,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -39,14 +42,16 @@ import org.apache.lucene.util.fst.FST.INPUT_TYPE;
 import org.apache.lucene.util.fst.PositiveIntOutputs;
 import org.apache.lucene.util.fst.Util;
 import org.jwat.arc.ArcRecordBase;
+import org.jwat.warc.WarcRecord;
 import org.warcbase.mapreduce.JwatArcInputFormat;
+import org.warcbase.mapreduce.JwatWarcInputFormat;
 
 public class UrlMappingMapReduceBuilder extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(UrlMappingMapReduceBuilder.class);
 
   private static enum Records { TOTAL, UNIQUE };
 
-  public static class UriMappingBuilderMapper extends
+  public static class ArcUriMappingBuilderMapper extends
       Mapper<LongWritable, ArcRecordBase, Text, Text> {
 
     public static final Text KEY = new Text();
@@ -57,6 +62,23 @@ public class UrlMappingMapReduceBuilder extends Configured implements Tool {
       context.getCounter(Records.TOTAL).increment(1);
       if (record.getUrlStr().startsWith("http://")) {
         KEY.set(record.getUrlStr());
+        context.write(KEY, VALUE);
+      }
+    }
+  }
+
+  public static class WarcUriMappingBuilderMapper extends
+      Mapper<LongWritable, WarcRecord, Text, Text> {
+
+    public static final Text KEY = new Text();
+    public static final Text VALUE = new Text();
+
+    public void map(LongWritable key, WarcRecord record, Context context) throws IOException,
+        InterruptedException {
+      context.getCounter(Records.TOTAL).increment(1);
+      String uri = record.header.warcTargetUriStr;
+      if ((uri != null) && uri.startsWith("http://")) {
+        KEY.set(uri);
         context.write(KEY, VALUE);
       }
     }
@@ -181,15 +203,28 @@ public class UrlMappingMapReduceBuilder extends Configured implements Tool {
     job.getConfiguration().set("UriMappingBuilderClass",
         UrlMappingMapReduceBuilder.class.getCanonicalName());
 
-    FileInputFormat.setInputPaths(job, new Path(inputPath));
+    Path path = new Path(inputPath);
+    FileSystem fs = path.getFileSystem(conf);
 
-    job.setInputFormatClass(JwatArcInputFormat.class);
+    RemoteIterator<LocatedFileStatus> itr = fs.listFiles(path, true);
+    LocatedFileStatus fileStatus;
+    while (itr.hasNext()) {
+      fileStatus = itr.next();
+      Path p = fileStatus.getPath();
+      if ((p.getName().endsWith(".warc.gz")) || (p.getName().endsWith(".warc"))) {
+        // WARC
+        MultipleInputs.addInputPath(job, p, JwatWarcInputFormat.class, WarcUriMappingBuilderMapper.class);
+      } else {
+        // Assume ARC
+        MultipleInputs.addInputPath(job, p, JwatArcInputFormat.class, ArcUriMappingBuilderMapper.class);
+      }
+    }
+
     job.setOutputFormatClass(NullOutputFormat.class); // no output
     // set map (key,value) output format
     job.setMapOutputKeyClass(Text.class);
     job.setMapOutputValueClass(Text.class);
 
-    job.setMapperClass(UriMappingBuilderMapper.class);
     job.setReducerClass(UriMappingBuilderReducer.class);
     // all the keys are shuffled to a single reducer
     job.setNumReduceTasks(1);
