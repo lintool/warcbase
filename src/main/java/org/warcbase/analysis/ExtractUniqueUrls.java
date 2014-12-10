@@ -13,7 +13,9 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -21,21 +23,23 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import org.jwat.arc.ArcRecordBase;
+import org.jwat.warc.WarcRecord;
 import org.warcbase.mapreduce.JwatArcInputFormat;
+import org.warcbase.mapreduce.JwatWarcInputFormat;
 
 public class ExtractUniqueUrls extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ExtractUniqueUrls.class);
 
   private static enum Records { TOTAL, UNIQUE };
 
-  private static class MyMapper
+  private static class MyArcMapper
       extends Mapper<LongWritable, ArcRecordBase, Text, IntWritable> {
     private final IntWritable value = new IntWritable(1);
     private final Text url = new Text();
@@ -47,6 +51,25 @@ public class ExtractUniqueUrls extends Configured implements Tool {
 
       if (record.getUrlStr().startsWith("http://")) {
         url.set(record.getUrlStr());
+        context.write(url, value);
+      }
+    }
+  }
+
+  private static class MyWarcMapper
+      extends Mapper<LongWritable, WarcRecord, Text, IntWritable> {
+    private final IntWritable value = new IntWritable(1);
+    private final Text url = new Text();
+
+    @Override
+    public void map(LongWritable key, WarcRecord record, Context context)
+        throws IOException, InterruptedException {
+      context.getCounter(Records.TOTAL).increment(1);
+
+      String uriStr = record.header.warcTargetUriStr;
+
+      if ((uriStr != null) && uriStr.startsWith("http://")) {
+        url.set(uriStr);
         context.write(url, value);
       }
     }
@@ -116,20 +139,34 @@ public class ExtractUniqueUrls extends Configured implements Tool {
     job.setJarByClass(ExtractUniqueUrls.class);
     job.setNumReduceTasks(1);
 
-    FileInputFormat.addInputPaths(job, input);
+    Path path = new Path(input);
+    FileSystem fs = path.getFileSystem(getConf());
+
+    RemoteIterator<LocatedFileStatus> itr = fs.listFiles(path, true);
+    LocatedFileStatus fileStatus;
+    while (itr.hasNext()) {
+      fileStatus = itr.next();
+      Path p = fileStatus.getPath();
+      if ((p.getName().endsWith(".warc.gz")) || (p.getName().endsWith(".warc"))) {
+        // WARC
+        MultipleInputs.addInputPath(job, p, JwatWarcInputFormat.class, MyWarcMapper.class);
+      } else {
+        // Assume ARC
+        MultipleInputs.addInputPath(job, p, JwatArcInputFormat.class, MyArcMapper.class);
+      }
+    }
+
     FileOutputFormat.setOutputPath(job, output);
 
-    job.setInputFormatClass(JwatArcInputFormat.class);
     job.setOutputFormatClass(TextOutputFormat.class);
 
-    job.setMapperClass(MyMapper.class);
     job.setReducerClass(MyReducer.class);
     job.setMapOutputKeyClass(Text.class);
     job.setMapOutputValueClass(IntWritable.class);
 
-    FileSystem fs = FileSystem.get(getConf());
+    FileSystem ofs = FileSystem.get(getConf());
     if ( FileSystem.get(getConf()).exists(output)) {
-      fs.delete(output, true);
+      ofs.delete(output, true);
     }
 
     long startTime = System.currentTimeMillis();

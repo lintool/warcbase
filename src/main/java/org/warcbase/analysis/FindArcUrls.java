@@ -29,8 +29,8 @@ import org.apache.log4j.Logger;
 import org.jwat.arc.ArcRecordBase;
 import org.warcbase.mapreduce.JwatArcInputFormat;
 
-public class FindUrls extends Configured implements Tool {
-  private static final Logger LOG = Logger.getLogger(FindUrls.class);
+public class FindArcUrls extends Configured implements Tool {
+  private static final Logger LOG = Logger.getLogger(FindArcUrls.class);
 
   private static enum Records { TOTAL };
 
@@ -63,7 +63,7 @@ public class FindUrls extends Configured implements Tool {
     }
   }
 
-  public FindUrls() {}
+  public FindArcUrls() {}
 
   public static final String INPUT_OPTION = "input";
   public static final String OUTPUT_OPTION = "output";
@@ -106,12 +106,12 @@ public class FindUrls extends Configured implements Tool {
     Path output = new Path(cmdline.getOptionValue(OUTPUT_OPTION));
     String pattern = cmdline.getOptionValue(PATTERN_OPTION);
 
-    LOG.info("Tool name: " + FindUrls.class.getSimpleName());
+    LOG.info("Tool name: " + FindArcUrls.class.getSimpleName());
     LOG.info(" - input: " + input);
     LOG.info(" - output: " + output);
 
-    Job job = Job.getInstance(getConf(), FindUrls.class.getSimpleName() + ":" + input);
-    job.setJarByClass(FindUrls.class);
+    Job job = Job.getInstance(getConf(), FindArcUrls.class.getSimpleName() + ":" + input);
+    job.setJarByClass(FindArcUrls.class);
     job.setNumReduceTasks(1);
     job.setMapOutputKeyClass(Text.class);
     job.setMapOutputValueClass(Text.class);
@@ -143,8 +143,8 @@ public class FindUrls extends Configured implements Tool {
    * Dispatches command-line arguments to the tool via the <code>ToolRunner</code>.
    */
   public static void main(String[] args) throws Exception {
-    LOG.info("Running " + FindUrls.class.getCanonicalName() + " with args "
+    LOG.info("Running " + FindArcUrls.class.getCanonicalName() + " with args "
         + Arrays.toString(args));
-    ToolRunner.run(new FindUrls(), args);
+    ToolRunner.run(new FindArcUrls(), args);
   }
 }
