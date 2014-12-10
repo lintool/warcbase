@@ -44,7 +44,7 @@ You can find some sample data [here](https://archive.org/details/ExampleArcAndWa
 
 ```
 $ setenv CLASSPATH_PREFIX "/etc/hbase/conf/"
-$ sh target/appassembler/bin/IngestWarcFiles \
+$ sh target/appassembler/bin/IngestFiles \
     -dir /path/to/warc/dir/ -name archive_name -create
 ```
 
@@ -143,7 +143,7 @@ We can use the mapping data (from above) to extract the webgraph and at the same
 ```
 $ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
     org.warcbase.analysis.graph.ExtractLinksWac \
-    -input /hdfs/path/to/data -output output -urlMapping fst.dat
+    -hdfs /hdfs/path/to/data -output output -urlMapping fst.dat
 ```
 
 Finally, instead of extracting links between individual URLs, we can extract the site-level webgraph by aggregating all URLs with common prefix into a "supernode". Link counts between supernodes represent the total number of links between individual URLs. In order to do this, following input files are needed:
@@ -155,7 +155,7 @@ Then run this MapReduce program:
 
 ```
 $ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
-    org.warcbase.data.ExtractSiteLinks \
+    org.warcbase.analysis.graph.ExtractSiteLinks \
     -input /hdfs/path/to/data -output output \
     -numReducers 1 -urlMapping fst.dat -prefixFile prefix.csv
 ```
