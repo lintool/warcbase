@@ -156,7 +156,7 @@ Then run this MapReduce program:
 ```
 $ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
     org.warcbase.analysis.graph.ExtractSiteLinks \
-    -input /hdfs/path/to/data -output output \
+    -hdfs /hdfs/path/to/data -output output \
     -numReducers 1 -urlMapping fst.dat -prefixFile prefix.csv
 ```
 
