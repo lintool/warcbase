@@ -57,7 +57,7 @@ public class WarcRecordUtils implements WARCConstants {
   public static String getWarcResponseMimeType(byte[] contents) {
     // This is a somewhat janky way to get the MIME type of the response.
     // Note that this is different from the "Content-Type" in the WARC header.
-    Pattern pattern = Pattern.compile("Content-Type: ([^\\s]+)");
+    Pattern pattern = Pattern.compile("Content-Type: ([^\\s]+)", Pattern.CASE_INSENSITIVE);
     Matcher matcher = pattern.matcher(new String(contents));
     if (matcher.find()) {
       return matcher.group(1).replaceAll(";$", "");
