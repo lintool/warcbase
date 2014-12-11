@@ -11,6 +11,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
+import org.apache.commons.httpclient.HttpParser;
+import org.archive.io.ArchiveRecordHeader;
+import org.archive.io.warc.WARCConstants;
 import org.archive.io.warc.WARCReader;
 import org.archive.io.warc.WARCReaderFactory;
 import org.archive.io.warc.WARCRecord;
@@ -18,7 +21,7 @@ import org.archive.io.warc.WARCRecord;
 /**
  * Utilities for working with {@code WARCRecord}s (from archive.org APIs).
  */
-public class WarcRecordUtils {
+public class WarcRecordUtils implements WARCConstants {
   private static final Logger LOG = Logger.getLogger(WarcRecordUtils.class);
 
   // TODO: these methods work fine, but there's a lot of unnecessary buffer copying, which is
@@ -64,7 +67,7 @@ public class WarcRecordUtils {
   }
 
   /**
-   * Extracts raw contents from an {@code WARCRecord} (including HTTP headers).
+   * Extracts raw contents from a {@code WARCRecord} (including HTTP headers).
    *
    * @param record the {@code WARCRecord}
    * @return raw contents
@@ -77,6 +80,26 @@ public class WarcRecordUtils {
     DataOutputStream dout = new DataOutputStream(baos);
     copyStream(record, len, true, dout);
 
+    return baos.toByteArray();
+  }
+
+  /**
+   * Extracts contents of the body from a {@code WARCRecord} (excluding HTTP headers).
+   *
+   * @param record the {@code WARCRecord}
+   * @return contents of the body
+   * @throws IOException
+   */
+  public static byte[] getBodyContent(WARCRecord record) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    String line = new String(HttpParser.readLine(record, WARC_HEADER_ENCODING));
+    if (line == null) {
+      return null;
+    }
+
+    // Just using parseHeaders to move down input stream to body
+    HttpParser.parseHeaders(record, WARC_HEADER_ENCODING);
+    record.dump(baos);
     return baos.toByteArray();
   }
 
