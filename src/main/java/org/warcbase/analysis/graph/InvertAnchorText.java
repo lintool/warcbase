@@ -20,7 +20,9 @@ import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -28,22 +30,27 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
+import org.archive.io.ArchiveRecordHeader;
 import org.archive.io.arc.ARCRecord;
 import org.archive.io.arc.ARCRecordMetaData;
+import org.archive.io.warc.WARCRecord;
 import org.archive.util.ArchiveUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.warcbase.data.ArcRecordUtils;
+import org.warcbase.data.WarcRecordUtils;
 import org.warcbase.data.UrlMapping;
 import org.warcbase.io.ArcRecordWritable;
+import org.warcbase.io.WarcRecordWritable;
 import org.warcbase.mapreduce.WacArcInputFormat;
+import org.warcbase.mapreduce.WacWarcInputFormat;
 
 import com.google.common.collect.Lists;
 
@@ -83,7 +90,7 @@ public class InvertAnchorText extends Configured implements Tool {
     return anchors;
   }
 
-  public static class InvertAnchorTextMapper extends
+  public static class InvertAnchorTextArcMapper extends
       Mapper<LongWritable, ArcRecordWritable, IntWritable, Text> {
     private final DateFormat df = new SimpleDateFormat("yyyyMMdd");
     private final IntWritable key = new IntWritable();
@@ -105,7 +112,11 @@ public class InvertAnchorText extends Configured implements Tool {
 
         // load FST UriMapping from file
         fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
-        fst.loadMapping(localFiles[0].toString());
+        String fstFileName = localFiles[0].toString();
+        if (fstFileName.startsWith("file:")) {
+          fstFileName = fstFileName.substring(5, fstFileName.length());
+        }
+        fst.loadMapping(fstFileName);
         // simply assume only one file in distributed cache.
       } catch (Exception e) {
         e.printStackTrace();
@@ -156,6 +167,99 @@ public class InvertAnchorText extends Configured implements Tool {
       context.getCounter(Counts.HTML_PAGES).increment(1);
 
       byte[] bytes = ArcRecordUtils.getBodyContent(record);
+      Int2ObjectMap<List<String>> anchors = InvertAnchorText.extractLinks(new String(bytes, "UTF8"), url, fst);
+      for (Int2ObjectMap.Entry<List<String>> entry : anchors.int2ObjectEntrySet()) {
+        key.set(entry.getIntKey());
+        for (String s : entry.getValue()) {
+          value.set(srcId + "\t" + s);
+          context.write(key, value);
+        }
+        context.getCounter(Counts.LINKS).increment(entry.getValue().size());
+      }
+    }
+  }
+
+  public static class InvertAnchorTextWarcMapper extends
+      Mapper<LongWritable, WarcRecordWritable, IntWritable, Text> {
+    private final DateFormat df = new SimpleDateFormat("yyyyMMdd");
+    private final DateFormat iso8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
+    private final IntWritable key = new IntWritable();
+    private final Text value = new Text();
+
+    private UrlMapping fst;
+
+    @Override
+    public void setup(Context context) {
+      try {
+        Configuration conf = context.getConfiguration();
+        // There appears to be a bug in getCacheFiles() which returns null,
+        // even though getLocalCacheFiles is deprecated...
+        @SuppressWarnings("deprecation")
+        Path[] localFiles = context.getLocalCacheFiles();
+
+        LOG.info("cache contents: " + Arrays.toString(localFiles));
+        System.out.println("cache contents: " + Arrays.toString(localFiles));
+
+        // load FST UriMapping from file
+        fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        String fstFileName = localFiles[0].toString();
+        if (fstFileName.startsWith("file:")) {
+          fstFileName = fstFileName.substring(5, fstFileName.length());
+        }
+        fst.loadMapping(fstFileName);
+        // simply assume only one file in distributed cache.
+      } catch (Exception e) {
+        e.printStackTrace();
+        throw new RuntimeException("Error Initializing UriMapping");
+      }
+    }
+
+    @Override
+    public void map(LongWritable k, WarcRecordWritable r, Context context)
+        throws IOException, InterruptedException {
+      context.getCounter(Counts.RECORDS).increment(1);
+
+      WARCRecord record = r.getRecord();
+      ArchiveRecordHeader header = record.getHeader();
+      byte[] recordBytes = WarcRecordUtils.toBytes(record);
+      byte[] content = WarcRecordUtils.getContent(WarcRecordUtils.fromBytes(recordBytes));
+      String url = header.getUrl();
+      String type = WarcRecordUtils.getWarcResponseMimeType(content);
+      if (type == null) type = "";
+      Date date = null;
+      try {
+        date = iso8601.parse(header.getDate());
+      } catch (java.text.ParseException e) {
+        e.printStackTrace();
+      }
+
+      if (date == null) {
+        return;
+      }
+      String time = df.format(date);
+
+      if (beginDate != null && endDate != null) {
+        if (time.compareTo(beginDate) < 0 || time.compareTo(endDate) > 0) {
+          return;
+        }
+      } else if (beginDate == null && endDate != null) {
+        if (time.compareTo(endDate) > 0) {
+          return;
+        }
+      } else if (beginDate != null && endDate == null) {
+        if (time.compareTo(beginDate) < 0) {
+          return;
+        }
+      }
+
+      int srcId = fst.getID(url);
+      if (!type.equals("text/html") || srcId == -1) {
+        return;
+      }
+
+      context.getCounter(Counts.HTML_PAGES).increment(1);
+
+      byte[] bytes = WarcRecordUtils.getBodyContent(WarcRecordUtils.fromBytes(recordBytes));
       Int2ObjectMap<List<String>> anchors = InvertAnchorText.extractLinks(new String(bytes, "UTF8"), url, fst);
       for (Int2ObjectMap.Entry<List<String>> entry : anchors.int2ObjectEntrySet()) {
         key.set(entry.getIntKey());
@@ -226,10 +330,10 @@ public class InvertAnchorText extends Configured implements Tool {
     }
 
     FileSystem fs = FileSystem.get(getConf());
-    String path = null, table = null;
+    String HDFSPath = null, table = null;
     boolean isHdfs;
     if (cmdline.hasOption(HDFS)) {
-      path = cmdline.getOptionValue(HDFS);
+      HDFSPath = cmdline.getOptionValue(HDFS);
       isHdfs = true;
     } else {
       table = cmdline.getOptionValue(HBASE);
@@ -240,7 +344,7 @@ public class InvertAnchorText extends Configured implements Tool {
 
     LOG.info("Tool: " + InvertAnchorText.class.getSimpleName());
     if (isHdfs) {
-      LOG.info(" - HDFS input path: " + path);
+      LOG.info(" - HDFS input path: " + HDFSPath);
     } else {
       LOG.info(" - HBase table name: " + table);
     }
@@ -269,7 +373,7 @@ public class InvertAnchorText extends Configured implements Tool {
     }
 
     Job job = Job.getInstance(conf, InvertAnchorText.class.getSimpleName() +
-        (isHdfs ? ":HDFS:" + path : ":HBase:" + table));
+        (isHdfs ? ":HDFS:" + HDFSPath : ":HBase:" + table));
     job.setJarByClass(InvertAnchorText.class);
 
     job.getConfiguration().set("UriMappingClass", UrlMapping.class.getCanonicalName());
@@ -281,14 +385,24 @@ public class InvertAnchorText extends Configured implements Tool {
     job.setNumReduceTasks(numReducers);
 
     if (isHdfs) { // HDFS input
-      FileInputFormat.setInputPaths(job, new Path(path));
+      Path path = new Path(HDFSPath);
+      RemoteIterator<LocatedFileStatus> itr = fs.listFiles(path, true);
+      LocatedFileStatus fileStatus;
+      while (itr.hasNext()) {
+        fileStatus = itr.next();
+        Path p = fileStatus.getPath();
+        if ((p.getName().endsWith(".warc.gz")) || (p.getName().endsWith(".warc"))) {
+          // WARC
+          MultipleInputs.addInputPath(job, p, WacWarcInputFormat.class, InvertAnchorTextWarcMapper.class);
+        } else {
+          // Assume ARC
+          MultipleInputs.addInputPath(job, p, WacArcInputFormat.class, InvertAnchorTextArcMapper.class);
+        }
+      }
 
-      job.setInputFormatClass(WacArcInputFormat.class);
       // set map (key,value) output format
       job.setMapOutputKeyClass(IntWritable.class);
       job.setMapOutputValueClass(Text.class);
-
-      job.setMapperClass(InvertAnchorTextMapper.class);
     } else { // HBase input
       throw new UnsupportedOperationException("HBase not supported yet!");
     }

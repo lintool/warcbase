@@ -59,9 +59,11 @@ public class PrefixMapping {
     };
     ArrayList<PrefixNode> prefixes = new ArrayList<PrefixNode>();
     CSVReader reader = new CSVReader(new FileReader(prefixFile), ',');
-    reader.readNext();
+    reader.readNext();	// Ignore first line of CSV file
     String[] record = null;
     while ((record = reader.readNext()) != null) {
+      if (record.length < 2)
+        continue;
       int id = Integer.valueOf(record[0]);
       String url = record[1];
       List<String> results = map.prefixSearch(url);
