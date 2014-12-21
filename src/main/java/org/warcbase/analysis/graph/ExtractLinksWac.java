@@ -67,7 +67,7 @@ public class ExtractLinksWac extends Configured implements Tool {
     private final Joiner joiner = Joiner.on(",");
     private final IntWritable outKey = new IntWritable();
     private final Text outValue = new Text();
-    
+
     private final DateFormat df = new SimpleDateFormat("yyyyMMdd");
     private UrlMapping fst;
     private String beginDate, endDate;
@@ -89,10 +89,10 @@ public class ExtractLinksWac extends Configured implements Tool {
 
         // load FST UriMapping from file
         fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
-	String fstFileName = localFiles[0].toString();
-	if (fstFileName.startsWith("file:")) {
-	  fstFileName = fstFileName.substring(5, fstFileName.length());
-	}
+        String fstFileName = localFiles[0].toString();
+        if (fstFileName.startsWith("file:")) {
+          fstFileName = fstFileName.substring(5, fstFileName.length());
+        }
         fst.loadMapping(fstFileName);
         // simply assume only one file in distributed cache.
       } catch (Exception e) {
@@ -181,7 +181,7 @@ public class ExtractLinksWac extends Configured implements Tool {
     private final Joiner joiner = Joiner.on(",");
     private final IntWritable outKey = new IntWritable();
     private final Text outValue = new Text();
-    
+
     private final DateFormat df = new SimpleDateFormat("yyyyMMdd");
     private final DateFormat iso8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
     private UrlMapping fst;
@@ -204,10 +204,10 @@ public class ExtractLinksWac extends Configured implements Tool {
 
         // load FST UriMapping from file
         fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
-	String fstFileName = localFiles[0].toString();
-	if (fstFileName.startsWith("file:")) {
-	  fstFileName = fstFileName.substring(5, fstFileName.length());
-	}
+        String fstFileName = localFiles[0].toString();
+        if (fstFileName.startsWith("file:")) {
+          fstFileName = fstFileName.substring(5, fstFileName.length());
+        }
         fst.loadMapping(fstFileName);
         // simply assume only one file in distributed cache.
       } catch (Exception e) {
@@ -239,7 +239,7 @@ public class ExtractLinksWac extends Configured implements Tool {
         return;
       }
       String time = df.format(date);
-            
+
       if (beginDate != null && endDate != null) {
         if (time.compareTo(beginDate) < 0 || time.compareTo(endDate) > 0) {
           return;
@@ -271,7 +271,7 @@ public class ExtractLinksWac extends Configured implements Tool {
       if (links == null) {
         return;
       }
-      
+
       outKey.set(fst.getID(url));
       IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
       for (Element link : links) {

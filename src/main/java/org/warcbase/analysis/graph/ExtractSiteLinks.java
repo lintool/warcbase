@@ -89,7 +89,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
         fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         String fstFileName = localFiles[0].toString();
         if (fstFileName.startsWith("file:")) {
-                fstFileName = fstFileName.substring(5, fstFileName.length());
+          fstFileName = fstFileName.substring(5, fstFileName.length());
         }
         fst.loadMapping(fstFileName);
         // load Prefix Mapping from file
@@ -186,14 +186,14 @@ public class ExtractSiteLinks extends Configured implements Tool {
     private static UrlMapping fst;
     private static PrefixMapping prefixMap;
     private static ArrayList<PrefixNode> prefix;
-    
+
     @Override
     public void setup(Context context) {
       try {
         Configuration conf = context.getConfiguration();
         beginDate = conf.get("beginDate");
         endDate = conf.get("endDate");
-        
+
         @SuppressWarnings("deprecation")
         //Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
         Path[] localFiles = context.getLocalCacheFiles();
@@ -202,7 +202,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
         fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
         String fstFileName = localFiles[0].toString();
         if (fstFileName.startsWith("file:")) {
-                fstFileName = fstFileName.substring(5, fstFileName.length());
+          fstFileName = fstFileName.substring(5, fstFileName.length());
         }
         fst.loadMapping(fstFileName);
         // load Prefix Mapping from file
@@ -211,7 +211,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
         if (prefixFileName.startsWith("file:")) {
           prefixFileName = prefixFileName.substring(5, prefixFileName.length());
         }
-        prefix = PrefixMapping.loadPrefix(prefixFileName, fst);      
+        prefix = PrefixMapping.loadPrefix(prefixFileName, fst);
       } catch (Exception e) {
         e.printStackTrace();
         throw new RuntimeException("Error Initializing UriMapping");
@@ -253,7 +253,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
           return;
         }
       }
-      
+
       if (!type.equals("text/html")) {
         return;
       }
