@@ -2,11 +2,14 @@ package org.warcbase.wayback;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.PushbackInputStream;
 import java.net.URL;
 import java.util.logging.Logger;
 
 import org.archive.io.arc.ARCReader;
 import org.archive.io.arc.ARCReaderFactory;
+import org.archive.io.warc.WARCReader;
+import org.archive.io.warc.WARCReaderFactory;
 import org.archive.util.ArchiveUtils;
 import org.archive.wayback.ResourceStore;
 import org.archive.wayback.core.CaptureSearchResult;
@@ -30,11 +33,22 @@ public class WarcbaseResourceStore implements ResourceStore {
     LOGGER.info("Fetching resource url: " + resourceUrl);
 
     try {
-      // Note that this hard codes ARC records, which we need to fix later.
-      ARCReader reader = (ARCReader) ARCReaderFactory.get(resourceUrl.toString(),
-          new BufferedInputStream(new URL(resourceUrl).openStream()), false);
-      r = ResourceFactory.ARCArchiveRecordToResource(reader.get(), reader);
+      // Read first 4 bytes of input stream to detect archive format; push back into stream for re-use
+      PushbackInputStream pb = new PushbackInputStream(new URL(resourceUrl).openStream(), 4);
+      byte[] signature = new byte[4];
+      pb.read(signature, 0, 4);
+      pb.unread(signature);
+
+      if ((new String(signature)).equals("WARC")) {
+        WARCReader reader = (WARCReader) WARCReaderFactory.get(resourceUrl.toString(), pb, false);
+        r = ResourceFactory.WARCArchiveRecordToResource(reader.get(), reader);
+      } else {
+        // Assume ARC format if not WARC
+        ARCReader reader = (ARCReader) ARCReaderFactory.get(resourceUrl.toString(), pb, false);
+        r = ResourceFactory.ARCArchiveRecordToResource(reader.get(), reader);
+      }
     } catch (IOException e) {
+
       throw new ResourceNotAvailableException("Error reading " + resourceUrl);
     }
 

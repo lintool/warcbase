@@ -22,7 +22,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -31,13 +33,15 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
+import org.archive.io.ArchiveRecordHeader;
 import org.archive.io.arc.ARCRecord;
 import org.archive.io.arc.ARCRecordMetaData;
+import org.archive.io.warc.WARCRecord;
 import org.archive.util.ArchiveUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -46,8 +50,11 @@ import org.jsoup.select.Elements;
 import org.warcbase.analysis.graph.PrefixMapping.PrefixNode;
 import org.warcbase.data.ArcRecordUtils;
 import org.warcbase.data.UrlMapping;
+import org.warcbase.data.WarcRecordUtils;
 import org.warcbase.io.ArcRecordWritable;
+import org.warcbase.io.WarcRecordWritable;
 import org.warcbase.mapreduce.WacArcInputFormat;
+import org.warcbase.mapreduce.WacWarcInputFormat;
 
 public class ExtractSiteLinks extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(ExtractSiteLinks.class);
@@ -56,7 +63,7 @@ public class ExtractSiteLinks extends Configured implements Tool {
     RECORDS, HTML_PAGES, LINKS
   };
 
-  public static class ExtractSiteLinksMapper extends
+  public static class ExtractSiteLinksArcMapper extends
       Mapper<LongWritable, ArcRecordWritable, IntWritable, IntWritable> {
     private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
     private static String beginDate, endDate;
@@ -75,15 +82,23 @@ public class ExtractSiteLinks extends Configured implements Tool {
         endDate = conf.get("endDate");
         
         @SuppressWarnings("deprecation")
-        Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
+        //Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
+        Path[] localFiles = context.getLocalCacheFiles();
 
         // load FST UriMapping from file
         fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
-        fst.loadMapping(localFiles[0].toString());
+        String fstFileName = localFiles[0].toString();
+        if (fstFileName.startsWith("file:")) {
+          fstFileName = fstFileName.substring(5, fstFileName.length());
+        }
+        fst.loadMapping(fstFileName);
         // load Prefix Mapping from file
         prefixMap = (PrefixMapping) Class.forName(conf.get("PrefixMappingClass")).newInstance();
-        prefix = PrefixMapping.loadPrefix(localFiles[1].toString(), fst);
-
+        String prefixFileName = localFiles[1].toString();
+        if (prefixFileName.startsWith("file:")) {
+          prefixFileName = prefixFileName.substring(5, prefixFileName.length());
+        }
+        prefix = PrefixMapping.loadPrefix(prefixFileName, fst);
       } catch (Exception e) {
         e.printStackTrace();
         throw new RuntimeException("Error Initializing UriMapping");
@@ -159,6 +174,124 @@ public class ExtractSiteLinks extends Configured implements Tool {
       }
     }
   }
+
+  public static class ExtractSiteLinksWarcMapper extends
+      Mapper<LongWritable, WarcRecordWritable, IntWritable, IntWritable> {
+    private static final DateFormat df = new SimpleDateFormat("yyyyMMdd");
+    private static final DateFormat iso8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
+    private static String beginDate, endDate;
+    private static final IntWritable KEY = new IntWritable();
+    private static final IntWritable VALUE = new IntWritable();
+
+    private static UrlMapping fst;
+    private static PrefixMapping prefixMap;
+    private static ArrayList<PrefixNode> prefix;
+
+    @Override
+    public void setup(Context context) {
+      try {
+        Configuration conf = context.getConfiguration();
+        beginDate = conf.get("beginDate");
+        endDate = conf.get("endDate");
+
+        @SuppressWarnings("deprecation")
+        //Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
+        Path[] localFiles = context.getLocalCacheFiles();
+
+        // load FST UriMapping from file
+        fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        String fstFileName = localFiles[0].toString();
+        if (fstFileName.startsWith("file:")) {
+          fstFileName = fstFileName.substring(5, fstFileName.length());
+        }
+        fst.loadMapping(fstFileName);
+        // load Prefix Mapping from file
+        prefixMap = (PrefixMapping) Class.forName(conf.get("PrefixMappingClass")).newInstance();
+        String prefixFileName = localFiles[1].toString();
+        if (prefixFileName.startsWith("file:")) {
+          prefixFileName = prefixFileName.substring(5, prefixFileName.length());
+        }
+        prefix = PrefixMapping.loadPrefix(prefixFileName, fst);
+      } catch (Exception e) {
+        e.printStackTrace();
+        throw new RuntimeException("Error Initializing UriMapping");
+      }
+    }
+
+    @Override
+    public void map(LongWritable key, WarcRecordWritable r, Context context)
+        throws IOException, InterruptedException {
+      context.getCounter(Counts.RECORDS).increment(1);
+      WARCRecord record = r.getRecord();
+      ArchiveRecordHeader header = record.getHeader();
+      byte[] recordBytes = WarcRecordUtils.toBytes(record);
+      byte[] content = WarcRecordUtils.getContent(WarcRecordUtils.fromBytes(recordBytes));
+      String url = header.getUrl();
+      String type = WarcRecordUtils.getWarcResponseMimeType(content);
+      if (type == null) type = "";
+      Date date = null;
+      try {
+        date = iso8601.parse(header.getDate());
+      } catch (java.text.ParseException e) {
+        e.printStackTrace();
+      }
+      if (date == null) {
+        return;
+      }
+      String time = df.format(date);
+
+      if (beginDate != null && endDate != null) {
+        if (time.compareTo(beginDate) < 0 || time.compareTo(endDate) > 0) {
+          return;
+        }
+      } else if (beginDate == null && endDate != null) {
+        if (time.compareTo(endDate) > 0) {
+          return;
+        }
+      } else if (beginDate != null && endDate == null) {
+        if (time.compareTo(beginDate) < 0) {
+          return;
+        }
+      }
+
+      if (!type.equals("text/html")) {
+        return;
+      }
+
+      context.getCounter(Counts.HTML_PAGES).increment(1);
+      byte[] bytes = WarcRecordUtils.getBodyContent(WarcRecordUtils.fromBytes(recordBytes));
+      Document doc = Jsoup.parse(new String(bytes, "UTF8"), url);
+
+      Elements links = doc.select("a[href]"); // empty if none match
+      if (links == null) {
+        return;
+      }
+
+      int sourcePrefixId = prefixMap.getPrefixId(fst.getID(url), prefix);
+
+      // this url is indexed in FST and its prefix is appeared in prefix map (thus declared in
+      // prefix file)
+      if (fst.getID(url) != -1 && sourcePrefixId != -1) {
+        KEY.set(sourcePrefixId);
+        List<Integer> linkUrlList = new ArrayList<Integer>();
+        for (Element link : links) {
+          String linkUrl = link.attr("abs:href");
+          int targetPrefixId = prefixMap.getPrefixId(fst.getID(linkUrl), prefix);
+          // target url is indexed in FST and its prefix url is found
+          if (fst.getID(linkUrl) != -1 && targetPrefixId != -1) {
+            linkUrlList.add(targetPrefixId);
+          }
+        }
+
+        for (Integer linkID : linkUrlList) {
+          VALUE.set(linkID);
+          context.write(KEY, VALUE);
+        }
+      }
+    }
+  }
+
+
 
   private static class ExtractSiteLinksReducer extends
       Reducer<IntWritable, IntWritable, IntWritable, Text> {
@@ -317,14 +450,24 @@ public class ExtractSiteLinks extends Configured implements Tool {
     job.setNumReduceTasks(reduceTasks); // no reducers
 
     if (isHDFSInput) { // HDFS input
-      FileInputFormat.setInputPaths(job, new Path(HDFSPath));
+      Path path = new Path(HDFSPath);
+      RemoteIterator<LocatedFileStatus> itr = fs.listFiles(path, true);
+      LocatedFileStatus fileStatus;
+      while (itr.hasNext()) {
+        fileStatus = itr.next();
+        Path p = fileStatus.getPath();
+        if ((p.getName().endsWith(".warc.gz")) || (p.getName().endsWith(".warc"))) {
+          // WARC
+          MultipleInputs.addInputPath(job, p, WacWarcInputFormat.class, ExtractSiteLinksWarcMapper.class);
+        } else {
+          // Assume ARC
+          MultipleInputs.addInputPath(job, p, WacArcInputFormat.class, ExtractSiteLinksArcMapper.class);
+        }
+      }
 
-      job.setInputFormatClass(WacArcInputFormat.class);
       // set map (key,value) output format
       job.setMapOutputKeyClass(IntWritable.class);
       job.setMapOutputValueClass(IntWritable.class);
-
-      job.setMapperClass(ExtractSiteLinksMapper.class);
     } else { // HBase input
       throw new UnsupportedOperationException("HBase not supported yet!");
     }

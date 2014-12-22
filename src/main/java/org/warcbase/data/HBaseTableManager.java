@@ -49,6 +49,8 @@ public class HBaseTableManager {
         hColumnDesc.setMaxVersions(MAX_VERSIONS);
         hColumnDesc.setCompressionType(Compression.Algorithm.SNAPPY);
         hColumnDesc.setCompactionCompressionType(Compression.Algorithm.SNAPPY);
+        //hColumnDesc.setCompressionType(Compression.Algorithm.GZ);	// Using GZ instead of SNAPPY because latter unavailable natively in OS X
+        //hColumnDesc.setCompactionCompressionType(Compression.Algorithm.GZ);
         hColumnDesc.setTimeToLive(HConstants.FOREVER);
         tableDesc.addFamily(hColumnDesc);
       }

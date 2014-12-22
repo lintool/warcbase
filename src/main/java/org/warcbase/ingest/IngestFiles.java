@@ -5,6 +5,9 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Iterator;
 
 import org.apache.commons.cli.CommandLine;
@@ -16,12 +19,19 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 import org.archive.io.ArchiveRecord;
+import org.archive.io.ArchiveRecordHeader;
 import org.archive.io.arc.ARCReader;
 import org.archive.io.arc.ARCReaderFactory;
 import org.archive.io.arc.ARCRecord;
 import org.archive.io.arc.ARCRecordMetaData;
+import org.archive.io.warc.WARCConstants;
+import org.archive.io.warc.WARCReader;
+import org.archive.io.warc.WARCReaderFactory; 
+import org.archive.io.warc.WARCRecord; 
+import org.archive.util.ArchiveUtils;
 import org.warcbase.data.HBaseTableManager;
 import org.warcbase.data.UrlUtils;
+import org.warcbase.data.WarcRecordUtils;
 
 public class IngestFiles {
   private static final String CREATE_OPTION = "create";
@@ -31,6 +41,8 @@ public class IngestFiles {
   private static final String START_OPTION = "start";
 
   private static final Logger LOG = Logger.getLogger(IngestFiles.class);
+
+  private static final DateFormat iso8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
 
   public static final int MAX_CONTENT_SIZE = 10 * 1024 * 1024;
 
@@ -143,8 +155,84 @@ public class IngestFiles {
     }
   }
 
-  private void ingestWarcFile(File inputWarcFile) throws IOException {
-    throw new UnsupportedOperationException("WARC files not supported yet!");
+  private void ingestWarcFile(File inputWarcFile) {
+    WARCReader reader = null;
+
+    // Per file trapping of exceptions so a corrupt file doesn't blow up entire ingest.
+    try {
+      reader = WARCReaderFactory.get(inputWarcFile);
+
+      // The following snippet of code was adapted from the dump method in ARCReader.
+      boolean firstRecord = true;
+      for (Iterator<ArchiveRecord> ii = reader.iterator(); ii.hasNext();) {
+        WARCRecord r = (WARCRecord) ii.next();
+	ArchiveRecordHeader h = r.getHeader();
+        byte[] recordBytes = WarcRecordUtils.toBytes(r);
+        byte[] content = WarcRecordUtils.getContent(WarcRecordUtils.fromBytes(recordBytes));
+
+        if (firstRecord) {
+          firstRecord = false;
+          while (r.available() > 0) {
+            r.read();
+          }
+          continue;
+        }
+
+        // Only store WARC 'response' records
+        // Would it be useful to store 'request' and 'metadata' records too?
+        if (!h.getHeaderValue(WARCConstants.HEADER_KEY_TYPE).equals("response")) {
+            continue;
+        }
+
+        if (h.getUrl().startsWith("dns:")) {
+            invalidUrls++;
+            continue;
+        }
+
+        Date d = iso8601.parse(h.getDate());
+        String date = ArchiveUtils.get14DigitDate(d);
+       
+        String key = UrlUtils.urlToKey(h.getUrl()); 
+        String type = WarcRecordUtils.getWarcResponseMimeType(content);
+
+        if (key == null) {
+          LOG.error("Invalid URL: " + h.getUrl());
+          invalidUrls++;
+          continue;
+        }
+
+        if (type == null) {
+          type = "text/plain";
+        }
+
+        if ((int) h.getLength() > MAX_CONTENT_SIZE) {
+          toolarge++;
+        } else {
+          if (hbaseManager.insertRecord(key, date, recordBytes, type)) {
+            cnt++;
+          } else {
+            errors++;
+          }
+        }
+
+        if (cnt % 10000 == 0 && cnt > 0) {
+          LOG.info("Ingested " + cnt + " records into HBase.");
+        }
+      }
+    } catch (Exception e) {
+      LOG.error("Error ingesting file: " + inputWarcFile);
+      e.printStackTrace();
+    } catch (OutOfMemoryError e) {
+      LOG.error("Encountered OutOfMemoryError ingesting file: " + inputWarcFile);
+      LOG.error("Attempting to continue...");
+    } finally {
+      if (reader != null)
+        try {
+          reader.close();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+    }
   }
 
   private void ingestFolder(File inputFolder, int i) throws Exception {
