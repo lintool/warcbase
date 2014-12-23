@@ -42,7 +42,7 @@ public class CountArcCrawlDates {
   public static void main(String[] args) throws Exception {
     LOG.info("Running " + CountArcCrawlDates.class.getCanonicalName() + " with args "
         + Arrays.toString(args));
-    Tool tool = new ArcCounter(MyMapper.class);
+    Tool tool = new GenericArcRecordCounter(MyMapper.class);
     ToolRunner.run(tool, args);
   }
 }
