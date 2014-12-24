@@ -40,7 +40,7 @@ public class IngestFiles {
   private static final String NAME_OPTION = "name";
   private static final String DIR_OPTION = "dir";
   private static final String START_OPTION = "start";
-  private static final String GZ_OPTION = "start";
+  private static final String GZ_OPTION = "gz";
 
   private static final Logger LOG = Logger.getLogger(IngestFiles.class);
 
@@ -313,6 +313,12 @@ public class IngestFiles {
 
     String name = cmdline.getOptionValue(NAME_OPTION);
     boolean create = cmdline.hasOption(CREATE_OPTION);
+
+    LOG.info("Input: " + inputFolder);
+    LOG.info("Table: " + name);
+    LOG.info("Create new table: " + create);
+    LOG.info("Compression: " + compression);
+
     IngestFiles load = new IngestFiles(name, create, compression);
     load.ingestFolder(inputFolder, i);
   }
