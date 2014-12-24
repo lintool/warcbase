@@ -17,6 +17,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.log4j.Logger;
 import org.archive.io.ArchiveRecord;
 import org.archive.io.ArchiveRecordHeader;
@@ -39,6 +40,7 @@ public class IngestFiles {
   private static final String NAME_OPTION = "name";
   private static final String DIR_OPTION = "dir";
   private static final String START_OPTION = "start";
+  private static final String GZ_OPTION = "start";
 
   private static final Logger LOG = Logger.getLogger(IngestFiles.class);
 
@@ -53,8 +55,8 @@ public class IngestFiles {
 
   private final HBaseTableManager hbaseManager;
 
-  public IngestFiles(String name, boolean create) throws Exception {
-    hbaseManager = new HBaseTableManager(name, create);
+  public IngestFiles(String name, boolean create, Compression.Algorithm compression) throws Exception {
+    hbaseManager = new HBaseTableManager(name, create, compression);
   }
 
   protected final byte [] scratchbuffer = new byte[4 * 1024];
@@ -272,6 +274,7 @@ public class IngestFiles {
 
     options.addOption("create", false, "create new table");
     options.addOption("append", false, "append to existing table");
+    options.addOption(GZ_OPTION, false, "use GZ compression (default = Snappy)");
 
     CommandLine cmdline = null;
     CommandLineParser parser = new GnuParser();
@@ -298,6 +301,10 @@ public class IngestFiles {
 
     String path = cmdline.getOptionValue(DIR_OPTION);
     File inputFolder = new File(path);
+    Compression.Algorithm compression = Compression.Algorithm.SNAPPY;
+    if (cmdline.hasOption(GZ_OPTION)) {
+      compression = Compression.Algorithm.GZ;
+    }
 
     int i = 0;
     if (cmdline.hasOption(START_OPTION)) {
@@ -306,7 +313,7 @@ public class IngestFiles {
 
     String name = cmdline.getOptionValue(NAME_OPTION);
     boolean create = cmdline.hasOption(CREATE_OPTION);
-    IngestFiles load = new IngestFiles(name, create);
+    IngestFiles load = new IngestFiles(name, create, compression);
     load.ingestFolder(inputFolder, i);
   }
 }
