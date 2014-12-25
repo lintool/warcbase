@@ -41,12 +41,13 @@ public class IngestFiles {
   private static final String DIR_OPTION = "dir";
   private static final String START_OPTION = "start";
   private static final String GZ_OPTION = "gz";
+  private static final String MAX_CONTENT_SIZE_OPTION = "maxSize";
 
   private static final Logger LOG = Logger.getLogger(IngestFiles.class);
 
   private static final DateFormat iso8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
 
-  public static final int MAX_CONTENT_SIZE = 10 * 1024 * 1024;
+  public static int MAX_CONTENT_SIZE = 10 * 1024 * 1024;
 
   private int cnt = 0;
   private int errors = 0;
@@ -270,7 +271,9 @@ public class IngestFiles {
     options.addOption(OptionBuilder.withArgName("path").hasArg()
         .withDescription("WARC files location").create(DIR_OPTION));
     options.addOption(OptionBuilder.withArgName("n").hasArg()
-        .withDescription("Start from the n-th WARC file").create(START_OPTION));
+        .withDescription("start from the n-th WARC file").create(START_OPTION));
+    options.addOption(OptionBuilder.withArgName("n").hasArg()
+        .withDescription("max record size to insert (default = 10 MB)").create(MAX_CONTENT_SIZE_OPTION));
 
     options.addOption("create", false, "create new table");
     options.addOption("append", false, "append to existing table");
@@ -311,13 +314,20 @@ public class IngestFiles {
       i = Integer.parseInt(cmdline.getOptionValue(START_OPTION));
     }
 
+    if (cmdline.hasOption(MAX_CONTENT_SIZE_OPTION)) {
+      IngestFiles.MAX_CONTENT_SIZE =
+          Integer.parseInt(cmdline.getOptionValue(MAX_CONTENT_SIZE_OPTION));
+    }
+
     String name = cmdline.getOptionValue(NAME_OPTION);
     boolean create = cmdline.hasOption(CREATE_OPTION);
+
 
     LOG.info("Input: " + inputFolder);
     LOG.info("Table: " + name);
     LOG.info("Create new table: " + create);
     LOG.info("Compression: " + compression);
+    LOG.info("Max content size: " + IngestFiles.MAX_CONTENT_SIZE);
 
     IngestFiles load = new IngestFiles(name, create, compression);
     load.ingestFolder(inputFolder, i);
