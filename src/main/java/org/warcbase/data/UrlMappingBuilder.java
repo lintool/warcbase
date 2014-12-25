@@ -1,6 +1,8 @@
 package org.warcbase.data;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,7 +15,6 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import org.apache.lucene.util.BytesRef;
@@ -28,15 +29,16 @@ public class UrlMappingBuilder {
   private static final Logger LOG = Logger.getLogger(UrlMappingBuilder.class);
 
   private static void readUrlFromFile(File f, List<String> urls) throws IOException {
-    String contents = FileUtils.readFileToString(f);
-    String[] lines = contents.split("\\n");
-    for (String line : lines) {
+    BufferedReader br = new BufferedReader(new FileReader(f));
+    String line;
+    while ((line = br.readLine()) != null) {
       if (!line.equals("")) {
         String url = line.split("\\s+")[0];
         urls.add(url);
       }
     }
     LOG.info("Read " + f + ", " + urls.size() + " URLs");
+    br.close();
   }
 
   private static List<String> readUrlFromFolder(String folderName) throws IOException {

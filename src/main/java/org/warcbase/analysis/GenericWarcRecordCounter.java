@@ -28,8 +28,8 @@ import org.apache.log4j.Logger;
 import org.jwat.warc.WarcRecord;
 import org.warcbase.mapreduce.JwatWarcInputFormat;
 
-public class WarcCounter extends Configured implements Tool {
-  private static final Logger LOG = Logger.getLogger(WarcCounter.class);
+public class GenericWarcRecordCounter extends Configured implements Tool {
+  private static final Logger LOG = Logger.getLogger(GenericWarcRecordCounter.class);
 
   private static class MyReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
     private final static IntWritable SUM = new IntWritable();
@@ -49,7 +49,7 @@ public class WarcCounter extends Configured implements Tool {
 
   private final Class<? extends Mapper<LongWritable, WarcRecord, Text, IntWritable>> mapperClass;
 
-  public WarcCounter(Class<? extends Mapper<LongWritable, WarcRecord, Text, IntWritable>> mapperClass) {
+  public GenericWarcRecordCounter(Class<? extends Mapper<LongWritable, WarcRecord, Text, IntWritable>> mapperClass) {
     this.mapperClass = mapperClass;
   }
 

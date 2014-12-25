@@ -223,10 +223,22 @@ public class ExtractLinksWac extends Configured implements Tool {
 
       WARCRecord record = r.getRecord();
       ArchiveRecordHeader header = record.getHeader();
-      byte[] recordBytes = WarcRecordUtils.toBytes(record);
-      byte[] content = WarcRecordUtils.getContent(WarcRecordUtils.fromBytes(recordBytes));
-      String url = header.getUrl();
-      String type = WarcRecordUtils.getWarcResponseMimeType(content);
+      byte[] recordBytes;
+      byte[] content;
+      String url;
+      String type;
+
+      // Corrupt records can cause these methods to throw OOM exceptions: catch and ignore record.
+      try {
+        recordBytes = WarcRecordUtils.toBytes(record);
+        content = WarcRecordUtils.getContent(WarcRecordUtils.fromBytes(recordBytes));
+        url = header.getUrl();
+        type = WarcRecordUtils.getWarcResponseMimeType(content);
+      } catch (java.lang.OutOfMemoryError e) {
+        LOG.error("Caught OutOfMemoryError, skipping record.");
+        return;
+      }
+
       if (type == null) type = "";
       Date date = null;
       try {
@@ -264,7 +276,17 @@ public class ExtractLinksWac extends Configured implements Tool {
 
       context.getCounter(Counts.HTML_PAGES).increment(1);
 
-      byte[] bytes = WarcRecordUtils.getBodyContent(WarcRecordUtils.fromBytes(recordBytes));
+      byte[] bytes;
+      try {
+        bytes = WarcRecordUtils.getBodyContent(WarcRecordUtils.fromBytes(recordBytes));
+      } catch (Exception e) {
+        LOG.error(e.getMessage() + ": skipping record.");
+        return;
+      } catch (java.lang.OutOfMemoryError e) {
+        LOG.error("Caught OutOfMemoryError, skipping record.");
+        return;
+      }
+
       Document doc = Jsoup.parse(new String(bytes, "UTF8"), url);
       Elements links = doc.select("a[href]");
 

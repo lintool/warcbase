@@ -39,7 +39,7 @@ public class CountWarcUrls {
   public static void main(String[] args) throws Exception {
     LOG.info("Running " + CountWarcUrls.class.getCanonicalName() + " with args "
         + Arrays.toString(args));
-    Tool tool = new WarcCounter(MyMapper.class);
+    Tool tool = new GenericWarcRecordCounter(MyMapper.class);
     ToolRunner.run(tool, args);
   }
 }
