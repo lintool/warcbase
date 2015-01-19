@@ -151,6 +151,10 @@
               <mainClass>org.warcbase.browser.SeleniumBrowser</mainClass>
               <name>SeleniumBrowser</name>
             </program>
+            <program>
+              <mainClass>org.warcbase.browser.SeleniumUrlBrowser</mainClass>
+              <name>SeleniumUrlBrowser</name>
+            </program>
           </programs>
         </configuration>
       </plugin>
@@ -387,12 +391,17 @@
     <dependency>
       <groupId>org.seleniumhq.selenium</groupId>
       <artifactId>selenium-java</artifactId>
-      <version>2.42.2</version>
+      <version>2.44.0</version>
       <exclusions>
         <exclusion><groupId>org.seleniumhq.selenium</groupId><artifactId>selenium-htmlunit-driver</artifactId></exclusion>
         <exclusion><groupId>org.seleniumhq.selenium</groupId><artifactId>selenium-ie-driver</artifactId></exclusion>
         <exclusion><groupId>org.webbitserver</groupId><artifactId>webbit</artifactId></exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+       <groupId>org.apache.httpcomponents</groupId>
+       <artifactId>httpclient</artifactId>
+       <version>4.3.6</version>
     </dependency>
 
   </dependencies>
