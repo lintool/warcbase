@@ -31,19 +31,19 @@ In order to build a functional Warcbase setup under OS X, a number of minor chan
     
           export HBASE_OPTS="-XX:+UseConcMarkSweepGC -Djava.security.krb5.realm=-Djava.security.krb5.kdc="
         
-Verify that HBase is installed correctly by running the HBase shell:
+    Verify that HBase is installed correctly by running the HBase shell:
     
-    $ hbase shell
-    
-    hbase(main):001:0> list
-    
-    // Some lines of log messages
-    
-    0 row(s) in 1.3060 seconds
-
-    => []
-    
-    hbase(main):002:0> exit
+        $ hbase shell
+        
+        hbase(main):001:0> list
+        
+        // Some lines of log messages
+        
+        0 row(s) in 1.3060 seconds
+        
+        => []
+        
+        hbase(main):002:0> exit
     
 * Tomcat (`brew install tomcat`)
 
