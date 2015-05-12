@@ -30,12 +30,16 @@ public class ExtractLinks extends EvalFunc<DataBag> {
 
     try {
       String html = (String) input.get(0);
+      String base = input.size() > 1 ? (String) input.get(1) : null;
 
       DataBag output = BAG_FACTORY.newDefaultBag();
       Document doc = Jsoup.parse(html);
       Elements links = doc.select("a[href]");
 
       for (Element link : links) {
+        if (base != null) {
+          link.setBaseUri(base);
+        }
         String target = link.attr("abs:href");
         if (target.length() == 0) {
           continue;
