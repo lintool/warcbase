@@ -38,8 +38,6 @@ You can then import the project into Eclipse.
 Ingesting Content
 -----------------
 
-Somewhat ironically (given the name of the project), Warcbase currently supports only ARC files. Don't worry, we're [on it](https://github.com/lintool/warcbase/issues/64).
-
 You can find some sample data [here](https://archive.org/details/ExampleArcAndWarcFiles). Ingesting data into Warcbase is fairly straightforward:
 
 ```
