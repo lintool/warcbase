@@ -7,52 +7,40 @@ import java.io.InputStream;
 import org.apache.pig.EvalFunc;
 import org.apache.pig.data.DataByteArray;
 import org.apache.pig.data.Tuple;
-import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.Parser;
 import org.apache.tika.parser.pdf.PDFParser;
 import org.apache.tika.sax.BodyContentHandler;
 import org.xml.sax.ContentHandler;
-import org.xml.sax.SAXException;
 
 public class ExtractTextFromPDFs extends EvalFunc<String> {
-  private Parser pdfparser = new PDFParser();
+  private Parser pdfParser = new PDFParser();
 
   @Override
   public String exec(Tuple input) throws IOException {
-    StringBuilder pdfText = new StringBuilder();
     try {
+      if (input == null || input.size() == 0 || input.get(0) == null) {
+        return "N/A";
+      }
 
-    if (input == null || input.size() == 0 || input.get(0) == null) {
-      return "N/A";
-    }
+      DataByteArray dba = (DataByteArray) input.get(0);
+      InputStream is = new ByteArrayInputStream(dba.get());
 
-    // prepare input for use with Tika
-    DataByteArray dba = (DataByteArray) input.get(0);
-    InputStream is = new ByteArrayInputStream(dba.get());
+      ContentHandler contenthandler = new BodyContentHandler(Integer.MAX_VALUE);
+      Metadata metadata = new Metadata();
 
-    // set up Tika constructs
-    ContentHandler contenthandler = new BodyContentHandler(Integer.MAX_VALUE);
-    Metadata metadata = new Metadata();
+      pdfParser.parse(is, contenthandler, metadata, new ParseContext());
 
-      // parse the bytestream of the PDF into plain text
-      pdfparser.parse(is, contenthandler, metadata, new ParseContext());
+      if (is != null) {
+        is.close();
+      }
 
-
-    // append the PDF's plain text to the string
-    pdfText.append(contenthandler.toString());
-
-    // close the input stream
-    if (is != null) {
-      is.close();
-    }
-
-    } catch (java.lang.Throwable t) {
+      return contenthandler.toString();
+    } catch (Throwable t) {
+      // Basically, catch everything...
       t.printStackTrace();
       return null;
     }
-    // return the plain text of the PDF
-    return pdfText.toString();
   }
 }
