@@ -22,6 +22,7 @@ public class ExtractTextFromPDFs extends EvalFunc<String> {
   @Override
   public String exec(Tuple input) throws IOException {
     StringBuilder pdfText = new StringBuilder();
+    try {
 
     if (input == null || input.size() == 0 || input.get(0) == null) {
       return "N/A";
@@ -35,12 +36,9 @@ public class ExtractTextFromPDFs extends EvalFunc<String> {
     ContentHandler contenthandler = new BodyContentHandler(Integer.MAX_VALUE);
     Metadata metadata = new Metadata();
 
-    try {
       // parse the bytestream of the PDF into plain text
       pdfparser.parse(is, contenthandler, metadata, new ParseContext());
-    } catch (SAXException | TikaException e) {
-      e.printStackTrace();
-    }
+
 
     // append the PDF's plain text to the string
     pdfText.append(contenthandler.toString());
@@ -50,6 +48,10 @@ public class ExtractTextFromPDFs extends EvalFunc<String> {
       is.close();
     }
 
+    } catch (java.lang.Throwable t) {
+      t.printStackTrace();
+      return null;
+    }
     // return the plain text of the PDF
     return pdfText.toString();
   }
