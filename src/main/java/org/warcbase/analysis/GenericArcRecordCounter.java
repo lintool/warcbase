@@ -1,7 +1,7 @@
 package org.warcbase.analysis;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Iterator;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -10,17 +10,16 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
@@ -29,45 +28,33 @@ import org.apache.log4j.Logger;
 import org.jwat.arc.ArcRecordBase;
 import org.warcbase.mapreduce.JwatArcInputFormat;
 
-public class FindUrls extends Configured implements Tool {
-  private static final Logger LOG = Logger.getLogger(FindUrls.class);
+public class GenericArcRecordCounter extends Configured implements Tool {
+  private static final Logger LOG = Logger.getLogger(GenericArcRecordCounter.class);
 
-  private static enum Records { TOTAL };
-
-  private static class MyMapper extends Mapper<LongWritable, ArcRecordBase, Text, Text> {
-    private static final Text KEY = new Text();
-    private static final Text VALUE = new Text();
-    private String pattern = null;
+  private static class MyReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+    private final static IntWritable SUM = new IntWritable();
 
     @Override
-    public void setup(Context context) {
-      Configuration conf = context.getConfiguration();
-      pattern = conf.get(PATTERN_OPTION);
-    }
-
-    @Override
-    public void map(LongWritable key, ArcRecordBase record, Context context)
+    public void reduce(Text key, Iterable<IntWritable> values, Context context)
         throws IOException, InterruptedException {
-      context.getCounter(Records.TOTAL).increment(1);
-
-      String url = record.getUrlStr();
-      String date = record.getArchiveDateStr();
-      String type = record.getContentTypeStr();
-
-      if (url.matches(pattern)) {
-        String fileName = ((FileSplit) context.getInputSplit()).getPath().getName();
-        KEY.set(fileName + " " + url + " " + type);
-        VALUE.set(date);
-        context.write(KEY, VALUE);
+      Iterator<IntWritable> iter = values.iterator();
+      int sum = 0;
+      while (iter.hasNext()) {
+        sum += iter.next().get();
       }
+      SUM.set(sum);
+      context.write(key, SUM);
     }
   }
 
-  public FindUrls() {}
+  private final Class<? extends Mapper<LongWritable, ArcRecordBase, Text, IntWritable>> mapperClass;
+
+  public GenericArcRecordCounter(Class<? extends Mapper<LongWritable, ArcRecordBase, Text, IntWritable>> mapperClass) {
+    this.mapperClass = mapperClass;
+  }
 
   public static final String INPUT_OPTION = "input";
   public static final String OUTPUT_OPTION = "output";
-  public static final String PATTERN_OPTION = "pattern";
 
   /**
    * Runs this tool.
@@ -80,8 +67,6 @@ public class FindUrls extends Configured implements Tool {
         .withDescription("input path").create(INPUT_OPTION));
     options.addOption(OptionBuilder.withArgName("path").hasArg()
         .withDescription("output path").create(OUTPUT_OPTION));
-    options.addOption(OptionBuilder.withArgName("regexp").hasArg()
-        .withDescription("URL pattern").create(PATTERN_OPTION));
 
     CommandLine cmdline;
     CommandLineParser parser = new GnuParser();
@@ -104,26 +89,27 @@ public class FindUrls extends Configured implements Tool {
 
     String input = cmdline.getOptionValue(INPUT_OPTION);
     Path output = new Path(cmdline.getOptionValue(OUTPUT_OPTION));
-    String pattern = cmdline.getOptionValue(PATTERN_OPTION);
 
-    LOG.info("Tool name: " + FindUrls.class.getSimpleName());
+    LOG.info("Tool name: " + CountArcContentTypes.class.getSimpleName());
     LOG.info(" - input: " + input);
     LOG.info(" - output: " + output);
 
-    Job job = Job.getInstance(getConf(), FindUrls.class.getSimpleName() + ":" + input);
-    job.setJarByClass(FindUrls.class);
+    Job job = Job.getInstance(getConf(), CountArcContentTypes.class.getSimpleName() + ":" + input);
+    job.setJarByClass(CountArcContentTypes.class);
     job.setNumReduceTasks(1);
-    job.setMapOutputKeyClass(Text.class);
-    job.setMapOutputValueClass(Text.class);
 
     FileInputFormat.addInputPaths(job, input);
     FileOutputFormat.setOutputPath(job, output);
 
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(IntWritable.class);
+
     job.setInputFormatClass(JwatArcInputFormat.class);
     job.setOutputFormatClass(TextOutputFormat.class);
-    job.setMapperClass(MyMapper.class);
 
-    job.getConfiguration().set(PATTERN_OPTION, pattern);
+    job.setMapperClass(mapperClass);
+    job.setCombinerClass(MyReducer.class);
+    job.setReducerClass(MyReducer.class);
 
     FileSystem fs = FileSystem.get(getConf());
     if ( FileSystem.get(getConf()).exists(output)) {
@@ -132,19 +118,6 @@ public class FindUrls extends Configured implements Tool {
 
     job.waitForCompletion(true);
 
-    Counters counters = job.getCounters();
-    int numDocs = (int) counters.findCounter(Records.TOTAL).getValue();
-    LOG.info("Read " + numDocs + " records.");
-
     return 0;
-  }
-
-  /**
-   * Dispatches command-line arguments to the tool via the <code>ToolRunner</code>.
-   */
-  public static void main(String[] args) throws Exception {
-    LOG.info("Running " + FindUrls.class.getCanonicalName() + " with args "
-        + Arrays.toString(args));
-    ToolRunner.run(new FindUrls(), args);
   }
 }

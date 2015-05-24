@@ -18,7 +18,9 @@ import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -26,22 +28,27 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
+import org.archive.io.ArchiveRecordHeader;
 import org.archive.io.arc.ARCRecord;
 import org.archive.io.arc.ARCRecordMetaData;
+import org.archive.io.warc.WARCRecord;
 import org.archive.util.ArchiveUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.warcbase.data.ArcRecordUtils;
+import org.warcbase.data.WarcRecordUtils;
 import org.warcbase.data.UrlMapping;
 import org.warcbase.io.ArcRecordWritable;
+import org.warcbase.io.WarcRecordWritable;
 import org.warcbase.mapreduce.WacArcInputFormat;
+import org.warcbase.mapreduce.WacWarcInputFormat;
 
 import com.google.common.base.Joiner;
 
@@ -55,12 +62,12 @@ public class ExtractLinksWac extends Configured implements Tool {
     RECORDS, HTML_PAGES, LINKS
   };
 
-  public static class ExtractLinksHdfsMapper extends
+  public static class ExtractLinksHdfsArcMapper extends
       Mapper<LongWritable, ArcRecordWritable, IntWritable, Text> {
     private final Joiner joiner = Joiner.on(",");
     private final IntWritable outKey = new IntWritable();
     private final Text outValue = new Text();
-    
+
     private final DateFormat df = new SimpleDateFormat("yyyyMMdd");
     private UrlMapping fst;
     private String beginDate, endDate;
@@ -82,7 +89,11 @@ public class ExtractLinksWac extends Configured implements Tool {
 
         // load FST UriMapping from file
         fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
-        fst.loadMapping(localFiles[0].toString());
+        String fstFileName = localFiles[0].toString();
+        if (fstFileName.startsWith("file:")) {
+          fstFileName = fstFileName.substring(5, fstFileName.length());
+        }
+        fst.loadMapping(fstFileName);
         // simply assume only one file in distributed cache.
       } catch (Exception e) {
         e.printStackTrace();
@@ -164,6 +175,147 @@ public class ExtractLinksWac extends Configured implements Tool {
       context.write(outKey, outValue);
     }
   }
+
+  public static class ExtractLinksHdfsWarcMapper extends
+      Mapper<LongWritable, WarcRecordWritable, IntWritable, Text> {
+    private final Joiner joiner = Joiner.on(",");
+    private final IntWritable outKey = new IntWritable();
+    private final Text outValue = new Text();
+
+    private final DateFormat df = new SimpleDateFormat("yyyyMMdd");
+    private final DateFormat iso8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
+    private UrlMapping fst;
+    private String beginDate, endDate;
+
+    @Override
+    public void setup(Context context) {
+      try {
+        Configuration conf = context.getConfiguration();
+        beginDate = conf.get("beginDate");
+        endDate = conf.get("endDate");
+
+        // There appears to be a bug in getCacheFiles() which returns null,
+        // even though getLocalCacheFiles is deprecated...
+        @SuppressWarnings("deprecation")
+        Path[] localFiles = context.getLocalCacheFiles();
+
+        LOG.info("cache contents: " + Arrays.toString(localFiles));
+        System.out.println("cache contents: " + Arrays.toString(localFiles));
+
+        // load FST UriMapping from file
+        fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
+        String fstFileName = localFiles[0].toString();
+        if (fstFileName.startsWith("file:")) {
+          fstFileName = fstFileName.substring(5, fstFileName.length());
+        }
+        fst.loadMapping(fstFileName);
+        // simply assume only one file in distributed cache.
+      } catch (Exception e) {
+        e.printStackTrace();
+        throw new RuntimeException("Error Initializing UriMapping");
+      }
+    }
+
+    @Override
+    public void map(LongWritable k, WarcRecordWritable r, Context context)
+        throws IOException, InterruptedException {
+      context.getCounter(Counts.RECORDS).increment(1);
+
+      WARCRecord record = r.getRecord();
+      ArchiveRecordHeader header = record.getHeader();
+      byte[] recordBytes;
+      byte[] content;
+      String url;
+      String type;
+
+      // Corrupt records can cause these methods to throw OOM exceptions: catch and ignore record.
+      try {
+        recordBytes = WarcRecordUtils.toBytes(record);
+        content = WarcRecordUtils.getContent(WarcRecordUtils.fromBytes(recordBytes));
+        url = header.getUrl();
+        type = WarcRecordUtils.getWarcResponseMimeType(content);
+      } catch (java.lang.OutOfMemoryError e) {
+        LOG.error("Caught OutOfMemoryError, skipping record.");
+        return;
+      }
+
+      if (type == null) type = "";
+      Date date = null;
+      try {
+        date = iso8601.parse(header.getDate());
+      } catch (java.text.ParseException e) {
+        e.printStackTrace();
+      }
+
+      if (date == null) {
+        return;
+      }
+      String time = df.format(date);
+
+      if (beginDate != null && endDate != null) {
+        if (time.compareTo(beginDate) < 0 || time.compareTo(endDate) > 0) {
+          return;
+        }
+      } else if (beginDate == null && endDate != null) {
+        if (time.compareTo(endDate) > 0) {
+          return;
+        }
+      } else if (beginDate != null && endDate == null) {
+        if (time.compareTo(beginDate) < 0) {
+          return;
+        }
+      }
+
+      if (!type.equals("text/html")) {
+        return;
+      }
+
+      if (fst.getID(url) == -1) {
+        return;
+      }
+
+      context.getCounter(Counts.HTML_PAGES).increment(1);
+
+      byte[] bytes;
+      try {
+        bytes = WarcRecordUtils.getBodyContent(WarcRecordUtils.fromBytes(recordBytes));
+      } catch (Exception e) {
+        LOG.error(e.getMessage() + ": skipping record.");
+        return;
+      } catch (java.lang.OutOfMemoryError e) {
+        LOG.error("Caught OutOfMemoryError, skipping record.");
+        return;
+      }
+
+      Document doc = Jsoup.parse(new String(bytes, "UTF8"), url);
+      Elements links = doc.select("a[href]");
+
+      if (links == null) {
+        return;
+      }
+
+      outKey.set(fst.getID(url));
+      IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
+      for (Element link : links) {
+        String linkUrl = link.attr("abs:href");
+        if (fst.getID(linkUrl) != -1) { // link already exists
+          linkUrlSet.add(fst.getID(linkUrl));
+        }
+      }
+
+      if (linkUrlSet.size() == 0) {
+        // Emit empty entry even if there aren't any outgoing links
+        outValue.set("");
+        context.write(outKey, outValue);
+        return;
+      }
+
+      outValue.set(joiner.join(linkUrlSet));
+      context.getCounter(Counts.LINKS).increment(linkUrlSet.size());
+      context.write(outKey, outValue);
+    }
+  }
+
 
   /**
    * Creates an instance of this tool.
@@ -277,14 +429,24 @@ public class ExtractLinksWac extends Configured implements Tool {
     job.setNumReduceTasks(0); // no reducers
     
     if (isHDFSInput) { // HDFS input
-      FileInputFormat.setInputPaths(job, new Path(HDFSPath));
+      Path path = new Path(HDFSPath);
+      RemoteIterator<LocatedFileStatus> itr = fs.listFiles(path, true);
+      LocatedFileStatus fileStatus;
+      while (itr.hasNext()) {
+        fileStatus = itr.next();
+        Path p = fileStatus.getPath();
+        if ((p.getName().endsWith(".warc.gz")) || (p.getName().endsWith(".warc"))) {
+          // WARC
+          MultipleInputs.addInputPath(job, p, WacWarcInputFormat.class, ExtractLinksHdfsWarcMapper.class);
+        } else {
+          // Assume ARC
+          MultipleInputs.addInputPath(job, p, WacArcInputFormat.class, ExtractLinksHdfsArcMapper.class);
+        }
+      }
   
-      job.setInputFormatClass(WacArcInputFormat.class);
       // set map (key,value) output format
       job.setMapOutputKeyClass(IntWritable.class);
       job.setMapOutputValueClass(Text.class);
-  
-      job.setMapperClass(ExtractLinksHdfsMapper.class);
     } else { // HBase input
       throw new UnsupportedOperationException("HBase not supported yet!");
     }

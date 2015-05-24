@@ -34,7 +34,7 @@ public class CountArcUrls {
   public static void main(String[] args) throws Exception {
     LOG.info("Running " + CountArcUrls.class.getCanonicalName() + " with args "
         + Arrays.toString(args));
-    Tool tool = new ArcCounter(MyMapper.class);
+    Tool tool = new GenericArcRecordCounter(MyMapper.class);
     ToolRunner.run(tool, args);
   }
 }

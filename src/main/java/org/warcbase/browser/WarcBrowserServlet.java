@@ -14,6 +14,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -109,25 +111,25 @@ public class WarcBrowserServlet extends HttpServlet {
 
     Get get = new Get(Bytes.toBytes(q));
     get.setMaxVersions(HBaseTableManager.MAX_VERSIONS);
-    Result rs = null;
-    rs = table.get(get);
+    Result result = table.get(get);
    
     String type = null; 
-    long[] dates = new long[rs.size()];
-    for (int i = 0; i < rs.raw().length; i++) {
-      dates[i] = rs.raw()[i].getTimestamp();
-      if (type == null && rs.raw()[i] != null) {
-	  type = Bytes.toString(rs.raw()[i].getQualifier());
+    long[] dates = new long[result.size()];
+    Cell[] cells = result.rawCells();
+    for (int i = 0; i < cells.length; i++) {
+      dates[i] = cells[i].getTimestamp();
+      if (type == null && cells[i] != null) {
+        type = Bytes.toString(CellUtil.cloneQualifier(cells[i]));
       }
     }
-    Arrays.sort(dates, 0, rs.raw().length);
+    Arrays.sort(dates, 0, cells.length);
     // Will the versions diff in type?
 
     resp.setContentType("text/plain");
     resp.setStatus(HttpServletResponse.SC_OK);
     PrintWriter out = resp.getWriter();
 
-    for (int i = 0; i < rs.raw().length; i++) {
+    for (int i = 0; i < cells.length; i++) {
       String date14digit = ArchiveUtils.get14DigitDate(new Date(dates[i]));
       out.println(date14digit + "\t" + type + "\t" + "/" + tableName + "/" + date14digit + "/" + query);
     }
@@ -144,12 +146,13 @@ public class WarcBrowserServlet extends HttpServlet {
     } catch (ParseException e) {
       e.printStackTrace();
     }
-    Result rs = table.get(get);
+    Result result = table.get(get);
+    Cell[] cells = result.rawCells();
 
-    if (rs.raw().length == 1) {
+    if (cells.length == 1) {
       // We should have exactly one result here...
-      byte[] data = rs.raw()[0].getValue();
-      String type = Bytes.toString(rs.raw()[0].getQualifier());
+      byte[] data = CellUtil.cloneValue(cells[0]);
+      String type = Bytes.toString(CellUtil.cloneQualifier(cells[0]));
 
       LOG.info("Fetching " + key + " at " + date14digit);
       resp.setHeader("Content-Type", type);
