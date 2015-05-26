@@ -400,5 +400,10 @@
       <artifactId>tika-parsers</artifactId>
       <version>1.6</version>
     </dependency>
+    <dependency>
+      <groupId>edu.stanford.nlp</groupId>
+      <artifactId>stanford-corenlp</artifactId>
+      <version>3.4.1</version>
+    </dependency>
   </dependencies>
 </project>
