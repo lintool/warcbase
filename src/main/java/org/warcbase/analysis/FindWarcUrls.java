@@ -49,15 +49,16 @@ public class FindWarcUrls extends Configured implements Tool {
     public void map(LongWritable key, WarcRecord record, Context context)
         throws IOException, InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
-      
+
       // Only consider response records
       if (record.header.warcTypeStr.equalsIgnoreCase("response")) {
         String uriStr = record.header.warcTargetUriStr;
         String date = record.header.warcDateStr;
         String type = "";
         if (record.getHttpHeader() != null) {
-	  if (record.getHttpHeader().contentType != null) 
+          if (record.getHttpHeader().contentType != null) {
             type = record.getHttpHeader().contentType.replaceAll(";.*", "");
+          }
         }
 
         if ((uriStr != null) && uriStr.matches(pattern)) {

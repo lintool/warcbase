@@ -28,8 +28,8 @@ import org.apache.log4j.Logger;
 import org.jwat.arc.ArcRecordBase;
 import org.warcbase.mapreduce.JwatArcInputFormat;
 
-public class ArcCounter extends Configured implements Tool {
-  private static final Logger LOG = Logger.getLogger(ArcCounter.class);
+public class GenericArcRecordCounter extends Configured implements Tool {
+  private static final Logger LOG = Logger.getLogger(GenericArcRecordCounter.class);
 
   private static class MyReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
     private final static IntWritable SUM = new IntWritable();
@@ -49,7 +49,7 @@ public class ArcCounter extends Configured implements Tool {
 
   private final Class<? extends Mapper<LongWritable, ArcRecordBase, Text, IntWritable>> mapperClass;
 
-  public ArcCounter(Class<? extends Mapper<LongWritable, ArcRecordBase, Text, IntWritable>> mapperClass) {
+  public GenericArcRecordCounter(Class<? extends Mapper<LongWritable, ArcRecordBase, Text, IntWritable>> mapperClass) {
     this.mapperClass = mapperClass;
   }
 

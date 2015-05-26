@@ -67,7 +67,7 @@ public class ExtractLinksWac extends Configured implements Tool {
     private final Joiner joiner = Joiner.on(",");
     private final IntWritable outKey = new IntWritable();
     private final Text outValue = new Text();
-    
+
     private final DateFormat df = new SimpleDateFormat("yyyyMMdd");
     private UrlMapping fst;
     private String beginDate, endDate;
@@ -89,10 +89,10 @@ public class ExtractLinksWac extends Configured implements Tool {
 
         // load FST UriMapping from file
         fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
-	String fstFileName = localFiles[0].toString();
-	if (fstFileName.startsWith("file:")) {
-	  fstFileName = fstFileName.substring(5, fstFileName.length());
-	}
+        String fstFileName = localFiles[0].toString();
+        if (fstFileName.startsWith("file:")) {
+          fstFileName = fstFileName.substring(5, fstFileName.length());
+        }
         fst.loadMapping(fstFileName);
         // simply assume only one file in distributed cache.
       } catch (Exception e) {
@@ -181,7 +181,7 @@ public class ExtractLinksWac extends Configured implements Tool {
     private final Joiner joiner = Joiner.on(",");
     private final IntWritable outKey = new IntWritable();
     private final Text outValue = new Text();
-    
+
     private final DateFormat df = new SimpleDateFormat("yyyyMMdd");
     private final DateFormat iso8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
     private UrlMapping fst;
@@ -204,10 +204,10 @@ public class ExtractLinksWac extends Configured implements Tool {
 
         // load FST UriMapping from file
         fst = (UrlMapping) Class.forName(conf.get("UriMappingClass")).newInstance();
-	String fstFileName = localFiles[0].toString();
-	if (fstFileName.startsWith("file:")) {
-	  fstFileName = fstFileName.substring(5, fstFileName.length());
-	}
+        String fstFileName = localFiles[0].toString();
+        if (fstFileName.startsWith("file:")) {
+          fstFileName = fstFileName.substring(5, fstFileName.length());
+        }
         fst.loadMapping(fstFileName);
         // simply assume only one file in distributed cache.
       } catch (Exception e) {
@@ -223,10 +223,22 @@ public class ExtractLinksWac extends Configured implements Tool {
 
       WARCRecord record = r.getRecord();
       ArchiveRecordHeader header = record.getHeader();
-      byte[] recordBytes = WarcRecordUtils.toBytes(record);
-      byte[] content = WarcRecordUtils.getContent(WarcRecordUtils.fromBytes(recordBytes));
-      String url = header.getUrl();
-      String type = WarcRecordUtils.getWarcResponseMimeType(content);
+      byte[] recordBytes;
+      byte[] content;
+      String url;
+      String type;
+
+      // Corrupt records can cause these methods to throw OOM exceptions: catch and ignore record.
+      try {
+        recordBytes = WarcRecordUtils.toBytes(record);
+        content = WarcRecordUtils.getContent(WarcRecordUtils.fromBytes(recordBytes));
+        url = header.getUrl();
+        type = WarcRecordUtils.getWarcResponseMimeType(content);
+      } catch (java.lang.OutOfMemoryError e) {
+        LOG.error("Caught OutOfMemoryError, skipping record.");
+        return;
+      }
+
       if (type == null) type = "";
       Date date = null;
       try {
@@ -239,7 +251,7 @@ public class ExtractLinksWac extends Configured implements Tool {
         return;
       }
       String time = df.format(date);
-            
+
       if (beginDate != null && endDate != null) {
         if (time.compareTo(beginDate) < 0 || time.compareTo(endDate) > 0) {
           return;
@@ -264,14 +276,24 @@ public class ExtractLinksWac extends Configured implements Tool {
 
       context.getCounter(Counts.HTML_PAGES).increment(1);
 
-      byte[] bytes = WarcRecordUtils.getBodyContent(WarcRecordUtils.fromBytes(recordBytes));
+      byte[] bytes;
+      try {
+        bytes = WarcRecordUtils.getBodyContent(WarcRecordUtils.fromBytes(recordBytes));
+      } catch (Exception e) {
+        LOG.error(e.getMessage() + ": skipping record.");
+        return;
+      } catch (java.lang.OutOfMemoryError e) {
+        LOG.error("Caught OutOfMemoryError, skipping record.");
+        return;
+      }
+
       Document doc = Jsoup.parse(new String(bytes, "UTF8"), url);
       Elements links = doc.select("a[href]");
 
       if (links == null) {
         return;
       }
-      
+
       outKey.set(fst.getID(url));
       IntAVLTreeSet linkUrlSet = new IntAVLTreeSet();
       for (Element link : links) {

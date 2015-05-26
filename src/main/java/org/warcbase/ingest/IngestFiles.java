@@ -17,6 +17,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.log4j.Logger;
 import org.archive.io.ArchiveRecord;
 import org.archive.io.ArchiveRecordHeader;
@@ -39,12 +40,14 @@ public class IngestFiles {
   private static final String NAME_OPTION = "name";
   private static final String DIR_OPTION = "dir";
   private static final String START_OPTION = "start";
+  private static final String GZ_OPTION = "gz";
+  private static final String MAX_CONTENT_SIZE_OPTION = "maxSize";
 
   private static final Logger LOG = Logger.getLogger(IngestFiles.class);
 
   private static final DateFormat iso8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
 
-  public static final int MAX_CONTENT_SIZE = 10 * 1024 * 1024;
+  public static int MAX_CONTENT_SIZE = 10 * 1024 * 1024;
 
   private int cnt = 0;
   private int errors = 0;
@@ -53,8 +56,8 @@ public class IngestFiles {
 
   private final HBaseTableManager hbaseManager;
 
-  public IngestFiles(String name, boolean create) throws Exception {
-    hbaseManager = new HBaseTableManager(name, create);
+  public IngestFiles(String name, boolean create, Compression.Algorithm compression) throws Exception {
+    hbaseManager = new HBaseTableManager(name, create, compression);
   }
 
   protected final byte [] scratchbuffer = new byte[4 * 1024];
@@ -268,10 +271,13 @@ public class IngestFiles {
     options.addOption(OptionBuilder.withArgName("path").hasArg()
         .withDescription("WARC files location").create(DIR_OPTION));
     options.addOption(OptionBuilder.withArgName("n").hasArg()
-        .withDescription("Start from the n-th WARC file").create(START_OPTION));
+        .withDescription("start from the n-th WARC file").create(START_OPTION));
+    options.addOption(OptionBuilder.withArgName("n").hasArg()
+        .withDescription("max record size to insert (default = 10 MB)").create(MAX_CONTENT_SIZE_OPTION));
 
     options.addOption("create", false, "create new table");
     options.addOption("append", false, "append to existing table");
+    options.addOption(GZ_OPTION, false, "use GZ compression (default = Snappy)");
 
     CommandLine cmdline = null;
     CommandLineParser parser = new GnuParser();
@@ -298,15 +304,32 @@ public class IngestFiles {
 
     String path = cmdline.getOptionValue(DIR_OPTION);
     File inputFolder = new File(path);
+    Compression.Algorithm compression = Compression.Algorithm.SNAPPY;
+    if (cmdline.hasOption(GZ_OPTION)) {
+      compression = Compression.Algorithm.GZ;
+    }
 
     int i = 0;
     if (cmdline.hasOption(START_OPTION)) {
       i = Integer.parseInt(cmdline.getOptionValue(START_OPTION));
     }
 
+    if (cmdline.hasOption(MAX_CONTENT_SIZE_OPTION)) {
+      IngestFiles.MAX_CONTENT_SIZE =
+          Integer.parseInt(cmdline.getOptionValue(MAX_CONTENT_SIZE_OPTION));
+    }
+
     String name = cmdline.getOptionValue(NAME_OPTION);
     boolean create = cmdline.hasOption(CREATE_OPTION);
-    IngestFiles load = new IngestFiles(name, create);
+
+
+    LOG.info("Input: " + inputFolder);
+    LOG.info("Table: " + name);
+    LOG.info("Create new table: " + create);
+    LOG.info("Compression: " + compression);
+    LOG.info("Max content size: " + IngestFiles.MAX_CONTENT_SIZE);
+
+    IngestFiles load = new IngestFiles(name, create, compression);
     load.ingestFolder(inputFolder, i);
   }
 }

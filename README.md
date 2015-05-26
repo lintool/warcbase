@@ -38,8 +38,6 @@ You can then import the project into Eclipse.
 Ingesting Content
 -----------------
 
-Somewhat ironically (given the name of the project), Warcbase currently supports only ARC files. Don't worry, we're [on it](https://github.com/lintool/warcbase/issues/64).
-
 You can find some sample data [here](https://archive.org/details/ExampleArcAndWarcFiles). Ingesting data into Warcbase is fairly straightforward:
 
 ```
@@ -184,6 +182,35 @@ store b into '/output/path/';
 ```
 
 In the output directory, you should find data output files with source URL, target URL, and anchor text.
+
+
+Spark Integration
+-----------------
+
+Spark supports seamless integration of Hadoop InputFormats out of the box using `newAPIHadoopFile`, so something like this "just works":
+
+```
+import org.apache.hadoop.io._
+import org.warcbase.mapreduce._
+import org.warcbase.io._
+
+val records =
+  sc.newAPIHadoopFile("/shared/collections/CanadianPoliticalParties/arc/",
+    classOf[WacArcInputFormat], classOf[LongWritable], classOf[ArcRecordWritable])
+
+// Take a few records
+records.map(t => {
+  val meta = t._2.getRecord().getMetaData()
+  (meta.getUrl(), meta.getDate().substring(0, 6), meta.getMimetype())
+}).filter(t => { t._3 == "text/html" }).take(20)
+
+// Count number of records per crawl date (YYYYMM)
+val counts = records.map(t => {
+  val meta = t._2.getRecord().getMetaData()
+  (meta.getDate().substring(0, 6), meta.getMimetype())
+}).filter(t => { t._2 == "text/html"
+}).map(t => { (t._1, 1) }).reduceByKey(_ + _).sortByKey().collect()
+```
 
 
 License

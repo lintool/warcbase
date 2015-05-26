@@ -7,6 +7,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -28,7 +29,7 @@ public class HBaseTableManager {
   private final HTable table;
   private final HBaseAdmin admin;
 
-  public HBaseTableManager(String name, boolean create) throws Exception {
+  public HBaseTableManager(String name, boolean create, Compression.Algorithm compression) throws Exception {
     Configuration hbaseConfig = HBaseConfiguration.create();
     admin = new HBaseAdmin(hbaseConfig);
 
@@ -43,12 +44,12 @@ public class HBaseTableManager {
         admin.deleteTable(name);
       }
 
-      HTableDescriptor tableDesc = new HTableDescriptor(name);
+      HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf(name));
       for (int i = 0; i < FAMILIES.length; i++) {
         HColumnDescriptor hColumnDesc = new HColumnDescriptor(FAMILIES[i]);
         hColumnDesc.setMaxVersions(MAX_VERSIONS);
-        hColumnDesc.setCompressionType(Compression.Algorithm.GZ);	// Using GZ instead of SNAPPY because latter unavailable natively in OS X
-        hColumnDesc.setCompactionCompressionType(Compression.Algorithm.GZ);
+        hColumnDesc.setCompressionType(compression);
+        hColumnDesc.setCompactionCompressionType(compression);
         hColumnDesc.setTimeToLive(HConstants.FOREVER);
         tableDesc.addFamily(hColumnDesc);
       }

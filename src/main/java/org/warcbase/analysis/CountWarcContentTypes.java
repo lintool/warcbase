@@ -24,7 +24,7 @@ public class CountWarcContentTypes {
     public void map(LongWritable key, WarcRecord record, Context context)
         throws IOException, InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
-      
+
       // Implicitly only counts response records (no need to check record.header.warcTypeStr)
       if ((record.getHttpHeader() != null) && (record.getHttpHeader().contentType != null)) {
         context.write(new Text(record.getHttpHeader().contentType.replaceAll(";.*", "")), ONE);
@@ -38,7 +38,7 @@ public class CountWarcContentTypes {
   public static void main(String[] args) throws Exception {
     LOG.info("Running " + CountWarcContentTypes.class.getCanonicalName() + " with args "
         + Arrays.toString(args));
-    Tool tool = new WarcCounter(MyMapper.class);
+    Tool tool = new GenericWarcRecordCounter(MyMapper.class);
     ToolRunner.run(tool, args);
   }
 }
