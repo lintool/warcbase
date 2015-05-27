@@ -21,3 +21,11 @@ class ArcRecordWritableToCrawlDateConverter extends Converter[Any, String] {
     meta.getDate()
   }
 }
+
+class ArcRecordWritableToMetadataConverter extends Converter[Any, String] {
+  override def convert(obj: Any): String = {
+    val key = obj.asInstanceOf[ArcRecordWritable]
+    val meta = key.getRecord().getMetaData()
+    meta.getUrl() + "\t" + meta.getDate() + "\t" + meta.getMimetype()
+  }
+}
