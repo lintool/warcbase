@@ -68,6 +68,7 @@ public class WacWarcInputFormatTest {
     assertTrue(urls.length == types.length);
 
     int cnt = 0;
+    int responseCnt = 0;
     while (reader.nextKeyValue()) {
       WARCRecord record = reader.getCurrentValue().getRecord();
 
@@ -75,8 +76,14 @@ public class WacWarcInputFormatTest {
         assertEquals(urls[cnt], record.getHeader().getUrl());
         assertEquals(types[cnt], record.getHeader().getHeaderValue("WARC-Type"));
       }
+
+      if (record.getHeader().getHeaderValue("WARC-Type").equals("response")) {
+        responseCnt++;
+      }
+
       cnt++;
     }
     assertEquals(822, cnt);
+    assertEquals(299, responseCnt);
   }
 }
