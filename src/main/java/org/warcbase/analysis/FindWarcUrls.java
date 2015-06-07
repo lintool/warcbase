@@ -1,7 +1,10 @@
 package org.warcbase.analysis;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -26,15 +29,19 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
-import org.jwat.warc.WarcRecord;
-import org.warcbase.mapreduce.JwatWarcInputFormat;
+import org.archive.io.ArchiveRecordHeader;
+import org.archive.util.ArchiveUtils;
+import org.warcbase.data.WarcRecordUtils;
+import org.warcbase.io.WarcRecordWritable;
+import org.warcbase.mapreduce.WacWarcInputFormat;
 
 public class FindWarcUrls extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(FindWarcUrls.class);
+  private static final DateFormat ISO8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
 
   private static enum Records { TOTAL };
 
-  private static class MyMapper extends Mapper<LongWritable, WarcRecord, Text, Text> {
+  private static class MyMapper extends Mapper<LongWritable, WarcRecordWritable, Text, Text> {
     private static final Text KEY = new Text();
     private static final Text VALUE = new Text();
     private String pattern = null;
@@ -46,27 +53,43 @@ public class FindWarcUrls extends Configured implements Tool {
     }
 
     @Override
-    public void map(LongWritable key, WarcRecord record, Context context)
+    public void map(LongWritable key, WarcRecordWritable record, Context context)
         throws IOException, InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
 
-      // Only consider response records
-      if (record.header.warcTypeStr.equalsIgnoreCase("response")) {
-        String uriStr = record.header.warcTargetUriStr;
-        String date = record.header.warcDateStr;
-        String type = "";
-        if (record.getHttpHeader() != null) {
-          if (record.getHttpHeader().contentType != null) {
-            type = record.getHttpHeader().contentType.replaceAll(";.*", "");
-          }
-        }
+      ArchiveRecordHeader header = record.getRecord().getHeader();
 
-        if ((uriStr != null) && uriStr.matches(pattern)) {
-          String fileName = ((FileSplit) context.getInputSplit()).getPath().getName();
-          KEY.set(fileName + " " + uriStr + " " + type);
-          VALUE.set(date);
-          context.write(KEY, VALUE);
-        }
+      // Only consider response records.
+      if (!header.getHeaderValue("WARC-Type").equals("response")) {
+        return;
+      }
+
+      String url = header.getUrl();
+
+      byte[] content = null;
+      String type = null;
+      Date d = null;
+      String date = null;
+
+      try {
+        content = WarcRecordUtils.getContent(record.getRecord());
+        type = WarcRecordUtils.getWarcResponseMimeType(content);
+        d = ISO8601.parse(header.getDate());
+        date = ArchiveUtils.get14DigitDate(d);
+      } catch (OutOfMemoryError e) {
+        // When we get a corrupt record, this will happen...
+        // Try to recover and move on...
+        LOG.error("Encountered OutOfMemoryError ingesting " + url);
+        LOG.error("Attempting to continue...");
+      } catch (java.text.ParseException e) {
+        LOG.error("Encountered ParseException ingesting " + url);
+      }
+
+      if ((url != null) && url.matches(pattern)) {
+        String fileName = ((FileSplit) context.getInputSplit()).getPath().getName();
+        KEY.set(fileName + " " + url + " " + type);
+        VALUE.set(date);
+        context.write(KEY, VALUE);
       }
     }
   }
@@ -127,7 +150,7 @@ public class FindWarcUrls extends Configured implements Tool {
     FileInputFormat.addInputPaths(job, input);
     FileOutputFormat.setOutputPath(job, output);
 
-    job.setInputFormatClass(JwatWarcInputFormat.class);
+    job.setInputFormatClass(WacWarcInputFormat.class);
     job.setOutputFormatClass(TextOutputFormat.class);
     job.setMapperClass(MyMapper.class);
 
