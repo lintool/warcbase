@@ -67,9 +67,11 @@ public class WarcLoader extends FileInputLoadFunc {
 
       String url = header.getUrl();
       byte[] content = null;
+      String type = null;
 
       try {
         content = WarcRecordUtils.getContent(record);
+        type = WarcRecordUtils.getWarcResponseMimeType(content);
       } catch (OutOfMemoryError e) {
         // When we get a corrupt record, this will happen...
         // Try to recover and move on...
@@ -78,15 +80,14 @@ public class WarcLoader extends FileInputLoadFunc {
       }
 
       Date d = null;
+      String date = null;
       try {
         d = ISO8601.parse(header.getDate());
+        date = ArchiveUtils.get14DigitDate(d);
       } catch (ParseException e) {
         LOG.error("Encountered ParseException ingesting " + url);
       }
-
-      String date = ArchiveUtils.get14DigitDate(d);
-      String type = WarcRecordUtils.getWarcResponseMimeType(content);
-      
+    
       List<Object> protoTuple = Lists.newArrayList();
       protoTuple.add(url);
       protoTuple.add(date);
