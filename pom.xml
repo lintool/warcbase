@@ -410,7 +410,6 @@
       <artifactId>tika-parsers</artifactId>
       <version>1.6</version>
     </dependency>
-<<<<<<< HEAD
 
     <dependency>
       <groupId>org.scala-lang</groupId>
@@ -423,12 +422,10 @@
       <version>1.2.0</version>
     </dependency>
 
-=======
     <dependency>
       <groupId>edu.stanford.nlp</groupId>
       <artifactId>stanford-corenlp</artifactId>
       <version>3.4.1</version>
     </dependency>
->>>>>>> 1c013a7b064fe6d2ea9a0d470a357aee9437712d
   </dependencies>
 </project>
