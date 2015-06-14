@@ -26,15 +26,16 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
-import org.jwat.arc.ArcRecordBase;
-import org.warcbase.mapreduce.JwatArcInputFormat;
+import org.archive.io.arc.ARCRecordMetaData;
+import org.warcbase.io.ArcRecordWritable;
+import org.warcbase.mapreduce.WacArcInputFormat;
 
 public class FindArcUrls extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(FindArcUrls.class);
 
   private static enum Records { TOTAL };
 
-  private static class MyMapper extends Mapper<LongWritable, ArcRecordBase, Text, Text> {
+  private static class MyMapper extends Mapper<LongWritable, ArcRecordWritable, Text, Text> {
     private static final Text KEY = new Text();
     private static final Text VALUE = new Text();
     private String pattern = null;
@@ -46,13 +47,14 @@ public class FindArcUrls extends Configured implements Tool {
     }
 
     @Override
-    public void map(LongWritable key, ArcRecordBase record, Context context)
+    public void map(LongWritable key, ArcRecordWritable record, Context context)
         throws IOException, InterruptedException {
       context.getCounter(Records.TOTAL).increment(1);
 
-      String url = record.getUrlStr();
-      String date = record.getArchiveDateStr();
-      String type = record.getContentTypeStr();
+      ARCRecordMetaData meta = record.getRecord().getMetaData();
+      String url = meta.getUrl();
+      String date = meta.getDate();
+      String type = meta.getMimetype();
 
       if (url.matches(pattern)) {
         String fileName = ((FileSplit) context.getInputSplit()).getPath().getName();
@@ -119,7 +121,7 @@ public class FindArcUrls extends Configured implements Tool {
     FileInputFormat.addInputPaths(job, input);
     FileOutputFormat.setOutputPath(job, output);
 
-    job.setInputFormatClass(JwatArcInputFormat.class);
+    job.setInputFormatClass(WacArcInputFormat.class);
     job.setOutputFormatClass(TextOutputFormat.class);
     job.setMapperClass(MyMapper.class);
 

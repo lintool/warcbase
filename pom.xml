@@ -356,29 +356,6 @@
       <version>1.6.4</version>                        
     </dependency>
 
-    <!-- Begin: jwat dependencies -->
-    <dependency>
-      <groupId>org.jwat</groupId>
-      <artifactId>jwat-common</artifactId>
-      <version>${jwat.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jwat</groupId>
-      <artifactId>jwat-gzip</artifactId>
-      <version>${jwat.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jwat</groupId>
-      <artifactId>jwat-arc</artifactId>
-      <version>${jwat.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jwat</groupId>
-      <artifactId>jwat-warc</artifactId>
-      <version>${jwat.version}</version>
-    </dependency>
-    <!-- End: jwat dependencies -->
-
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
@@ -445,5 +422,10 @@
       <version>1.2.0</version>
     </dependency>
 
+    <dependency>
+      <groupId>edu.stanford.nlp</groupId>
+      <artifactId>stanford-corenlp</artifactId>
+      <version>3.4.1</version>
+    </dependency>
   </dependencies>
 </project>
