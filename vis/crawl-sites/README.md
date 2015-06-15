@@ -1,4 +1,8 @@
-python -m SimpleHTTPServer 1234
+To view the visualization, type:
 
-From: http://bl.ocks.org/mbostock/3886208
+```
+python -m SimpleHTTPServer 1234
+```
+
+Then go into a web browser and type `http://localhost:1234/` into the URL bar.
 

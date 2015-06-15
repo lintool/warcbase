@@ -39,7 +39,8 @@ for url in urls:
 sys.stdout.write(",other\n")
 
 for date in sorted(data.keys()):
-  print date,
+  d = re.sub(r'\d\d(\d\d)', r'\1/', date)
+  print d,
   for url in urls:
     #print url,
     if url in data[date]:
