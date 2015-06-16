@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<style>
+
+body {
+  font: 10px sans-serif;
+}
+
+p {
+  font: 12px sans-serif;
+  width: 1050px;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.bar {
+  fill: steelblue;
+}
+
+.x.axis path {
+  display: none;
+}
+
+.tooltip{
+	text-anchor: middle;
+	font-family: sans-serif;
+	font-size: 16px;
+	font-weight: bold;
+}
+
+</style>
+<body>
+
+<h1>Visualization of the Canadian Political Parties and Political Interest Groups Web Crawls</h1>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+var margin = {top: 20, right: 120, bottom: 50, left: 32},
+    width = 1050 - margin.left - margin.right,
+    height = 480 - margin.top - margin.bottom;
+
+var x = d3.scale.ordinal()
+    .rangeRoundBands([0, width], .1);
+
+var y = d3.scale.linear()
+    .rangeRound([height, 0]);
+
+// colors selected using http://www.w3schools.com/tags/ref_colorpicker.asp
+var color = d3.scale.ordinal()
+    .range(["#3366FF", "#0099FF", "#33CCCC", "#00FF99", "#33CC33", "#99FF33", "#FFFF00", "#FF9933", "#FF5050", "#FF9999", "#FF99FF"]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+    .tickFormat(d3.format(".2s"));
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+d3.csv("data.csv", function(error, data) {
+  color.domain(d3.keys(data[0]).filter(function(key) { return key !== "State"; }));
+
+  data.forEach(function(d) {
+    var y0 = 0;
+    d.ages = color.domain().map(function(name) { return {name: name, y0: y0, y1: y0 += +d[name]}; });
+    d.total = d.ages[d.ages.length - 1].y1;
+  });
+
+  x.domain(data.map(function(d) { return d.State; }));
+  y.domain([0, d3.max(data, function(d) { return d.total; })]);
+
+  // For rotated axis labels
+  // http://www.d3noob.org/2013/01/how-to-rotate-text-labels-for-x-axis-of.html
+  svg.append("g")
+     .attr("class", "x axis")
+     .attr("transform", "translate(0," + height + ")")
+     .call(xAxis)
+     .selectAll("text")
+     .style("text-anchor", "end")
+     .attr("dx", "-.8em")
+     .attr("dy", ".15em")
+     .attr("transform", function(d) { return "rotate(-65)" });
+
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("pages");
+
+  var state = svg.selectAll(".state")
+      .data(data)
+    .enter().append("g")
+      .attr("class", "g")
+      .attr("transform", function(d) { return "translate(" + x(d.State) + ",0)"; });
+
+  state.selectAll("rect")
+      .data(function(d) { return d.ages; })
+    .enter().append("rect")
+      .attr("domain", function(d) { return d.name; })
+      .attr("width", x.rangeBand())
+      .attr("y", function(d) { return y(d.y1); })
+      .attr("height", function(d) { return y(d.y0) - y(d.y1); })
+      .style("fill", function(d) { return color(d.name); })
+      .on("mouseover", function(d, i) {
+        var xPos = parseFloat(d3.select(this).attr("width"));
+        var yPos = parseFloat(d3.select(this).attr("y"));
+        var height = parseFloat(d3.select(this).attr("height"))
+
+	d3.select(this).attr("stroke","blue").attr("stroke-width",0.8);
+
+        var domain = d3.select(this).attr("domain");
+        d3.selectAll("[domain='" + domain + "']").attr("stroke","red").attr("stroke-width",2.0);
+        })
+      .on("mouseout", function(d) {
+        var domain = d3.select(this).attr("domain");
+        d3.selectAll("[domain='" + domain + "']").attr("stroke","pink").attr("stroke-width",0.2);
+	d3.select(this).attr("stroke","pink").attr("stroke-width",0.2);
+       });
+
+
+  var legend = svg.selectAll(".legend")
+      .data(color.domain().slice().reverse())
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(120," + i * 20 + ")"; })
+      .on("mouseover", function(d, i) {
+        d3.selectAll("[domain='" + d + "']").attr("stroke","red").attr("stroke-width",2.0);
+        })
+      .on("mouseout", function(d) {
+        d3.selectAll("[domain='" + d + "']").attr("stroke","pink").attr("stroke-width",0.2);
+       });
+
+  legend.append("rect")
+      .attr("x", width - 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .attr("domain", function(d) { return d; })
+      .style("fill", color);
+
+  legend.append("text")
+      .attr("x", width - 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .style("text-anchor", "end")
+      .text(function(d) { return d; });
+
+});
+
+</script>
+
+<p>This is a visualization of the <a href="https://www.archive-it.org/collections/227">Canadian Political Parties and Political Interest Groups</a> web crawl. Each bar shows the distribution of pages in that crawl by top-level domain. The legend on the right orders the domains by the number of pages across the <i>entire</i> collection, ordered from the bottom&mdash;that is, the bottom domain has the most pages, the second one from the bottom has the second most pages, etc. The legend breaks out the top 20 domains; everything else is grouped into "other" (at the very top). The stacking of the colors in each column is consistent with the legend ordering. Mousing over a portion of a bar will outline in red the domain across all crawls, as will mousing over any part of the legend.</p>
+
+<p>This visualization was created with d3, based on <a href="http://bl.ocks.org/mbostock/3886208">this example</a> and <a href="http://bl.ocks.org/yuuniverse4444/8325617">this example</a>. The raw data for this visualization comes from the output of a <a href="https://github.com/lintool/warcbase/wiki/Pig:-Gathering-Basic-Crawl-Statistics">Pig script</a>.</p>
+
+</html>
