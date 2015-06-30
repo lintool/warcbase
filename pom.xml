@@ -427,5 +427,17 @@
       <artifactId>stanford-corenlp</artifactId>
       <version>3.4.1</version>
     </dependency>
+
+    <dependency>
+      <groupId>com.syncthemall</groupId>
+      <artifactId>boilerpipe</artifactId>
+      <version>1.2.2</version>
+    </dependency>
+
+    <dependency>
+      <groupId>xerces</groupId>
+      <artifactId>xercesImpl</artifactId>
+      <version>2.11.0</version>
+    </dependency>
   </dependencies>
 </project>
