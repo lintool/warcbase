@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.URI;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -14,6 +15,8 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.filecache.DistributedCache;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
@@ -24,13 +27,15 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.solr.common.cloud.SolrZkClient;
 import org.apache.zookeeper.KeeperException;
 
 import uk.bl.wa.apache.solr.hadoop.Solate;
+import uk.bl.wa.apache.solr.hadoop.Zipper;
+import uk.bl.wa.apache.solr.hadoop.ZooKeeperInspector;
 import uk.bl.wa.hadoop.ArchiveFileInputFormat;
 import uk.bl.wa.hadoop.TextOutputFormat;
 import uk.bl.wa.hadoop.indexer.WritableSolrRecord;
-import uk.bl.wa.solr.SolrWebServer;
 import uk.bl.wa.util.ConfigPrinter;
 
 import com.typesafe.config.Config;
@@ -154,7 +159,7 @@ public class WARCIndexerRunner extends Configured implements Tool {
 //						index_conf.getString(SolrWebServer.COLLECTION),
 //						solrHomeZipName);
 //			} else {
-				Solate.cacheSolrHome(conf, null, null, solrHomeZipName);
+				cacheSolrHome(conf, null, null, solrHomeZipName);
 //			}
 			// TODO Check num_shards == num reducers
 
@@ -252,5 +257,40 @@ public class WARCIndexerRunner extends Configured implements Tool {
 		int ret = ToolRunner.run(new WARCIndexerRunner(), args);
 		System.exit(ret);
 	}
+
+	 public static void cacheSolrHome(JobConf conf, String zkHost,
+	      String collection, String solrHomeZipName) throws KeeperException,
+	      InterruptedException, IOException {
+
+	    // use the config that this collection uses for the SolrHomeCache.
+	    File tmpSolrHomeDir;
+	    if (zkHost != null) {
+	      ZooKeeperInspector zki = new ZooKeeperInspector();
+	      SolrZkClient zkClient = zki
+	        .getZkClient(zkHost);
+	      String configName = zki.readConfigName(zkClient, collection);
+	      tmpSolrHomeDir = zki.downloadConfigDir(zkClient, configName);
+	    }
+	    // Override with local config:
+	    tmpSolrHomeDir = new File("src/main/solr")
+	        .getAbsoluteFile();
+
+	    // Create a ZIP file:
+	    File solrHomeLocalZip = File.createTempFile("tmp-", solrHomeZipName);
+	    Zipper.zipDir(tmpSolrHomeDir, solrHomeLocalZip);
+
+	    // Add to HDFS:
+	    FileSystem fs = FileSystem.get(conf);
+	    String hdfsSolrHomeDir = fs.getHomeDirectory() + "/solr/tempHome/"
+	        + solrHomeZipName;
+	    fs.copyFromLocalFile(new Path(solrHomeLocalZip.toString()), new Path(
+	        hdfsSolrHomeDir));
+
+	    final URI baseZipUrl = fs.getUri().resolve(
+	        hdfsSolrHomeDir + '#' + solrHomeZipName);
+
+	    // Cache it:
+	    DistributedCache.addCacheArchive(baseZipUrl, conf);
+	  }
 
 }
