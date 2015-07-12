@@ -80,6 +80,15 @@
               <goal>shade</goal>
             </goals>
             <configuration>
+
+<!--
+http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130822094206.310452@isped.u-bordeaux2.fr%3E
+-->
+
+<transformers><transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+<resource>META-INF/services/org.apache.lucene.codecs.Codec</resource></transformer></transformers>
+
+
               <!-- This fixes the issue "Invalid signature file digest for Manifest main attributes"
                    cf. http://zhentao-li.blogspot.com/2012/06/maven-shade-plugin-invalid-signature.html -->
               <filters>
@@ -207,6 +216,31 @@
   </repositories>
 
   <dependencies>
+
+    <!-- dependency>
+      <groupId>org.apache.solr</groupId>
+      <artifactId>solr-solrj</artifactId>
+      <version>4.7.2</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>slf4j-api</artifactId>
+          <groupId>org.slf4j</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency -->
+
+    <dependency>
+      <groupId>org.apache.solr</groupId>
+      <artifactId>solr-core</artifactId>
+      <version>4.7.2</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>slf4j-api</artifactId>
+          <groupId>org.slf4j</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -223,15 +257,15 @@
       <artifactId>jsoup</artifactId>
       <version>1.7.3</version>
     </dependency>
-    <dependency>
+    <!--dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-core</artifactId>
       <version>4.5.1</version>
-    </dependency>
+    </dependency-->
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>18.0</version>
+      <version>14.0.1</version> <!-- downgrade for Hadoop WARC indexer -->
     </dependency>
     <dependency>
       <groupId>tl.lin</groupId>
@@ -256,6 +290,7 @@
         <exclusion><groupId>org.apache.hadoop</groupId><artifactId>hadoop-core</artifactId></exclusion>
         <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>servlet-api-2.5</artifactId></exclusion>
         <exclusion><groupId>javax.servlet</groupId><artifactId>servlet-api</artifactId></exclusion>
+        <exclusion><groupId>asm</groupId><artifactId>asm</artifactId></exclusion>
       </exclusions>
     </dependency>
 
@@ -373,12 +408,17 @@
       <version>2.3</version>
     </dependency>
 
-    <!-- these are needed for the Pig test cases -->
     <dependency>
       <groupId>org.apache.tika</groupId>
       <artifactId>tika-core</artifactId>
-      <version>1.5</version>
+      <version>1.9</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.tika</groupId>
+      <artifactId>tika-parsers</artifactId>
+      <version>1.9</version>
+    </dependency>
+
     <dependency>
       <groupId>org.antlr</groupId>
       <artifactId>antlr</artifactId>
@@ -406,12 +446,6 @@
     </dependency>
 
     <dependency>
-      <groupId>org.apache.tika</groupId>
-      <artifactId>tika-parsers</artifactId>
-      <version>1.6</version>
-    </dependency>
-
-    <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
       <version>2.10.4</version>
@@ -427,5 +461,15 @@
       <artifactId>stanford-corenlp</artifactId>
       <version>3.4.1</version>
     </dependency>
+
+    <dependency>
+      <groupId>uk.bl.wa.discovery</groupId>
+      <artifactId>warc-hadoop-indexer</artifactId>
+      <version>2.2.0-SNAPSHOT</version>
+      <exclusions>
+        <exclusion><groupId>asm</groupId><artifactId>asm</artifactId></exclusion>
+      </exclusions>
+    </dependency>
+
   </dependencies>
 </project>
