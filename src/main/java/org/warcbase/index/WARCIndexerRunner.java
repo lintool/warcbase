@@ -27,12 +27,9 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.solr.common.cloud.SolrZkClient;
 import org.apache.zookeeper.KeeperException;
 
-import uk.bl.wa.apache.solr.hadoop.Solate;
 import uk.bl.wa.apache.solr.hadoop.Zipper;
-import uk.bl.wa.apache.solr.hadoop.ZooKeeperInspector;
 import uk.bl.wa.hadoop.ArchiveFileInputFormat;
 import uk.bl.wa.hadoop.TextOutputFormat;
 import uk.bl.wa.hadoop.indexer.WritableSolrRecord;
@@ -41,14 +38,6 @@ import uk.bl.wa.util.ConfigPrinter;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
-
-/**
- * WARCIndexerRunner
- * 
- * Extracts text/metadata using from a series of Archive files.
- * 
- * @author rcoram
- */
 
 @SuppressWarnings({ "deprecation" })
 public class WARCIndexerRunner extends Configured implements Tool {
@@ -68,54 +57,34 @@ public class WARCIndexerRunner extends Configured implements Tool {
   private boolean exportXml;
   private boolean applyAnnotations;
 
-  /**
-   * 
-   * @param args
-   * @return
-   * @throws IOException
-   * @throws ParseException
-   * @throws InterruptedException
-   * @throws KeeperException
-   */
   protected void createJobConf(JobConf conf, String[] args) throws IOException, ParseException,
       KeeperException, InterruptedException {
     // Parse the command-line parameters.
     this.setup(args, conf);
 
-    // Store application properties where the mappers/reducers can access
-    // them
-    Config index_conf;
+    // Store application properties where the mappers/reducers can access them.
+    Config config;
     if (this.configPath != null) {
-      index_conf = ConfigFactory.parseFile(new File(this.configPath));
+      config = ConfigFactory.parseFile(new File(this.configPath));
     } else {
-      index_conf = ConfigFactory.load();
+      config = ConfigFactory.load();
     }
+
     if (this.dumpConfig) {
-      ConfigPrinter.print(index_conf);
+      ConfigPrinter.print(config);
       System.exit(0);
     }
-    conf.set(CONFIG_PROPERTIES,
-        index_conf.withOnlyPath("warc").root().render(ConfigRenderOptions.concise()));
-    LOG.info("Loaded warc config.");
-    LOG.info(index_conf.getString("warc.title"));
-    if (index_conf.getBoolean("warc.solr.use_hash_url_id")) {
-      LOG.info("Using hash-based ID.");
-    }
-    if (index_conf.hasPath("warc.solr.zookeepers")) {
-      LOG.info("Using Zookeepers.");
-    } else {
-      LOG.info("Using SolrServers.");
-    }
 
-    // Also set reduce speculative execution off, avoiding duplicate
-    // submissions to Solr.
+    conf.set(CONFIG_PROPERTIES,
+        config.withOnlyPath("warc").root().render(ConfigRenderOptions.concise()));
+
+    // Also set reduce speculative execution off, avoiding duplicate submissions to Solr.
     conf.set("mapred.reduce.tasks.speculative.execution", "false");
 
-    // Reducer count dependent on concurrent HTTP connections to Solr
-    // server.
+    // Reducer count dependent on concurrent HTTP connections to Solr server.
     int numReducers = 1;
     try {
-      numReducers = index_conf.getInt("warc.hadoop.num_reducers");
+      numReducers = config.getInt("warc.hadoop.num_reducers");
     } catch (NumberFormatException n) {
       numReducers = 10;
     }
@@ -149,24 +118,14 @@ public class WARCIndexerRunner extends Configured implements Tool {
     conf.setBoolean("mapreduce.task.classpath.user.precedence", true);
 
     // If we are indexing into HDFS, we need a copy of the config:
-    if (index_conf.getBoolean("warc.solr.hdfs")) {
-      // Grab the Solr config from ZK and cache it for during the job.
-      // if (index_conf.hasPath(SolrWebServer.CONF_ZOOKEEPERS)) {
-      // Solate.cacheSolrHome(conf,
-      // index_conf.getString(SolrWebServer.CONF_ZOOKEEPERS),
-      // index_conf.getString(SolrWebServer.COLLECTION),
-      // solrHomeZipName);
-      // } else {
-      cacheSolrHome(conf, null, null, solrHomeZipName);
-      // }
-      // TODO Check num_shards == num reducers
+    cacheSolrHome(conf, solrHomeZipName);
+    // TODO Check num_shards == num reducers
 
-      // Note that we need this to ensure FileSystem.get is thread-safe:
-      // @see https://issues.apache.org/jira/browse/HDFS-925
-      // @see
-      // https://mail-archives.apache.org/mod_mbox/hadoop-user/201208.mbox/%3CCA+4kjVt-QE2L83p85uELjWXiog25bYTKOZXdc1Ahun+oBSJYpQ@mail.gmail.com%3E
-      conf.setBoolean("fs.hdfs.impl.disable.cache", true);
-    }
+    // Note that we need this to ensure FileSystem.get is thread-safe:
+    // @see https://issues.apache.org/jira/browse/HDFS-925
+    // @see
+    // https://mail-archives.apache.org/mod_mbox/hadoop-user/201208.mbox/%3CCA+4kjVt-QE2L83p85uELjWXiog25bYTKOZXdc1Ahun+oBSJYpQ@mail.gmail.com%3E
+    conf.setBoolean("fs.hdfs.impl.disable.cache", true);
     conf.setBoolean("mapred.output.oai-pmh", this.exportXml);
 
     // Decide whether to apply annotations:
@@ -179,14 +138,24 @@ public class WARCIndexerRunner extends Configured implements Tool {
     conf.setNumReduceTasks(numReducers);
   }
 
-  /**
-   * 
-   * Run the job:
-   * 
-   * @throws InterruptedException
-   * @throws KeeperException
-   * 
-   */
+  private void cacheSolrHome(JobConf conf, String solrHomeZipName) throws IOException {
+    File tmpSolrHomeDir = new File("src/main/solr").getAbsoluteFile();
+
+    // Create a ZIP file.
+    File solrHomeLocalZip = File.createTempFile("tmp-", solrHomeZipName);
+    Zipper.zipDir(tmpSolrHomeDir, solrHomeLocalZip);
+
+    // Add to HDFS.
+    FileSystem fs = FileSystem.get(conf);
+    String hdfsSolrHomeDir = fs.getHomeDirectory() + "/solr/tempHome/" + solrHomeZipName;
+    fs.copyFromLocalFile(new Path(solrHomeLocalZip.toString()), new Path(hdfsSolrHomeDir));
+
+    final URI baseZipUrl = fs.getUri().resolve(hdfsSolrHomeDir + '#' + solrHomeZipName);
+
+    // Cache it.
+    DistributedCache.addCacheArchive(baseZipUrl, conf);
+  }
+
   public int run(String[] args) throws IOException, ParseException, KeeperException,
       InterruptedException {
     // Set up the base conf:
@@ -244,43 +213,8 @@ public class WARCIndexerRunner extends Configured implements Tool {
     this.applyAnnotations = cmd.hasOption("a");
   }
 
-  /**
-   * 
-   * @param args
-   * @throws Exception
-   */
   public static void main(String[] args) throws Exception {
     int ret = ToolRunner.run(new WARCIndexerRunner(), args);
     System.exit(ret);
   }
-
-  public static void cacheSolrHome(JobConf conf, String zkHost, String collection,
-      String solrHomeZipName) throws KeeperException, InterruptedException, IOException {
-
-    // use the config that this collection uses for the SolrHomeCache.
-    File tmpSolrHomeDir;
-    if (zkHost != null) {
-      ZooKeeperInspector zki = new ZooKeeperInspector();
-      SolrZkClient zkClient = zki.getZkClient(zkHost);
-      String configName = zki.readConfigName(zkClient, collection);
-      tmpSolrHomeDir = zki.downloadConfigDir(zkClient, configName);
-    }
-    // Override with local config:
-    tmpSolrHomeDir = new File("src/main/solr").getAbsoluteFile();
-
-    // Create a ZIP file:
-    File solrHomeLocalZip = File.createTempFile("tmp-", solrHomeZipName);
-    Zipper.zipDir(tmpSolrHomeDir, solrHomeLocalZip);
-
-    // Add to HDFS:
-    FileSystem fs = FileSystem.get(conf);
-    String hdfsSolrHomeDir = fs.getHomeDirectory() + "/solr/tempHome/" + solrHomeZipName;
-    fs.copyFromLocalFile(new Path(solrHomeLocalZip.toString()), new Path(hdfsSolrHomeDir));
-
-    final URI baseZipUrl = fs.getUri().resolve(hdfsSolrHomeDir + '#' + solrHomeZipName);
-
-    // Cache it:
-    DistributedCache.addCacheArchive(baseZipUrl, conf);
-  }
-
 }
