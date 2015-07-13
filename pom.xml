@@ -51,11 +51,10 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jettyVersion>8.1.12.v20130726</jettyVersion>
-    <hadoop.version>2.3.0-cdh5.1.2</hadoop.version>
-    <hbase.version>0.98.1-cdh5.1.2</hbase.version>
-    <zookeeper.version>3.4.5-cdh5.1.2</zookeeper.version>
-    <pig.version>0.12.0-cdh5.1.2</pig.version>
-    <jwat.version>1.0.0</jwat.version>
+    <hadoop.version>2.6.0-cdh5.4.1</hadoop.version>
+    <hbase.version>1.0.0-cdh5.4.1</hbase.version>
+    <zookeeper.version>3.4.5-cdh5.4.1</zookeeper.version>
+    <pig.version>0.12.0-cdh5.4.1</pig.version>
   </properties>
 
   <build>
@@ -216,31 +215,6 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
   </repositories>
 
   <dependencies>
-
-    <!-- dependency>
-      <groupId>org.apache.solr</groupId>
-      <artifactId>solr-solrj</artifactId>
-      <version>4.7.2</version>
-      <exclusions>
-        <exclusion>
-          <artifactId>slf4j-api</artifactId>
-          <groupId>org.slf4j</groupId>
-        </exclusion>
-      </exclusions>
-    </dependency -->
-
-    <dependency>
-      <groupId>org.apache.solr</groupId>
-      <artifactId>solr-core</artifactId>
-      <version>4.7.2</version>
-      <exclusions>
-        <exclusion>
-          <artifactId>slf4j-api</artifactId>
-          <groupId>org.slf4j</groupId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -262,11 +236,6 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
       <artifactId>jsoup</artifactId>
       <version>1.7.3</version>
     </dependency>
-    <!--dependency>
-      <groupId>org.apache.lucene</groupId>
-      <artifactId>lucene-core</artifactId>
-      <version>4.5.1</version>
-    </dependency-->
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
@@ -465,6 +434,23 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
       <groupId>edu.stanford.nlp</groupId>
       <artifactId>stanford-corenlp</artifactId>
       <version>3.4.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-core</artifactId>
+      <version>4.7.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.solr</groupId>
+      <artifactId>solr-core</artifactId>
+      <version>4.7.2</version>
+      <exclusions>
+        <exclusion><artifactId>slf4j-api</artifactId><groupId>org.slf4j</groupId></exclusion>
+        <exclusion><artifactId>org.apache.hadoop</artifactId><groupId>hadoop-annotations</groupId></exclusion>
+        <exclusion><artifactId>org.apache.hadoop</artifactId><groupId>hadoop-common</groupId></exclusion>
+        <exclusion><artifactId>org.apache.hadoop</artifactId><groupId>hadoop-hdfs</groupId></exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>

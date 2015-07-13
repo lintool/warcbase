@@ -147,7 +147,7 @@ public class PigArcLoaderTest {
         case                    "image/jpeg": assertEquals( 18L, (long) t.get(1)); break;
         case                     "text/html": assertEquals(132L, (long) t.get(1)); break;
         case                    "text/plain": assertEquals( 86L, (long) t.get(1)); break;
-        case               "application/xml": assertEquals(  2L, (long) t.get(1)); break;
+        case               "application/xml": assertEquals(  1L, (long) t.get(1)); break;
         case           "application/rss+xml": assertEquals(  9L, (long) t.get(1)); break;
         case         "applicaiton/xhtml+xml": assertEquals(  1L, (long) t.get(1)); break;
         case      "application/octet-stream": assertEquals(  7L, (long) t.get(1)); break;
