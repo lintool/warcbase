@@ -40,8 +40,8 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
 
 @SuppressWarnings({ "deprecation" })
-public class WARCIndexerRunner extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(WARCIndexerRunner.class);
+public class IndexerRunner extends Configured implements Tool {
+  private static final Log LOG = LogFactory.getLog(IndexerRunner.class);
   private static final String CLI_USAGE = "[-i <input file>] [-o <output dir>] [-c <config file>] [-d] [Dump config.] [-w] [Wait for completion.] [-x] [output XML in OAI-PMH format]";
   private static final String CLI_HEADER = "WARCIndexerRunner - MapReduce method for extracing metadata/text from Archive Records";
   public static final String CONFIG_PROPERTIES = "warc_indexer_config";
@@ -103,8 +103,8 @@ public class WARCIndexerRunner extends Configured implements Tool {
 
     conf.setJobName(this.inputPath + "_" + System.currentTimeMillis());
     conf.setInputFormat(ArchiveFileInputFormat.class);
-    conf.setMapperClass(WARCIndexerMapper.class);
-    conf.setReducerClass(WARCIndexerReducer.class);
+    conf.setMapperClass(IndexerMapper.class);
+    conf.setReducerClass(IndexerReducer.class);
     conf.setOutputFormat(TextOutputFormat.class);
     conf.set("map.output.key.field.separator", "");
     // Compress the output from the maps, to cut down temp space
@@ -159,7 +159,7 @@ public class WARCIndexerRunner extends Configured implements Tool {
   public int run(String[] args) throws IOException, ParseException, KeeperException,
       InterruptedException {
     // Set up the base conf:
-    JobConf conf = new JobConf(getConf(), WARCIndexerRunner.class);
+    JobConf conf = new JobConf(getConf(), IndexerRunner.class);
 
     // Get the job configuration:
     this.createJobConf(conf, args);
@@ -214,7 +214,7 @@ public class WARCIndexerRunner extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    int ret = ToolRunner.run(new WARCIndexerRunner(), args);
+    int ret = ToolRunner.run(new IndexerRunner(), args);
     System.exit(ret);
   }
 }

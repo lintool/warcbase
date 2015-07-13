@@ -24,9 +24,9 @@ import uk.bl.wa.solr.SolrWebServer;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-public class WARCIndexerMapper extends MapReduceBase implements
+public class IndexerMapper extends MapReduceBase implements
     Mapper<Text, WritableArchiveRecord, IntWritable, WritableSolrRecord> {
-  private static final Log LOG = LogFactory.getLog(WARCIndexerMapper.class);
+  private static final Log LOG = LogFactory.getLog(IndexerMapper.class);
 
   static enum MyCounters {
     NUM_RECORDS, NUM_ERRORS, NUM_NULLS, NUM_EMPTY_HEADERS
@@ -43,7 +43,7 @@ public class WARCIndexerMapper extends MapReduceBase implements
   @Override
   public void configure(JobConf job) {
     try {
-      this.config = ConfigFactory.parseString(job.get(WARCIndexerRunner.CONFIG_PROPERTIES));
+      this.config = ConfigFactory.parseString(job.get(IndexerRunner.CONFIG_PROPERTIES));
       this.indexer = new WARCIndexer(config);
 
       numShards = config.getInt(SolrWebServer.NUM_SHARDS);

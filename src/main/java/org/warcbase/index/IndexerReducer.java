@@ -35,9 +35,9 @@ import uk.bl.wa.solr.WctFields;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-public class WARCIndexerReducer extends MapReduceBase implements
+public class IndexerReducer extends MapReduceBase implements
     Reducer<IntWritable, WritableSolrRecord, Text, Text> {
-  private static final Log LOG = LogFactory.getLog(WARCIndexerReducer.class);
+  private static final Log LOG = LogFactory.getLog(IndexerReducer.class);
   // TODO: make the shard/partition terminology consistent
   private static final String SHARD_PREFIX = "shard";
 
@@ -65,7 +65,7 @@ public class WARCIndexerReducer extends MapReduceBase implements
     LOG.info("Configuring reducer, including Solr connection...");
 
     // Get config from job property:
-    Config conf = ConfigFactory.parseString(job.get(WARCIndexerRunner.CONFIG_PROPERTIES));
+    Config conf = ConfigFactory.parseString(job.get(IndexerRunner.CONFIG_PROPERTIES));
 
     this.batchSize = conf.getInt("warc.solr.batch_size");
 
@@ -76,7 +76,7 @@ public class WARCIndexerReducer extends MapReduceBase implements
     try {
       job.setBoolean("fs.hdfs.impl.disable.cache", true);
       fs = FileSystem.get(job);
-      solrHomeDir = Solate.findSolrConfig(job, WARCIndexerRunner.solrHomeZipName);
+      solrHomeDir = Solate.findSolrConfig(job, IndexerRunner.solrHomeZipName);
       LOG.info("Found solrHomeDir " + solrHomeDir);
     } catch (IOException e) {
       e.printStackTrace();
