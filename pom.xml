@@ -59,6 +59,20 @@
 
   <build>
     <plugins>
+
+ <plugin>
+    <artifactId>maven-clean-plugin</artifactId>
+    <version>2.6.1</version>
+    <configuration>
+      <filesets>
+        <fileset>
+          <directory>src/main/solr/lib</directory>
+          <followSymlinks>false</followSymlinks>
+        </fileset>
+      </filesets>
+    </configuration>
+  </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>

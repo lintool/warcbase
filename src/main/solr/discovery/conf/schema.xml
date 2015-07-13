@@ -96,7 +96,7 @@
    <field name="wayback_date" type="string" indexed="true" stored="true" multiValued="false"/>
    <!-- The ealiest harvest/crawl date, as a date, and also as multi-valued for hash-based ID. -->
    <field name="crawl_date" type="tdate" indexed="true" stored="true" multiValued="false" docValues="true"/>
-   <field name="crawl_dates" type="tdate" indexed="true" stored="true" multiValued="true" docValues="true"/>
+   <field name="crawl_dates" type="tdate" indexed="true" stored="true" multiValued="true"/>
    <!-- The harvest/crawl year (for faceting), and also as multi-valued for hash-based ID. -->
    <field name="crawl_year" type="string" indexed="true" stored="true" multiValued="false"/>
    <field name="crawl_years" type="string" indexed="true" stored="true" multiValued="true"/>
