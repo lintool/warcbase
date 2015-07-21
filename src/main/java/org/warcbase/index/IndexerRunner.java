@@ -21,16 +21,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.lib.NullOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import uk.bl.wa.apache.solr.hadoop.Zipper;
 import uk.bl.wa.hadoop.ArchiveFileInputFormat;
-import uk.bl.wa.hadoop.TextOutputFormat;
 import uk.bl.wa.hadoop.indexer.WritableSolrRecord;
 
 import com.typesafe.config.Config;
@@ -39,47 +38,46 @@ import com.typesafe.config.ConfigRenderOptions;
 
 @SuppressWarnings({ "deprecation" })
 public class IndexerRunner extends Configured implements Tool {
-  public static final String CONFIG_PROPERTIES = "warc_indexer_config";
+  public static final String CONFIG_PROPERTIES = "IndexerRunner.Config";
 
   private static final Log LOG = LogFactory.getLog(IndexerRunner.class);
   protected static String solrHomeZipName = "solr_home.zip";
 
   private String inputPath;
   private String outputPath;
-  private String configPath;
+  private String configPath = null;
   private int shards;
 
   protected void createJobConf(JobConf conf, String[] args) throws IOException, ParseException {
+    LOG.info("Initializing indexer...");
+
     // Parse the command-line parameters.
     this.setup(args, conf);
 
-    // Store application properties where the mappers/reducers can access them.
-    Config config = ConfigFactory.parseFile(new File(this.configPath)); // TODO: make sure config actually exists.
+    if (configPath == null) {
+      LOG.info("Config not specified, using default src/main/solr/WARCIndexer.conf");
+      configPath = "src/main/solr/WARCIndexer.conf";
+    }
+    File configFile = new File(this.configPath);
+    if (!configFile.exists()) {
+      LOG.error("Error: config does not exist!");
+      System.exit(-1);
+    }
+    Config config = ConfigFactory.parseFile(configFile);
     conf.set(CONFIG_PROPERTIES, config.withOnlyPath("warc").root().render(ConfigRenderOptions.concise()));
 
     FileSystem fs = FileSystem.get(conf);
-
-    LOG.info("Initializing indexer...");
-    String logDir = this.outputPath.trim().replace("/$", "") + ".logs";
 
     LOG.info("HDFS index output path: " + outputPath);
     conf.set(IndexerReducer.HDFS_OUTPUT_PATH, outputPath);
     if (fs.exists(new Path(outputPath))) {
       LOG.error("Error: path exists already!");
-    }
-
-    LOG.info("Logging output: " + logDir);
-    FileOutputFormat.setOutputPath(conf, new Path(logDir));
-    if (fs.exists(new Path(logDir))) {
-      LOG.error("Error: path exists already!");
+      System.exit(-1);
     }
 
     int numReducers = this.shards;
     LOG.info("Number of shards: " + shards);
     conf.setInt(IndexerMapper.NUM_SHARDS, shards);
-
-    // Also set reduce speculative execution off, avoiding duplicate submissions to Solr.
-    conf.setBoolean("mapreduce.reduce.speculative", false);
 
     // Add input paths:
     LOG.info("Reading input files...");
@@ -95,11 +93,12 @@ public class IndexerRunner extends Configured implements Tool {
     conf.setInputFormat(ArchiveFileInputFormat.class);
     conf.setMapperClass(IndexerMapper.class);
     conf.setReducerClass(IndexerReducer.class);
-    conf.setOutputFormat(TextOutputFormat.class);
+    conf.setOutputFormat(NullOutputFormat.class);
+
     // Ensure the JARs we provide take precedence over ones from Hadoop:
     conf.setBoolean("mapreduce.job.user.classpath.first", true);
-
-    cacheSolrHome(conf, solrHomeZipName);
+    // Also set reduce speculative execution off, avoiding duplicate submissions to Solr.
+    conf.setBoolean("mapreduce.reduce.speculative", false);
 
     // Note that we need this to ensure FileSystem.get is thread-safe:
     // @see https://issues.apache.org/jira/browse/HDFS-925
@@ -111,6 +110,8 @@ public class IndexerRunner extends Configured implements Tool {
     conf.setMapOutputKeyClass(IntWritable.class);
     conf.setMapOutputValueClass(WritableSolrRecord.class);
     conf.setNumReduceTasks(numReducers);
+
+    cacheSolrHome(conf, solrHomeZipName);
   }
 
   private void cacheSolrHome(JobConf conf, String solrHomeZipName) throws IOException {
@@ -156,14 +157,18 @@ public class IndexerRunner extends Configured implements Tool {
 
     CommandLineParser parser = new PosixParser();
     CommandLine cmd = parser.parse(options, otherArgs);
-    if (!cmd.hasOption("i") || !cmd.hasOption("o") || !cmd.hasOption("c") || !cmd.hasOption("s")) {
+    if (!cmd.hasOption("i") || !cmd.hasOption("o") || !cmd.hasOption("s")) {
       HelpFormatter helpFormatter = new HelpFormatter();
       helpFormatter.printHelp(this.getClass().getName(), options);
       System.exit(1);
     }
+
+    if (cmd.hasOption("c")) {
+      this.configPath = cmd.getOptionValue("c");
+    }
+
     this.inputPath = cmd.getOptionValue("i");
     this.outputPath = cmd.getOptionValue("o");
-    this.configPath = cmd.getOptionValue("c");
     this.shards = Integer.parseInt(cmd.getOptionValue("s"));
   }
 
