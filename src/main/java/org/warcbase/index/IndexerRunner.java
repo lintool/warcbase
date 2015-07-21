@@ -5,13 +5,15 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
@@ -24,7 +26,6 @@ import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
-import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -43,22 +44,61 @@ public class IndexerRunner extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(IndexerRunner.class);
   protected static String solrHomeZipName = "solr_home.zip";
 
-  private String inputPath;
-  private String outputPath;
-  private String configPath = null;
-  private int shards;
+  public static final String INPUT_OPTION = "input";
+  public static final String INDEX_OPTION = "index";
+  public static final String CONFIG_OPTION = "config";
+  public static final String SHARDS_OPTION = "numShards";
 
-  protected void createJobConf(JobConf conf, String[] args) throws IOException, ParseException {
+  @SuppressWarnings("static-access")
+  public int run(String[] args) throws IOException, ParseException {
     LOG.info("Initializing indexer...");
 
-    // Parse the command-line parameters.
-    this.setup(args, conf);
+    Options options = new Options();
+
+    options.addOption(OptionBuilder.withArgName("file").hasArg()
+        .withDescription("input file list").create(INPUT_OPTION));
+    options.addOption(OptionBuilder.withArgName("path").hasArg()
+        .withDescription("HDFS index output path").create(INDEX_OPTION));
+    options.addOption(OptionBuilder.withArgName("num").hasArg()
+        .withDescription("number of shards").create(SHARDS_OPTION));
+    options.addOption(OptionBuilder.withArgName("file").hasArg()
+        .withDescription("config file (optional)").create(CONFIG_OPTION));
+
+    CommandLine cmdline;
+    CommandLineParser parser = new GnuParser();
+    try {
+      cmdline = parser.parse(options, args);
+    } catch (ParseException exp) {
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.printHelp(this.getClass().getName(), options);
+      ToolRunner.printGenericCommandUsage(System.out);
+      System.err.println("Error parsing command line: " + exp.getMessage());
+      return -1;
+    }
+
+    if (!cmdline.hasOption(INPUT_OPTION) || !cmdline.hasOption(INDEX_OPTION) || !cmdline.hasOption(SHARDS_OPTION)) {
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.printHelp(this.getClass().getName(), options);
+      ToolRunner.printGenericCommandUsage(System.out);
+      return -1;
+    }
+
+    String configPath = null;
+    if (cmdline.hasOption(CONFIG_OPTION)) {
+      configPath = cmdline.getOptionValue(CONFIG_OPTION);
+    }
+
+    String inputPath = cmdline.getOptionValue(INPUT_OPTION);
+    String outputPath = cmdline.getOptionValue(INDEX_OPTION);
+    int shards = Integer.parseInt(cmdline.getOptionValue(SHARDS_OPTION));
+
+    JobConf conf = new JobConf(getConf(), IndexerRunner.class);
 
     if (configPath == null) {
       LOG.info("Config not specified, using default src/main/solr/WARCIndexer.conf");
       configPath = "src/main/solr/WARCIndexer.conf";
     }
-    File configFile = new File(this.configPath);
+    File configFile = new File(configPath);
     if (!configFile.exists()) {
       LOG.error("Error: config does not exist!");
       System.exit(-1);
@@ -75,21 +115,20 @@ public class IndexerRunner extends Configured implements Tool {
       System.exit(-1);
     }
 
-    int numReducers = this.shards;
     LOG.info("Number of shards: " + shards);
     conf.setInt(IndexerMapper.NUM_SHARDS, shards);
 
     // Add input paths:
     LOG.info("Reading input files...");
     String line = null;
-    BufferedReader br = new BufferedReader(new FileReader(this.inputPath));
+    BufferedReader br = new BufferedReader(new FileReader(inputPath));
     while ((line = br.readLine()) != null) {
       FileInputFormat.addInputPath(conf, new Path(line));
     }
     br.close();
     LOG.info("Read " + FileInputFormat.getInputPaths(conf).length + " input files.");
 
-    conf.setJobName(this.inputPath + "_" + System.currentTimeMillis());
+    conf.setJobName(IndexerRunner.class.getSimpleName() + ": " + inputPath);
     conf.setInputFormat(ArchiveFileInputFormat.class);
     conf.setMapperClass(IndexerMapper.class);
     conf.setReducerClass(IndexerReducer.class);
@@ -109,9 +148,13 @@ public class IndexerRunner extends Configured implements Tool {
     conf.setOutputValueClass(Text.class);
     conf.setMapOutputKeyClass(IntWritable.class);
     conf.setMapOutputValueClass(WritableSolrRecord.class);
-    conf.setNumReduceTasks(numReducers);
+    conf.setNumReduceTasks(shards);  // number of reducers = number of shards
 
     cacheSolrHome(conf, solrHomeZipName);
+
+    JobClient.runJob(conf);
+
+    return 0;
   }
 
   private void cacheSolrHome(JobConf conf, String solrHomeZipName) throws IOException {
@@ -132,48 +175,9 @@ public class IndexerRunner extends Configured implements Tool {
     DistributedCache.addCacheArchive(baseZipUrl, conf);
   }
 
-  public int run(String[] args) throws IOException, ParseException {
-    // Set up the base conf:
-    JobConf conf = new JobConf(getConf(), IndexerRunner.class);
-
-    // Get the job configuration:
-    this.createJobConf(conf, args);
-
-    JobClient.runJob(conf);
-
-    return 0;
-  }
-
-  private void setup(String[] args, JobConf conf) throws ParseException, IOException {
-    // Process Hadoop args first:
-    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
-
-    // Process remaining args list this:
-    Options options = new Options();
-    options.addOption("i", true, "input file list");
-    options.addOption("o", true, "HDFS index output path");
-    options.addOption("c", true, "config file");
-    options.addOption("s", true, "number of shards");
-
-    CommandLineParser parser = new PosixParser();
-    CommandLine cmd = parser.parse(options, otherArgs);
-    if (!cmd.hasOption("i") || !cmd.hasOption("o") || !cmd.hasOption("s")) {
-      HelpFormatter helpFormatter = new HelpFormatter();
-      helpFormatter.printHelp(this.getClass().getName(), options);
-      System.exit(1);
-    }
-
-    if (cmd.hasOption("c")) {
-      this.configPath = cmd.getOptionValue("c");
-    }
-
-    this.inputPath = cmd.getOptionValue("i");
-    this.outputPath = cmd.getOptionValue("o");
-    this.shards = Integer.parseInt(cmd.getOptionValue("s"));
-  }
-
   public static void main(String[] args) throws Exception {
-    int ret = ToolRunner.run(new IndexerRunner(), args);
-    System.exit(ret);
+    LOG.info("Running " + IndexerRunner.class.getCanonicalName() + " with args "
+        + Arrays.toString(args));
+    ToolRunner.run(new IndexerRunner(), args);
   }
 }
