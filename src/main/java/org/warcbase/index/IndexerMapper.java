@@ -19,13 +19,14 @@ import uk.bl.wa.hadoop.WritableArchiveRecord;
 import uk.bl.wa.hadoop.indexer.WritableSolrRecord;
 import uk.bl.wa.indexer.WARCIndexer;
 import uk.bl.wa.solr.SolrRecord;
-import uk.bl.wa.solr.SolrWebServer;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 public class IndexerMapper extends MapReduceBase implements
     Mapper<Text, WritableArchiveRecord, IntWritable, WritableSolrRecord> {
+  public static final String NUM_SHARDS = "IndexerMapper.NumShards";
+
   private static final Log LOG = LogFactory.getLog(IndexerMapper.class);
 
   static enum MyCounters {
@@ -35,24 +36,25 @@ public class IndexerMapper extends MapReduceBase implements
   private String mapTaskId;
   private String inputFile;
   private int numRecords = 0;
-  private int numShards = 1;
+  private int numShards;
 
   private WARCIndexer indexer;
-  private Config config;
 
   @Override
   public void configure(JobConf job) {
     try {
-      this.config = ConfigFactory.parseString(job.get(IndexerRunner.CONFIG_PROPERTIES));
+      LOG.info("Configuring WARCIndexer.");
+      Config config = ConfigFactory.parseString(job.get(IndexerRunner.CONFIG_PROPERTIES));
       this.indexer = new WARCIndexer(config);
 
-      numShards = config.getInt(SolrWebServer.NUM_SHARDS);
+      numShards = job.getInt(NUM_SHARDS, 10);
+      LOG.info("Number of shards: " + numShards);
+
       mapTaskId = job.get("mapred.task.id");
       inputFile = job.get("map.input.file");
-
       LOG.info("Got task.id " + mapTaskId + " and input.file " + inputFile);
     } catch (NoSuchAlgorithmException e) {
-      LOG.error("WARCIndexerMapper.configure(): " + e.getMessage());
+      LOG.error("IndexerMapper.configure(): " + e.getMessage());
     }
   }
 
@@ -94,12 +96,12 @@ public class IndexerMapper extends MapReduceBase implements
       solr.addParseException(e);
     }
 
-    // Random partition assignment.
-    IntWritable partition = new IntWritable((int) (Math.round(Math.random() * numShards)));
+    // Random shard assignment.
+    IntWritable shard = new IntWritable((int) (Math.round(Math.random() * (numShards-1))));
 
     // Wrap up and collect the result:
     WritableSolrRecord solrRecord = new WritableSolrRecord(solr);
-    output.collect(partition, solrRecord);
+    output.collect(shard, solrRecord);
 
     // Occasionally update application-level status.
     if ((numRecords % 1000) == 0) {
