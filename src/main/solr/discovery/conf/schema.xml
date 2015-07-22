@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<!-- BL: set schema name -->
+<schema name="webarchive-discovery" version="1.5">
+<!-- :BL -->
+
+ <fields>
+   <field name="_version_" type="long" indexed="true" stored="true"/>
+   <field name="_root_" type="string" indexed="true" stored="false"/>
+
+   <field name="id" type="string" indexed="true" stored="true" required="true" multiValued="false" /> 
+        
+   <!-- Common metadata fields, named specifically to match up with
+     SolrCell metadata when parsing rich documents such as Word, PDF.
+     Some fields are multiValued only because Tika currently may return
+     multiple values for them. Some metadata is parsed from the documents,
+     but there are some which come from the client context:
+       "content_type": From the HTTP headers of incoming stream
+       "resourcename": From SolrCell request param resource.name
+   -->
+   <!-- BL: changed title multiValued to false -->
+   <field name="title" type="text_general" indexed="true" stored="true" multiValued="false"/>
+   <!-- :BL -->
+   <!-- BL: changed to string rather than text_general -->
+   <field name="resourcename" type="string" indexed="true" stored="true"/>
+   <!-- :BL -->
+
+   <!-- BL: added multiValued true to subject -->
+   <field name="subject" type="text_general" indexed="true" stored="true" multiValued="true"/>
+   <!-- :BL -->
+
+   <field name="description" type="text_general" indexed="true" stored="true"/>
+   <field name="comments" type="text_general" indexed="true" stored="true"/>
+   <field name="author" type="string" indexed="true" stored="true" docValues="true"/>
+   <field name="keywords" type="text_general" indexed="true" stored="true"/>
+   <!-- BL: Changed to string and tdate rather than text_general and date... -->
+   <field name="url" type="string" indexed="true" stored="true" docValues="true"/>
+   <field name="url_norm" type="string" indexed="true" stored="true" docValues="true"/>
+   <field name="content_type" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+   <field name="last_modified" type="tdate" indexed="true" stored="true" docValues="true"/>
+   <field name="links" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+   <!-- :BL -->
+
+   <!-- Main body of document extracted by SolrCell.
+        NOTE: This field is not indexed by default, since it is also copied to "text"
+        using copyField below. This is to save space. Use this field for returning and
+        highlighting document content. Use the "text" field to search the content. -->
+   <!-- BL: -->
+   <field name="content" type="text_general" indexed="false" stored="true" multiValued="true" />
+   
+   <!-- A general field to deposit metadata into so it can be searched even when unstructured. -->
+   <field name="content_metadata_text" type="text_general" indexed="true" stored="false" multiValued="false"/>
+
+   <!-- catchall field, containing all other searchable text fields (implemented
+        via copyField further on in this schema  -->
+   <field name="text" type="text_general" indexed="true" stored="false" multiValued="true"/>
+
+   <!-- BL fields: -->
+   <field name="last_modified_year" type="string" indexed="true" stored="true"/>
+   <field name="content_text_length" type="tint" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   
+   <!-- The id_long is a long integer ID field used to distinguish records when integrated into systems 
+        that required integer IDs.  Not guarenteed to be unique, unlike 'id': -->
+   <field name="id_long" type="long" indexed="true" stored="true" multiValued="false"/>
+   <!-- The underyling WARC record type -->
+   <field name="record_type" type="string" indexed="false" stored="true" multiValued="false"/>
+   <!-- The url_type is used to distinguish certain URLs, e.g. so they can be 'title level records'.
+        Values are 'slashpage' (for a hosts homepage), or 'embed' ? -->
+   <field name="url_type" type="text_general" indexed="true" stored="true"/>
+   <!-- Length of the content, in bytes: -->
+   <field name="content_length" type="tint" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <!-- The content encoding: -->
+   <field name="content_encoding" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <!-- The content language - ISO 639 Language Codes: -->
+   <field name="content_language" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <!-- The 'normalised' (simplified) content type: -->
+   <field name="content_type_norm" type="string" indexed="true" stored="true" multiValued="false" default="other"/>
+
+   <!-- The harvest date, but in wayback format: 'YYYYMMDDHHMMSS' -->
+   <field name="wayback_date" type="string" indexed="true" stored="true" multiValued="false"/>
+   <!-- The ealiest harvest/crawl date, as a date, and also as multi-valued for hash-based ID. -->
+   <field name="crawl_date" type="tdate" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <field name="crawl_dates" type="tdate" indexed="true" stored="true" multiValued="true"/>
+   <!-- The harvest/crawl year (for faceting), and also as multi-valued for hash-based ID. -->
+   <field name="crawl_year" type="string" indexed="true" stored="true" multiValued="false"/>
+   <field name="crawl_years" type="string" indexed="true" stored="true" multiValued="true"/>
+   <!-- The harvest/crawl year and month, for faceting -->
+   <field name="crawl_year_month" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <!-- The harvest/crawl year, month and day, for faceting -->
+   <field name="crawl_year_month_day" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+
+   <!-- The domain for this URL: -->
+   <field name="host" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <!-- The private suffix a.k.a domain for this host: -->
+   <field name="domain" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <!-- The public suffix of the host domain, i.e. co.uk, org, etc: -->
+   <field name="public_suffix" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   
+   <!-- The hostnames of discovered outlinks -->
+   <field name="links_hosts" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+   <!-- The private suffixs of the target domains of any links, i.e. example.co.uk, example.org, etc: -->
+   <field name="links_domains" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+   <!-- The public suffixs of the target domains of any links, i.e. co.uk, org, etc: -->
+   <field name="links_public_suffixes" type="string" indexed="true" stored="true" multiValued="true"/>
+
+   <!-- The digest/hash of the content (e.g. sha1:UYIPOGACBXSSCQVMBGTCGYOFBHFO5TTL, WARC only?): -->
+   <field name="hash" type="string" indexed="true" stored="true" multiValued="true"/>
+
+   <!-- The referring URL - not actually populated at present. -->
+   <field name="referrer_url" type="string" indexed="false" stored="true" multiValued="false"/>
+
+   <!-- The publication date, as a date -->
+   <field name="publication_date" type="tdate" indexed="true" stored="true" multiValued="false"/>
+   <!-- The publication year, for faceting -->
+   <field name="publication_year" type="string" indexed="true" stored="true" multiValued="false"/>
+
+   <!-- Collections this item belongs to (top-level, not sub-collections) -->
+   <field name="collection" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+   
+   <!-- All collections and sub-collections this item belongs to -->
+   <field name="collections" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+   
+   <!-- NOTE on Text - note that neither 'text' nor 'text_ns' are stored, and therefore not retrievable/fragment-highlight-able -->
+   
+   <!-- WCT fields -->
+   <field name="wct_target_id" type="string" indexed="true" stored="true" multiValued="false"/>
+   <field name="wct_instance_id" type="int" indexed="true" stored="true" multiValued="false"/>
+   <field name="wct_collections" type="string" indexed="true" stored="true" multiValued="true"/>
+   <field name="wct_subjects" type="string" indexed="true" stored="true" multiValued="true"/>
+   <field name="wct_description" type="text_general" indexed="true" stored="true"/>
+   <field name="wct_title" type="string" indexed="true" stored="true"/>
+   <field name="wct_agency" type="string" indexed="true" stored="true" multiValued="false"/> <!-- default="British Library"/  -->
+
+   <!-- Format fields -->
+   <!-- The version of the content type, e.g. '1.4' for PDF-1.4: -->
+   <field name="content_type_version" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <!-- The 'full' content type, e.g. including charset parameters: -->
+   <field name="content_type_full" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <!-- The content type, as determined via Apache Tika: -->
+   <field name="content_type_tika" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <!-- The content type, as determined by Droid: -->
+   <field name="content_type_droid" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <!-- The content type, as supplied by the original server: -->
+   <field name="content_type_served" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <!-- The content type, as supplied by the URI extension: -->
+   <field name="content_type_ext" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <!-- The first four bytes of the bitstream, suitably hex-encoded as a string ('xxxxxxxx'): -->
+   <field name="content_ffb" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <!-- The binary n-grams first few bytes of the bitstream, hex-encoded and space separated ('xx xx xx xx'): -->
+   <field name="content_first_bytes" type="hex_text_shingle" indexed="true" stored="true" multiValued="false"/>
+   <!-- The raw metadata discovered by characterisation -->
+   <field name="content_metadata" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+
+   <!-- The identification of the server that produced the response: -->
+   <field name="server" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+
+   <!-- The software generators or creator tools, that can be determined from the item: -->
+   <field name="generator" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+
+   <!-- Any Parse Error encountered while attempting to extract metadata and text: -->
+   <field name="parse_error" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+   
+   <!-- Results of checking if PDFs are valid PDF/A: -->
+   <field name="pdf_pdfa_is_valid" type="string" indexed="true" stored="true" multiValued="false"/>
+   <field name="pdf_pdfa_errors" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+   
+   <!-- Root namespace of XML documents: -->
+   <field name="xml_root_ns" type="string" indexed="true" stored="true" multiValued="false" docValues="true"/>
+
+   <!-- Content-based fields -->
+   <!-- Postcode fields: -->
+   <!-- The full postcode, e.g. LS11 5RR. -->
+   <field name="postcode" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+   <!-- The postcode district, e.g. LS11. -->
+   <field name="postcode_district" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+   <!-- The locations mentioned in each page. -->
+   <field name="locations" type="location" indexed="true" stored="true" multiValued="true"/>
+
+   <!-- Sentiment analysis, as facets and as score: -->
+   <field name="sentiment" type="string" indexed="true" stored="true" multiValued="false"/>
+   <field name="sentiment_score" type="tfloat" indexed="true" stored="true" multiValued="false"/>
+
+   <!-- The size of images, in pixels? or tags/ranges? -->
+   <field name="image_width" type="tint" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <field name="image_height" type="tint" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <field name="image_size" type="tint" indexed="true" stored="true" multiValued="false" docValues="true"/>
+   <!-- Locations of faces detected in the images -->
+   <field name='image_faces_count' type='tint' indexed='true' stored='true' multiValued='false'/>
+   <field name='image_faces' type='string' indexed='false' stored='true' multiValued='true'/>
+   <!-- The dominant colours extracted from the images -->
+   <field name='image_colours' type='string' indexed='true' stored='true' multiValued='true' docValues="true"/>
+   <field name='image_dominant_colour' type='string' indexed='true' stored='true' multiValued='false' docValues="true"/>
+
+   <!-- The different HTML elements used by the document -->
+   <field name="elements_used" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+
+
+   <!-- Fuzzy hashing for detecting similar content.
+        Uses a dynamic field definition to allow for variations in block sizes. -->
+   <dynamicField name="ssdeep_hash_bs_*" type="string" indexed="true" stored="true" multiValued="false"/>
+   <dynamicField name="ssdeep_hash_ngram_bs_*" type="literal_ngram" indexed="true" stored="true" multiValued="false"/>
+
+
+   <!-- Details of any embedded licenses: -->
+   <field name="license_url" type="string" indexed="true" stored="true" multiValued="true" docValues="true"/>
+
+   <!-- Store identity of the source file and offset this record came from. -->
+   <field name="source_file" type="string" indexed="true" stored="true" docValues="true"/>
+   <field name="source_file_offset" type="tint" indexed="true" stored="true" />
+
+
+    <!-- Type used to index the lat and lon components for the "location" FieldType -->
+    <!-- This dynamic field is used, but we can not find where in the code it is defined-->
+   <dynamicField name="*_coordinate" type="tdouble" indexed="true" stored="false" docValues="true"/>
+   <!-- :BL -->
+
+ </fields>
+
+
+ <uniqueKey>id</uniqueKey>
+
+ <solrQueryParser defaultOperator="AND"/>
+
+
+ <!-- BL copyFields: -->
+ <!-- Metadata fields to add to default search: -->
+ <copyField source="title" dest="text"/>
+ <copyField source="author" dest="text"/>
+ <copyField source="keywords" dest="text"/>
+ <copyField source="description" dest="text"/>
+ <copyField source="wct_title" dest="text"/>
+ <copyField source="wct_description" dest="text"/>
+ <copyField source="url" dest="text"/>
+ <!-- Also copy in the actual text payload to ensure it is actually indexed: -->
+ <copyField source="content" dest="text"/> 
+ <!-- :BL -->
+
+
+ <types>
+   <!-- The StrField type is not analyzed, but indexed/stored verbatim.
+        It supports doc values but in that case the field needs to be
+        single-valued and either required or have a default value.  -->
+   <fieldType name="string" class="solr.StrField" sortMissingLast="true" />
+
+   <!-- boolean type: "true" or "false" -->
+   <fieldType name="boolean" class="solr.BoolField" sortMissingLast="true"/>
+
+   <!-- Default numeric field types. For faster range queries, consider the tint/tfloat/tlong/tdouble types.
+        These fields support doc values, but they require the field to be
+        single-valued and either be required or have a default value.  -->
+   <fieldType name="int" class="solr.TrieIntField" precisionStep="0" positionIncrementGap="0"/>
+   <fieldType name="float" class="solr.TrieFloatField" precisionStep="0" positionIncrementGap="0"/>
+   <fieldType name="long" class="solr.TrieLongField" precisionStep="0" positionIncrementGap="0"/>
+   <fieldType name="double" class="solr.TrieDoubleField" precisionStep="0" positionIncrementGap="0"/>
+
+   <!-- Numeric field types that index each value at various levels of precision
+        to accelerate range queries when the number of values between the range
+        endpoints is large. See the javadoc for NumericRangeQuery for internal
+        implementation details.  -->
+   <fieldType name="tint" class="solr.TrieIntField" precisionStep="8" positionIncrementGap="0"/>
+   <fieldType name="tfloat" class="solr.TrieFloatField" precisionStep="8" positionIncrementGap="0"/>
+   <fieldType name="tlong" class="solr.TrieLongField" precisionStep="8" positionIncrementGap="0"/>
+   <fieldType name="tdouble" class="solr.TrieDoubleField" precisionStep="8" positionIncrementGap="0"/>
+
+   <fieldType name="date" class="solr.TrieDateField" precisionStep="0" positionIncrementGap="0"/>
+
+   <!-- A Trie based date field for faster date range queries and date faceting. -->
+   <fieldType name="tdate" class="solr.TrieDateField" precisionStep="6" positionIncrementGap="0"/>
+
+
+   <!--Binary data type. The data should be sent/retrieved in as Base64 encoded Strings -->
+   <fieldtype name="binary" class="solr.BinaryField"/>
+
+   <!-- A specialized field for geospatial search. If indexed, this fieldType must not be multivalued. -->
+   <fieldType name="location" class="solr.LatLonType" subFieldSuffix="_coordinate"/>
+
+
+   <!-- A general text field that has reasonable, generic
+        cross-language defaults: it tokenizes with StandardTokenizer,
+        removes stop words from case-insensitive "stopwords.txt"
+        (empty by default), and down cases.  At query time only, it
+        also applies synonyms. -->
+   <fieldType name="text_general" class="solr.TextField" positionIncrementGap="100">
+     <analyzer type="index">
+       <tokenizer class="solr.StandardTokenizerFactory"/>
+       <filter class="solr.StopFilterFactory" ignoreCase="true" words="stopwords.txt" enablePositionIncrements="true"/>
+       <filter class="solr.LowerCaseFilterFactory"/>
+     </analyzer>
+
+     <analyzer type="query">
+       <tokenizer class="solr.StandardTokenizerFactory"/>
+       <filter class="solr.StopFilterFactory" ignoreCase="true" words="stopwords.txt" enablePositionIncrements="true"/>
+       <filter class="solr.SynonymFilterFactory" synonyms="synonyms.txt" ignoreCase="true" expand="true"/>
+       <filter class="solr.LowerCaseFilterFactory"/>
+     </analyzer>
+   </fieldType>
+
+
+   <!-- BL: fieldType -->
+   <fieldType name="literal_ngram" stored="false" indexed="true" class="solr.TextField" >
+     <analyzer>
+       <tokenizer class="solr.WhitespaceTokenizerFactory"/>
+       <filter class="solr.NGramFilterFactory" minGramSize="2" maxGramSize="5" />
+     </analyzer>
+   </fieldType>
+
+   <fieldType name="hex_text_shingle" class="solr.TextField" positionIncrementGap="100">
+     <analyzer>
+       <tokenizer class="solr.WhitespaceTokenizerFactory"/>
+       <filter class="solr.ShingleFilterFactory" minShingleSize="4" maxShingleSize="8"
+            outputUnigrams="false" outputUnigramsIfNoShingles="false" tokenSeparator=" "/>
+     </analyzer>
+   </fieldType>
+   <!-- :BL -->
+
+ </types>
+</schema>
