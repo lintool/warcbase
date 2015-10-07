@@ -11,7 +11,7 @@ Getting Started
 Clone the repo:
 
 ```
-$ git clone git@github.com:lintool/warcbase.git
+$ git clone http://github.com/lintool/warcbase.git
 ```
 
 You can then build Warcbase:
