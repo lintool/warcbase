@@ -12,60 +12,12 @@ import org.warcbase.data.ArcRecordUtils
 import org.warcbase.io.ArcRecordWritable
 import org.warcbase.mapreduce.WacArcInputFormat
 
-class ArcRecords {
-  protected var rdd: RDD[ARCRecord] = null
+import scala.reflect.ClassTag
 
-  protected var toOutput: RDD[(String, Array[Byte])] = null
-
+object ArcRecords {
   def load(path: String, sc: SparkContext) = {
-    rdd = sc.newAPIHadoopFile(path, classOf[WacArcInputFormat], classOf[LongWritable], classOf[ArcRecordWritable])
+    sc.newAPIHadoopFile(path, classOf[WacArcInputFormat], classOf[LongWritable], classOf[ArcRecordWritable])
       .map(r => r._2.getRecord)
-    this
-  }
-
-  def keepMimeTypes(mimeTypes: Seq[String]) = {
-    mimeTypes.foreach(mt => rdd = rdd.filter(r => r.getMetaData.getMimetype == mt))
-    this
-  }
-
-  def keepDate(date: String) = {
-    rdd = rdd.filter(r => r.getMetaData.getDate == date)
-    this
-  }
-
-  def keepUrl(urls: Seq[String]) = {
-    urls.foreach(url =>
-      rdd = rdd.filter(r =>
-        extractTopLevelDomain(r.getMetaData.getUrl).replace("^\\s*www\\.", "") == url
-      )
-    )
-    this
-  }
-
-  def discardMimeTypes(mimeTypes: Seq[String]) = {
-    mimeTypes.foreach(mt => rdd = rdd.filter(r => r.getMetaData.getMimetype != mt))
-    this
-  }
-
-  def discardDate(date: String) = {
-    rdd = rdd.filter(r => r.getMetaData.getDate != date)
-    this
-  }
-
-  def discardUrl(urls: Seq[String]) = {
-    urls.foreach(url => rdd = rdd.filter(r => r.getMetaData.getUrl != url))
-    this
-  }
-
-  def extractUrlAndBody() = {
-    toOutput = rdd.map(r => (
-      extractTopLevelDomain(r.getMetaData.getUrl).replace("^\\s*www\\.", ""),
-      ArcRecordUtils.getBodyContent(r)))
-    this
-  }
-
-  def output(outputPath: String) = {
-    toOutput.saveAsTextFile(outputPath)
   }
 
   def extractTopLevelDomain(url: String, source: String = ""): String = {
@@ -78,6 +30,8 @@ class ArcRecords {
       } else {
         u.getHost
       }
+    } catch {
+      case e: Exception => throw new IOException("error parsing url" + url + ". " + e.getMessage)
     }
   }
 
@@ -89,4 +43,37 @@ class ArcRecords {
       case e: Exception => throw new IOException("Caught exception processing input row ", e)
     }
   }
+
+  implicit class ARCRecordRDD[T](rdd: RDD[ARCRecord]) {
+    def keepMimeTypes(mimeTypes: Set[String]) = {
+      rdd.filter(r => mimeTypes.contains(r.getMetaData.getMimetype))
+    }
+
+    def keepDate(date: String) = {
+      rdd.filter(r => r.getMetaData.getDate == date)
+    }
+
+    def keepUrls(urls: Set[String]) = {
+      rdd.filter(r => urls.contains(r.getMetaData.getUrl))
+    }
+
+    def discardMimeTypes(mimeTypes: Set[String]) = {
+      rdd.filter(r => !mimeTypes.contains(r.getMetaData.getMimetype))
+    }
+
+    def discardDate(date: String) = {
+      rdd.filter(r => r.getMetaData.getDate != date)
+    }
+
+    def discardUrls(urls: Set[String]) = {
+      rdd.filter(r => !urls.contains(r.getMetaData.getUrl))
+    }
+
+    def extractUrlAndBody() = {
+      rdd.map(r => (
+        extractTopLevelDomain(r.getMetaData.getUrl).replace("^\\s*www\\.", ""),
+        ArcRecordUtils.getBodyContent(r)))
+    }
+  }
+
 }
