@@ -13,6 +13,10 @@ object ExtractTopLevelDomain {
       } else {
         u.getHost
       }
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+        ""
     }
   }
 }

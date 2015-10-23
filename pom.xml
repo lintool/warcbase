@@ -258,6 +258,12 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.scalatest</groupId>
+      <artifactId>scalatest_2.10</artifactId>
+      <version>2.2.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
       <version>1.8</version>
