@@ -6,7 +6,11 @@ import org.warcbase.spark.matchbox.ArcRecords._
 
 object Filter {
   def filter(sc: SparkContext) = {
-    val r = ArcRecords.load("collections/ARCHIVEIT-227-UOFTORONTO-CANPOLPINT-20090201174320-00056-crawling04.us.archive.org.arc.gz", sc).keepMimeTypes(Set("text/html")).discardDate(null).keepDomains(Set("greenparty.ca")).extractUrlAndBody()
+    val r = ArcRecords.load("collections/ARCHIVEIT-227-UOFTORONTO-CANPOLPINT-20090201174320-00056-crawling04.us.archive.org.arc.gz", sc)
+      .keepMimeTypes(Set("text/html"))
+      .discardDate(null)
+      .keepDomains(Set("greenparty.ca"))
+
     r.saveAsTextFile("/green")
   }
 
@@ -15,3 +19,4 @@ object Filter {
     val sc = new SparkContext(conf)
   }
 }
+

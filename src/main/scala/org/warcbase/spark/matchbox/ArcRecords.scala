@@ -8,6 +8,7 @@ import org.warcbase.data.ArcRecordUtils
 import org.warcbase.io.ArcRecordWritable
 import org.warcbase.mapreduce.WacArcInputFormat
 
+// Helper functions on RDD[ArcRecord]
 object ArcRecords extends java.io.Serializable {
   def load(path: String, sc: SparkContext) = {
     sc.newAPIHadoopFile(path, classOf[WacArcInputFormat], classOf[LongWritable], classOf[ArcRecordWritable])
@@ -47,16 +48,20 @@ object ArcRecords extends java.io.Serializable {
       rdd.filter(r => !urls.contains(ExtractTopLevelDomain(r.getMetaData.getUrl).replace("^\\s*www\\.", "")))
     }
 
-    def extractUrlAndBody() = {
+    def extractDomainUrlBody() = {
       rdd.map(r => (
         ExtractTopLevelDomain(r.getMetaData.getUrl).replace("^\\s*www\\.", ""),
-        ExtractRawText(new String(ArcRecordUtils.getBodyContent(r)))))
+        r.getMetaData.getUrl,
+        ExtractRawText(new String(ArcRecordUtils.getBodyContent(r)))
+        )
+      )
     }
 
-    def extractDateAndUrlAndBody() = {
+    def extractCrawldateDomainUrlBody() = {
       rdd.map(r => (
-        r.getMetaData.getDate,
+        r.getMetaData.getDate.substring(0, 8),
         ExtractTopLevelDomain(r.getMetaData.getUrl).replace("^\\s*www\\.", ""),
+        r.getMetaData.getUrl,
         ExtractRawText(new String(ArcRecordUtils.getBodyContent(r)))
         )
       )
