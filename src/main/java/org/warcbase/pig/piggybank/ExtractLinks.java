@@ -1,8 +1,6 @@
 package org.warcbase.pig.piggybank;
 
-import java.io.IOException;
-import java.util.List;
-
+import com.google.common.collect.Lists;
 import org.apache.pig.EvalFunc;
 import org.apache.pig.data.BagFactory;
 import org.apache.pig.data.DataBag;
@@ -13,7 +11,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import com.google.common.collect.Lists;
+import java.io.IOException;
+import java.util.List;
 
 /**
  * UDF for extracting links from a webpage given the HTML content (using Jsoup). Returns a bag of
