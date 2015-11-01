@@ -15,7 +15,7 @@ Warcbase is built against CDH 5.4.1:
 + Hadoop version: 2.6.0-cdh5.4.1
 + HBase version: 1.0.0-cdh5.4.1
 + Pig version: 0.12.0-cdh5.4.1
-+ Spark version: spark-core_2.10 1.2.0 (this will be upgraded soon)
++ Spark version: 1.3.0-cdh5.4.1
 
 The Hadoop ecosystem is evolving rapidly, so there may be incompatibilities with other versions.
 
