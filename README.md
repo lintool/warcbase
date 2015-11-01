@@ -1,9 +1,26 @@
 Warcbase
 ========
 
-Warcbase is an open-source platform for managing web archives built on Hadoop and HBase. The platform provides a flexible data model for storing and managing raw content as well as metadata and extracted knowledge. Tight integration with Hadoop provides powerful tools for analytics and data processing.
+Warcbase is an open-source platform for managing web archives built on Hadoop and HBase. The platform provides a flexible data model for storing and managing raw content as well as metadata and extracted knowledge. Tight integration with Hadoop provides powerful tools for analytics and data processing via Spark.
 
-A series of scripts and walkthroughs for warcbase is available in [this repository's wiki](https://github.com/lintool/warcbase/wiki).
+There are two main ways of using Warcbase:
+
++ The first and most common is to analyze web archives using Spark (the preferred approach) or Pig (which is in the process of being deprecated).
++ The second is to take advantage of HBase to provide random access as well as analytics capabilities. Random access allows Warcbase to provide temporal browsing of archived content (i.e., "wayback" functionality).
+
+You can use Warcbase without HBase, and since HBase requires more extensive setup, it is recommended that if you're just starting out, play with the Spark analytics and don't worry about HBase.
+
+Warcbase is built against CDH 5.4.1:
+
++ Hadoop version: 2.6.0-cdh5.4.1
++ HBase version: 1.0.0-cdh5.4.1
++ Pig version: 0.12.0-cdh5.4.1
++ Spark version: 1.3.0-cdh5.4.1
+
+The Hadoop ecosystem is evolving rapidly, so there may be incompatibilities with other versions.
+
+Detailed documentation is available in [this repository's wiki](https://github.com/lintool/warcbase/wiki).
+
 
 Getting Started
 ---------------
@@ -36,182 +53,42 @@ $ mvn eclipse:eclipse
 You can then import the project into Eclipse.
 
 
-Ingesting Content
------------------
+Spark Quickstart
+----------------
 
-You can find some sample data [here](https://archive.org/details/ExampleArcAndWarcFiles). Ingesting data into Warcbase is fairly straightforward:
+For the impatient, let's do a simple analysis with Spark. Within the repo there's already a sample ARC file stored at `src/test/resources/arc/example.arc.gz`.
 
-```
-$ setenv CLASSPATH_PREFIX "/etc/hbase/conf/"
-$ sh target/appassembler/bin/IngestFiles \
-    -dir /path/to/warc/dir/ -name archive_name -create
-```
-
-Command-line options:
-
-+ Use the `-dir` option to specify the directory containing the data files.
-+ Use the `-name` option to specify the name of the archive (will correspond to the HBase table name).
-+ Use the `-create` option to create a new table (and drop the existing table if a table with the same name exists already). Alternatively, use `-append` to add to an existing table.
-
-That should do it. The data should now be in Warcbase.
-
-
-Wayback/Warcbase Integration
-----------------------------
-
-Warcbase comes with a browser exposed as a REST API that conforms to Wayback's schema of `collection/YYYYMMDDHHMMSS/targetURL`. Here's how you start the browser:
+Assuming you've already got Spark installed, you can go ahead and fire up the Spark shell:
 
 ```
-$ setenv CLASSPATH_PREFIX "/etc/hbase/conf/"
-$ sh target/appassembler/bin/WarcBrowser -port 8080
+$ spark-shell --jars target/warcbase-0.1.0-SNAPSHOT-fatjar.jar
 ```
 
-You can now use `http://myhost:8080/` to browse the archive. For example:
-
-+ `http://myhost:8080/mycollection/*/http://mysite.com/` will give you a list of available versions of `http://mysite.com/`.
-+ `http://myhost:8080/mycollection/19991231235959/http://mysite.com/` will give you the record of `http://mysite.com/` just before Y2K.
-
-Note that this API serves up raw records, so the HTML pages don't look pretty, and images don't render properly (since the browser gets confused by record headers). So how do you actually navigate through the archive? This is where Wayback/Warcbase integration comes in.
-
-As it turns out, the Wayback code has the ability separate rendering/browsing from data storage. More details can be found in this [technical overview](https://github.com/iipc/openwayback/wiki/Technical-overview). In short, we can customize a Wayback instance to point at the Warcbase REST API, and have the Wayback fetch records from HBase. This is accomplished by custom implementations of `ResourceIndex` and `ResourceStore` in [here](https://github.com/lintool/warcbase/tree/master/src/main/java/org/warcbase/wayback).
-
-Here's how to install the integration:
-
-1. Make sure you already have Wayback installed. See this [installation guide](https://github.com/iipc/openwayback/wiki/How-to-install) and [configuration guide](https://github.com/iipc/openwayback/wiki/How-to-configure).
-2. Add the Warcbase jar to the Wayback's WAR deployment. In a standard setup, you would copy `warcbase-0.1.0-SNAPSHOT.jar` to the `TOMCAT_ROOT/webapps/ROOT/WEB-INF/lib/`.
-3. Replace the `BDBCollection.xml` configuration in `TOMCAT_ROOT/webapps/ROOT/WEB-INF/` with the version in [`src/main/resources/`](https://github.com/lintool/warcbase/tree/master/src/main/resources).
-4. Open up `BDBCollection.xml` and specify the correct `HOST`, `PORT`, and `TABLE`.
-5. Shutdown and restart Tomcat.
-
-Now navigate to your Wayback as before. Enjoy browsing your web archive!
-
-
-Building the URL mapping
-------------------------
-
-It's convenient for a variety of tasks to map every URL to a unique integer id. Lucene's FST package provides a nice API for this task.
-
-There are two ways to build the URL mapping, the first of which is via a MapReduce job:
+Here's a simple script that extracts the crawl date, domain, URL, and plain text from HTML files in the sample ARC data (and saves the output to `out/`):
 
 ```
-$ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
-    org.warcbase.data.UrlMappingMapReduceBuilder \
-    -input /hdfs/path/to/data -output fst.dat
+import org.warcbase.spark.matchbox.ArcRecords
+import org.warcbase.spark.matchbox.ArcRecords._
+
+val r = ArcRecords.load("src/test/resources/arc/example.arc.gz", sc)
+  .keepMimeTypes(Set("text/html"))
+  .discardDate(null)
+  .extractCrawldateDomainUrlBody()
+
+r.saveAsTextFile("out/")
 ```
 
-The FST data in this case will be written to HDFS. The potential issue with this approach is that building the FST is relatively memory hungry, and cluster memory is sometimes scarce.
+**Tip:** By default, commands in the Spark shell must be one line. To run multi-line commands, type `:paste` in Spark shell: you can then copy-paste the script above directly into Spark shell. Use Ctrl-D to finish the command.
 
-The alternative is to build the mapping locally on a machine with sufficient memory. To do this, first run a MapReduce job to extract all the unique URLs:
-
-```
-$ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
-    org.warcbase.analysis.ExtractUniqueUrls \
-    -input /hdfs/path/to/data -output urls
-```
-
-Now copy the `urls/` directory out of HDFS and then run the following program:
-
-```
-$ sh target/appassembler/bin/UrlMappingBuilder -input urls -output fst.dat
-```
-
-Where `urls` is the output directory from above and `fst.dat` is the name of the FST data file. We can examine the FST data with the following utility program:
-
-```
-# Lookup by URL, fetches the integer id
-$ sh target/appassembler/bin/UrlMapping -data fst.dat -getId http://www.foo.com/
-
-# Lookup by id, fetches the URL
-$ sh target/appassembler/bin/UrlMapping -data fst.dat -getUrl 42
-
-# Fetches all URLs with the prefix
-$ sh target/appassembler/bin/UrlMapping -data fst.dat -getPrefix http://www.foo.com/
-```
-
-Now copy the fst.dat file into HDFS for use in the next step:
-
-```
-$ hadoop fs -put fst.dat /hdfs/path/
-```
-
-Extracting the Webgraph
------------------------
-
-We can use the mapping data (from above) to extract the webgraph and at the same time map URLs to unique integer ids. This is accomplished by a Hadoop program:
-
-```
-$ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
-    org.warcbase.analysis.graph.ExtractLinksWac \
-    -hdfs /hdfs/path/to/data -output output -urlMapping fst.dat
-```
-
-Finally, instead of extracting links between individual URLs, we can extract the site-level webgraph by aggregating all URLs with common prefix into a "supernode". Link counts between supernodes represent the total number of links between individual URLs. In order to do this, following input files are needed:
-
-+ a prefix file providing URL prefixes for each supernode (comma-delimited: id, URL prefix);
-+ an FST mapping file to map individual URLs to unique integer ids (from above);
-
-Then run this MapReduce program:
-
-```
-$ hadoop jar target/warcbase-0.1.0-SNAPSHOT-fatjar.jar \
-    org.warcbase.analysis.graph.ExtractSiteLinks \
-    -hdfs /hdfs/path/to/data -output output \
-    -numReducers 1 -urlMapping fst.dat -prefixFile prefix.csv
-```
-
-You'll find site-level webgraph in `output/` on HDFS.
+What to learn more? Check out [analyzing web archives with Spark](https://github.com/lintool/warcbase/wiki/Analyzing-Web-Archives-with-Spark).
 
 
-Pig Integration
----------------
+Next Steps
+----------
 
-Warcbase comes with Pig integration for manipulating web archive data. Start the `Grunt` shell by typing `pig`. You should then be able to run the following Pig script to extract links:
-
-```
-register 'target/warcbase-0.1.0-SNAPSHOT-fatjar.jar';
-
-DEFINE ArcLoader org.warcbase.pig.ArcLoader();
-DEFINE ExtractLinks org.warcbase.pig.piggybank.ExtractLinks();
-
-raw = load '/hdfs/path/to/data' using ArcLoader as
-  (url: chararray, date: chararray, mime: chararray, content: bytearray);
-
-a = filter raw by mime == 'text/html';
-b = foreach a generate url, FLATTEN(ExtractLinks((chararray) content));
-
-store b into '/output/path/';
-```
-
-In the output directory, you should find data output files with source URL, target URL, and anchor text.
-
-
-Spark Integration
------------------
-
-Spark supports seamless integration of Hadoop InputFormats out of the box using `newAPIHadoopFile`, so something like this "just works":
-
-```
-import org.apache.hadoop.io._
-import org.warcbase.mapreduce._
-import org.warcbase.io._
-
-val records =
-  sc.newAPIHadoopFile("/shared/collections/CanadianPoliticalParties/arc/",
-    classOf[WacArcInputFormat], classOf[LongWritable], classOf[ArcRecordWritable])
-
-// Take a few records
-records.map(t => {
-  val meta = t._2.getRecord().getMetaData()
-  (meta.getUrl(), meta.getDate().substring(0, 6), meta.getMimetype())
-}).filter(t => { t._3 == "text/html" }).take(20)
-
-// Count number of records per crawl date (YYYYMM)
-val counts = records.map(t => {
-  val meta = t._2.getRecord().getMetaData()
-  (meta.getDate().substring(0, 6), meta.getMimetype())
-}).filter(t => { t._2 == "text/html"
-}).map(t => { (t._1, 1) }).reduceByKey(_ + _).sortByKey().collect()
-```
++ [Ingesting content into HBase](https://github.com/lintool/warcbase/wiki/Ingesting-Content-into-HBase): loading ARC and WARC data into HBase
++ [Warcbase/Wayback integration](https://github.com/lintool/warcbase/wiki/Warcbase-Wayback-Integration): guide to provide temporal browsing capabilities
++ [Warcbase Java tools](https://github.com/lintool/warcbase/wiki/Warcbase-Java-Tools): building the URL mapping, extracting the webgraph
 
 
 License

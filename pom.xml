@@ -55,6 +55,7 @@
     <hbase.version>1.0.0-cdh5.4.1</hbase.version>
     <zookeeper.version>3.4.5-cdh5.4.1</zookeeper.version>
     <pig.version>0.12.0-cdh5.4.1</pig.version>
+    <spark.version>1.3.0-cdh5.4.1</spark.version>
   </properties>
 
   <build>
@@ -462,7 +463,7 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-core_2.10</artifactId>
-      <version>1.2.0</version>
+      <version>${spark.version}</version>
     </dependency>
 
     <dependency>
