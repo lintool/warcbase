@@ -7,10 +7,12 @@ import org.apache.tika.detect.DefaultDetector
 import org.apache.tika.parser.AutoDetectParser
 ;
 
+/**
+  * A UDF to detect mime types
+  */
 object DetectMimeTypeTika {
-  def apply(magicFile: String, content: String): String = {
-    if (magicFile.isEmpty) return "N/A"
-    if (content.isEmpty) "EMPTY"
+  def apply(content: String): String = {
+    if (content.isEmpty) "N/A"
     else {
       val is = new ByteArrayInputStream(content.getBytes)
       val detector = new DefaultDetector()
