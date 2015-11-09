@@ -4,7 +4,7 @@ import com.google.common.io.Resources
 import org.apache.spark.{SparkConf, SparkContext}
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.warcbase.spark.matchbox._
-import org.warcbase.spark.rdd.WARecordRDD._
+import org.warcbase.spark.rdd.RecordRDD._
 
 class ArcSpec extends FunSuite with BeforeAndAfter {
   private val arcPath = Resources.getResource("arc/example.arc.gz").getPath
