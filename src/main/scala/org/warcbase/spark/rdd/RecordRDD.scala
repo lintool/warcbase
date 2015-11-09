@@ -5,10 +5,10 @@ import org.warcbase.spark.matchbox.RecordTransformers.WARecord
 import org.warcbase.spark.matchbox.{ExtractRawText, ExtractTopLevelDomain}
 
 /**
- * A Wrapper class around RDD to allow RDDs of type ARCRecord and WARCRecord to be queried via a fluent API.
- *
- * To load such an RDD, please see [[org.warcbase.spark.matchbox.RecordLoader]]
- */
+  * A Wrapper class around RDD to allow RDDs of type ARCRecord and WARCRecord to be queried via a fluent API.
+  *
+  * To load such an RDD, please see [[org.warcbase.spark.matchbox.RecordLoader]]
+  */
 object RecordRDD extends java.io.Serializable {
 
   object ToExtract extends Enumeration {
@@ -19,13 +19,6 @@ object RecordRDD extends java.io.Serializable {
   }
 
   implicit class WARecordRDD(rdd: RDD[WARecord]) extends java.io.Serializable {
-
-    val functions = Map(
-      (ToExtract.CRAWLDATE, (r: WARecord) => r.getCrawldate),
-      (ToExtract.DOMAIN, (r: WARecord) => r.getDomain),
-      (ToExtract.URL, (r: WARecord) => r.getUrl),
-      (ToExtract.BODY, (r: WARecord) => ExtractRawText(r.getBodyContent))
-    )
 
     def keepMimeTypes(mimeTypes: Set[String]) = {
       rdd.filter(r => mimeTypes.contains(r.getMimeType))
@@ -60,16 +53,21 @@ object RecordRDD extends java.io.Serializable {
     }
 
     def extract(params: ToExtract.Value*) = {
-      val list = params.map { p => functions.get(p).get }
+      val func = params.map {
+        case ToExtract.CRAWLDATE => (r: WARecord) => r.getCrawldate
+        case ToExtract.DOMAIN => (r: WARecord) => r.getDomain
+        case ToExtract.URL => (r: WARecord) => r.getUrl
+        case ToExtract.BODY => (r: WARecord) => ExtractRawText(r.getBodyContent)
+      }
       rdd.map(r => {
-        if (list.size == 1) {
-          list.head(r)
-        } else if (list.size == 2) {
-          (list.head(r), list(1)(r))
-        } else if (list.size == 3) {
-          (list.head(r), list(1), list(2))
-        } else if (list.size == 4) {
-          (list.head(r), list(1)(r), list(2)(r), list(3)(r))
+        if (func.size == 1) {
+          func.head(r)
+        } else if (func.size == 2) {
+          (func.head(r), func(1)(r))
+        } else if (func.size == 3) {
+          (func.head(r), func(1), func(2))
+        } else if (func.size == 4) {
+          (func.head(r), func(1)(r), func(2)(r), func(3)(r))
         } else {
           throw sys.error("no matching parameters")
         }
