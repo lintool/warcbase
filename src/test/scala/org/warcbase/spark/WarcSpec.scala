@@ -3,10 +3,13 @@ package org.warcbase.spark
 import com.google.common.io.Resources
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.warcbase.spark.matchbox.RecordLoader
 import org.warcbase.spark.matchbox.RecordTransformers.WARecord
 
+@RunWith(classOf[JUnitRunner])
 class WarcSpec extends FunSuite with BeforeAndAfter {
 
   private val warcPath = Resources.getResource("warc/example.warc.gz").getPath
@@ -24,7 +27,8 @@ class WarcSpec extends FunSuite with BeforeAndAfter {
   }
 
   test("count records") {
-    assert(RecordLoader.loadWarc(warcPath, sc).count == 299L)
+    val warcRecords = RecordLoader.loadWarc(warcPath, sc)
+    assert(822L == warcRecords.count)
   }
 
   after {

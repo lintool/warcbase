@@ -5,7 +5,6 @@ import java.io.ByteArrayInputStream
 import org.apache.tika.Tika
 import org.apache.tika.detect.DefaultDetector
 import org.apache.tika.parser.AutoDetectParser
-;
 
 /**
   * A UDF to detect mime types

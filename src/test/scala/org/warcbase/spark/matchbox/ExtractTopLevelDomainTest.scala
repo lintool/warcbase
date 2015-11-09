@@ -1,8 +1,10 @@
 package org.warcbase.spark.matchbox
 
+import org.junit.runner.RunWith
 import org.scalatest.FunSuite
+import org.scalatest.junit.JUnitRunner
 
-
+@RunWith(classOf[JUnitRunner])
 class ExtractTopLevelDomainTest extends FunSuite {
 
   private val data1: Seq[(String, String)] = Seq.newBuilder.+=(

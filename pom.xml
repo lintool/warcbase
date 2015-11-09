@@ -473,6 +473,8 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
       <version>${spark.version}</version>
       <exclusions>
         <exclusion><groupId>com.typesafe</groupId><artifactId>config</artifactId></exclusion>
+        <exclusion><groupId>org.xerial.snappy</groupId><artifactId>snappy-java</artifactId>
+      </exclusion>
       </exclusions>
     </dependency>
 
@@ -480,6 +482,12 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
       <groupId>com.typesafe</groupId>
       <artifactId>config</artifactId>
       <version>1.2.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <version>1.0.5</version>
     </dependency>
 
     <dependency>
