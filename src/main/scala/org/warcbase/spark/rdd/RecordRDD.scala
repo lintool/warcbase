@@ -60,19 +60,14 @@ object RecordRDD extends java.io.Serializable {
         case ToExtract.BODY => (r: WARecord) => ExtractRawText(r.getBodyContent)
       }
       rdd.map(r => {
-        if (func.size == 1) {
-          func.head(r)
-        } else if (func.size == 2) {
-          (func.head(r), func(1)(r))
-        } else if (func.size == 3) {
-          (func.head(r), func(1), func(2))
-        } else if (func.size == 4) {
-          (func.head(r), func(1)(r), func(2)(r), func(3)(r))
-        } else {
-          throw sys.error("no matching parameters")
+        func.size match {
+          case 1 => func.head(r)
+          case 2 => (func.head(r), func(1)(r))
+          case 3 => (func.head(r), func(1)(r), func(2)(r))
+          case 4 => (func.head(r), func(1)(r), func(2)(r), func(3)(r))
+          case _ => throw sys.error("no matching parameters")
         }
       })
     }
   }
-
 }
