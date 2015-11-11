@@ -28,7 +28,7 @@ class ArcTest extends FunSuite with BeforeAndAfter {
 
   test("count links") {
     val links = RecordLoader.loadArc(arcPath, sc)
-      .map(r => ExtractLinks(r.getBodyContent))
+      .map(r => ExtractLinks(r.getUrl, r.getBodyContent))
       .reduce((a, b) => a ++ b)
     assert(links.size == 664)
   }
