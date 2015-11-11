@@ -1,23 +1,12 @@
 package org.warcbase.pig;
 
-import java.io.IOException;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-
+import com.google.common.collect.Lists;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.log4j.Logger;
-import org.apache.pig.Expression;
-import org.apache.pig.FileInputLoadFunc;
-import org.apache.pig.LoadMetadata;
-import org.apache.pig.PigException;
-import org.apache.pig.ResourceSchema;
-import org.apache.pig.ResourceStatistics;
+import org.apache.pig.*;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.backend.hadoop.executionengine.mapReduceLayer.PigSplit;
 import org.apache.pig.data.DataByteArray;
@@ -31,7 +20,12 @@ import org.warcbase.data.WarcRecordUtils;
 import org.warcbase.io.WarcRecordWritable;
 import org.warcbase.mapreduce.WacWarcInputFormat;
 
-import com.google.common.collect.Lists;
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
 
 public class WarcLoader extends FileInputLoadFunc implements LoadMetadata {
   private static final Logger LOG = Logger.getLogger(WarcLoader.class);
@@ -62,7 +56,7 @@ public class WarcLoader extends FileInputLoadFunc implements LoadMetadata {
           return null;
         }
 
-        record = (WARCRecord) in.getCurrentValue().getRecord();
+        record = in.getCurrentValue().getRecord();
         header = record.getHeader();
 
         if (header.getHeaderValue("WARC-Type").equals("response")) {
