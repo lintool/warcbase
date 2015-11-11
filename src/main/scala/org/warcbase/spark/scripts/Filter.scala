@@ -10,7 +10,7 @@ object Filter {
       .keepMimeTypes(Set("text/html"))
       .discardDate(null)
       .keepDomains(Set("greenparty.ca"))
-      .extract(ToExtract.CRAWLDATE, ToExtract.BODY)
+      .map(r => (r.getCrawldate, r.getRawBodyContent))
     r.saveAsTextFile("/green")
   }
 }
