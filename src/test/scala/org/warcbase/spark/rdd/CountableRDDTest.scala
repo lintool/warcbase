@@ -15,13 +15,13 @@ class CountableRDDTest extends FunSuite with BeforeAndAfter {
   private val appName = "example-spark"
   private var sc: SparkContext = _
 
-
   before {
     val conf = new SparkConf()
       .setMaster(master)
       .setAppName(appName)
     sc = new SparkContext(conf)
   }
+
   test("count records") {
     val base = RecordLoader.loadArc(arcPath, sc)
       .keepValidPages()
