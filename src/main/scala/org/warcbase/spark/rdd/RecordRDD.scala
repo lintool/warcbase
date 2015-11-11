@@ -4,6 +4,8 @@ import org.apache.spark.rdd.RDD
 import org.warcbase.spark.matchbox.RecordTransformers.WARecord
 import org.warcbase.spark.matchbox.{ExtractRawText, ExtractTopLevelDomain}
 
+import scala.reflect.ClassTag
+
 /**
   * A Wrapper class around RDD to allow RDDs of type ARCRecord and WARCRecord to be queried via a fluent API.
   *
@@ -18,7 +20,19 @@ object RecordRDD extends java.io.Serializable {
     val BODY = Value("BODY")
   }
 
+  implicit class CountableRDD[T: ClassTag](rdd: RDD[T]) extends java.io.Serializable {
+    def countItems(): RDD[(T, Int)] = {
+      rdd.map(r => (r, 1))
+        .reduceByKey((c1, c2) => c1 + c2)
+        .sortBy(f => f._2, ascending = false)
+    }
+  }
+
   implicit class WARecordRDD(rdd: RDD[WARecord]) extends java.io.Serializable {
+
+    def keepValidPages(): RDD[WARecord] = {
+      rdd.discardDate(null).keepMimeTypes(Set("text/html"))
+    }
 
     def keepMimeTypes(mimeTypes: Set[String]) = {
       rdd.filter(r => mimeTypes.contains(r.getMimeType))
@@ -70,4 +84,5 @@ object RecordRDD extends java.io.Serializable {
       })
     }
   }
+
 }
