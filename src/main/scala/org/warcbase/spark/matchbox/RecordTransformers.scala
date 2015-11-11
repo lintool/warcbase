@@ -8,10 +8,10 @@ import org.archive.util.ArchiveUtils
 import org.warcbase.data.{ArcRecordUtils, WarcRecordUtils}
 
 /**
- * Provides a common interface from which ARCRecords and WARCRecords can be accessed.
- *
- * Specifically, a WARecord has fields crawldate, url, domain, mimeType, and bodyContent.
- */
+  * Provides a common interface from which ARCRecords and WARCRecords can be accessed.
+  *
+  * Specifically, a WARecord has fields crawldate, url, domain, mimeType, and bodyContent.
+  */
 object RecordTransformers {
 
   trait WARecord extends Serializable {
@@ -24,6 +24,8 @@ object RecordTransformers {
     def getMimeType: String
 
     def getBodyContent: String
+
+    def getRawBodyContent: String
   }
 
   implicit def toArcRecord(r: ARCRecord): WARecord = new ArcRecord(r)
@@ -40,6 +42,8 @@ object RecordTransformers {
     override def getUrl: String = r.getMetaData.getUrl
 
     override def getBodyContent: String = new String(ArcRecordUtils.getBodyContent(r))
+
+    override def getRawBodyContent: String = ExtractRawText(new String(ArcRecordUtils.getBodyContent(r)))
   }
 
   class WarcRecord(r: WARCRecord) extends WARecord {
@@ -54,5 +58,8 @@ object RecordTransformers {
     override def getUrl = r.getHeader.getUrl
 
     override def getBodyContent: String = new String(WarcRecordUtils.getBodyContent(r))
+
+    override def getRawBodyContent: String = ExtractRawText(new String(WarcRecordUtils.getBodyContent(r)))
   }
+
 }
