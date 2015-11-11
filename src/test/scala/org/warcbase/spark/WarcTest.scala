@@ -10,7 +10,7 @@ import org.warcbase.spark.matchbox.RecordLoader
 import org.warcbase.spark.matchbox.RecordTransformers.WARecord
 
 @RunWith(classOf[JUnitRunner])
-class WarcSpec extends FunSuite with BeforeAndAfter {
+class WarcTest extends FunSuite with BeforeAndAfter {
 
   private val warcPath = Resources.getResource("warc/example.warc.gz").getPath
   private val master = "local[2]"
