@@ -7,12 +7,13 @@ import org.warcbase.spark.matchbox.RecordTransformers.WARecord
 import scala.reflect.ClassTag
 
 /**
-  * A Wrapper class around RDD to allow RDDs of type ARCRecord and WARCRecord to be queried via a fluent API.
-  *
-  * To load such an RDD, please see [[org.warcbase.spark.matchbox.RecordLoader]]
+  * RDD wrappers for working with Records
   */
 object RecordRDD extends java.io.Serializable {
 
+  /**
+    * A Wrapper class around RDD to simplify counting
+    */
   implicit class CountableRDD[T: ClassTag](rdd: RDD[T]) extends java.io.Serializable {
     def countItems(): RDD[(T, Int)] = {
       rdd.map(r => (r, 1))
@@ -21,6 +22,11 @@ object RecordRDD extends java.io.Serializable {
     }
   }
 
+  /**
+    * A Wrapper class around RDD to allow RDDs of type ARCRecord and WARCRecord to be queried via a fluent API.
+    *
+    * To load such an RDD, please see [[org.warcbase.spark.matchbox.RecordLoader]]
+    */
   implicit class WARecordRDD(rdd: RDD[WARecord]) extends java.io.Serializable {
 
     def keepValidPages(): RDD[WARecord] = {
