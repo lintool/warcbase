@@ -4,8 +4,8 @@ import java.util
 
 import edu.stanford.nlp.ie.AbstractSequenceClassifier
 import edu.stanford.nlp.ie.crf.CRFClassifier
-import edu.stanford.nlp.ling.CoreAnnotations
-import edu.stanford.nlp.ling.CoreLabel
+import edu.stanford.nlp.ling.{CoreAnnotations, CoreLabel}
+
 import scala.collection.mutable
 
 /**
@@ -75,13 +75,25 @@ object NER3Classifier {
         entityBuffer = ""
       }
 
-      entitiesByType.toString()
-    }
-    catch {
-      case e: Exception => {
+      def stringify() = {
+        val sb = new StringBuilder()
+        sb ++= "{"
+        NERClassType.values.foreach(t => {
+          sb ++= t.toString + "=" + "["
+          entitiesByType.get(t).foreach(s => {
+            sb ++= s.mkString(",")
+          })
+          sb ++= "]"
+        })
+        sb ++= "}"
+        sb.toString
+      }
+
+      stringify()
+    } catch {
+      case e: Exception =>
         if (classifier == null) throw new ExceptionInInitializerError("Unable to load classifier " + e)
         emptyString
-      }
     }
   }
 

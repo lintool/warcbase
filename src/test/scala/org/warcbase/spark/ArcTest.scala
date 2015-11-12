@@ -24,6 +24,9 @@ class ArcTest extends FunSuite with BeforeAndAfter {
 
   test("count records") {
     assert(RecordLoader.loadArc(arcPath, sc).count == 300L)
+    RecordLoader.loadArc(arcPath, sc)
+      .map(r => (r.getCrawldate, r.getUrl, r.getRawBodyContent))
+      .saveAsTextFile("ex")
   }
 
   test("count links") {
