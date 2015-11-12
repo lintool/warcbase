@@ -2,6 +2,9 @@ package org.warcbase.spark.matchbox
 
 import java.util
 
+import com.fasterxml.jackson.core.`type`.TypeReference
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.{DefaultScalaModule, JsonScalaEnumeration}
 import edu.stanford.nlp.ie.AbstractSequenceClassifier
 import edu.stanford.nlp.ie.crf.CRFClassifier
 import edu.stanford.nlp.ling.{CoreAnnotations, CoreLabel}
@@ -12,12 +15,19 @@ import scala.collection.mutable
   * UDF which reads in a text string, and returns entities identified by the configured Stanford NER classifier
   */
 object NER3Classifier {
+
   var serializedClassifier: String = _
   var classifier: AbstractSequenceClassifier[CoreLabel] = _
+  val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
 
   object NERClassType extends Enumeration {
     type NERClassType = Value
     val PERSON, ORGANIZATION, LOCATION, O = Value
+
+    class NERClassTypeType extends TypeReference[NERClassType.type]
+
+    case class NERClassTypeHolder(@JsonScalaEnumeration(classOf[NERClassTypeType]) nerclasstype: NERClassType.NERClassType)
+
   }
 
   def apply(file: String) = {
@@ -25,8 +35,8 @@ object NER3Classifier {
   }
 
   def classify(input: String): String = {
-    val emptyString: String = "{PERSON=[], ORGANIZATION=[], LOCATION=[]}"
-    val entitiesByType = scala.collection.mutable.Map[NERClassType.Value, mutable.Seq[String]]()
+    val emptyString: String = "{\"PERSON\"=[], \"ORGANIZATION\"=[], \"LOCATION\"=[]}"
+    val entitiesByType = mutable.LinkedHashMap[NERClassType.Value, mutable.Seq[String]]()
     for (t <- NERClassType.values) {
       if (t != NERClassType.O) entitiesByType.put(t, mutable.Seq())
     }
@@ -75,13 +85,7 @@ object NER3Classifier {
         entityBuffer = ""
       }
 
-      def formatToString() =
-        entitiesByType.toStream
-          .sortBy(f => f._1)
-          .map(f => f._1.toString + "=" + f._2.mkString("[", ", ", "]"))
-          .mkString("{", ", ", "}")
-
-      formatToString()
+      mapper.writeValueAsString(entitiesByType)
     } catch {
       case e: Exception =>
         if (classifier == null) throw new ExceptionInInitializerError("Unable to load classifier " + e)

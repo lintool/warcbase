@@ -2,6 +2,8 @@ package org.warcbase.spark.matchbox
 
 import java.io.File
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.google.common.io.{Files, Resources}
 import org.apache.commons.io.FileUtils
 import org.apache.commons.logging.LogFactory
@@ -9,6 +11,9 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfter, FunSuite}
+import org.warcbase.spark.matchbox.NER3Classifier.NERClassType
+
+import scala.collection.mutable
 
 @RunWith(classOf[JUnitRunner])
 class ExtractEntitiesTest extends FunSuite with BeforeAndAfter {
@@ -18,6 +23,7 @@ class ExtractEntitiesTest extends FunSuite with BeforeAndAfter {
   private val appName = "example-spark"
   private var sc: SparkContext = _
   private var tempDir: File = _
+  private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
 
   before {
     val conf = new SparkConf()
@@ -30,9 +36,17 @@ class ExtractEntitiesTest extends FunSuite with BeforeAndAfter {
 
   test("extract entities") {
     val e = ExtractEntities.extractFromScrapeText(scrapePath, tempDir + "/scrapeTextEntities", sc).take(3).last
+    val expectedEntityMap = mutable.Map[NERClassType.Value, List[String]]()
+    expectedEntityMap.put(NERClassType.PERSON, List())
+    expectedEntityMap.put(NERClassType.LOCATION, List("Teoma"))
+    expectedEntityMap.put(NERClassType.ORGANIZATION, List())
     assert(e._1 == "20080430")
     assert(e._2 == "http://www.archive.org/robots.txt")
-    assert(e._3 == "{PERSON=[], ORGANIZATION=[], LOCATION=[Teoma]}")
+    val actual = mapper.readValue(e._3, classOf[Map[String, List[String]]])
+
+    expectedEntityMap.toStream.foreach(f => {
+      assert(f._2 == actual.get(f._1.toString).get)
+    })
   }
 
   after {
