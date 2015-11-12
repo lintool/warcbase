@@ -96,5 +96,4 @@ object NER3Classifier {
         emptyString
     }
   }
-
 }
