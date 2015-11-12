@@ -75,21 +75,13 @@ object NER3Classifier {
         entityBuffer = ""
       }
 
-      def stringify() = {
-        val sb = new StringBuilder()
-        sb ++= "{"
-        NERClassType.values.foreach(t => {
-          sb ++= t.toString + "=" + "["
-          entitiesByType.get(t).foreach(s => {
-            sb ++= s.mkString(",")
-          })
-          sb ++= "]"
-        })
-        sb ++= "}"
-        sb.toString
-      }
+      def formatToString() =
+        entitiesByType.toStream
+          .sortBy(f => f._1)
+          .map(f => f._1.toString + "=" + f._2.mkString("[", ", ", "]"))
+          .mkString("{", ", ", "}")
 
-      stringify()
+      formatToString()
     } catch {
       case e: Exception =>
         if (classifier == null) throw new ExceptionInInitializerError("Unable to load classifier " + e)

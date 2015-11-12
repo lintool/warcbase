@@ -32,7 +32,7 @@ class ExtractEntitiesTest extends FunSuite with BeforeAndAfter {
     val e = ExtractEntities.extractFromScrapeText(scrapePath, tempDir + "/scrapeTextEntities", sc).take(3).last
     assert(e._1 == "20080430")
     assert(e._2 == "http://www.archive.org/robots.txt")
-    assert(e._3 == "{PERSON=[]ORGANIZATION=[]LOCATION=[Teoma]O=[]}")
+    assert(e._3 == "{PERSON=[], ORGANIZATION=[], LOCATION=[Teoma]}")
   }
 
   after {
