@@ -13,13 +13,16 @@ import scala.collection.mutable
   */
 object ExtractLinks {
   /**
-    * @param html the content from which links are to be extracted
-    * Returns a sequence of links
+    * @param src the src link.
+    * @param html the content from which links are to be extracted.
+    * @param base an optional base domain.
+    *
+    * Returns a sequence of (source, target, anchortext)
     */
-  def apply(html: String, base: String = ""): Seq[(String, String)] = {
+  def apply(src: String, html: String, base: String = ""): Seq[(String, String, String)] = {
     if (html.isEmpty) return Nil
     try {
-      val output = mutable.MutableList[(String, String)]()
+      val output = mutable.MutableList[(String, String, String)]()
       val doc = Jsoup.parse(html)
       val links: Elements = doc.select("a[href]")
       val it = links.iterator()
@@ -28,7 +31,7 @@ object ExtractLinks {
         if (base.nonEmpty) link.setBaseUri(base)
         val target = link.attr("abs:href")
         if (target.nonEmpty) {
-          output += ((target, link.text))
+          output += ((src, target, link.text))
         }
       }
       output
