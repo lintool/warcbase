@@ -58,7 +58,9 @@ Spark Quickstart
 
 For the impatient, let's do a simple analysis with Spark. Within the repo there's already a sample ARC file stored at `src/test/resources/arc/example.arc.gz`.
 
-Assuming you've already got Spark installed, you can go ahead and fire up the Spark shell:
+If you need to install Spark, [we have a walkthrough here for installation on OS X](https://github.com/lintool/warcbase/wiki/Installing-and-Running-Spark-under-OS-X). This page also has instructions on how to get Spark Notebook, an interactive web-based editor, running. 
+
+Once you've got Spark installed, you can go ahead and fire up the Spark shell:
 
 ```
 $ spark-shell --jars target/warcbase-0.1.0-SNAPSHOT-fatjar.jar
