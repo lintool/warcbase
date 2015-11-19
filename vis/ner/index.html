@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<!--
+    This visualization was inspired by the Location Cloud from the Trading Consequences
+    Project (http://tcqdev.edina.ac.uk/vis/locationCloud/index.php?com=Sugar), but it
+    was written from scratch.
+
+    Ideas for future improvements/features:
+    - Use SVG for frequency lists, following Location Cloud example, for more control
+      over layout?
+    - Normalize list item font sizes, so each list is same height.
+    - More visualizations.
+    - Option to save graphic visualizations as image. (See http://techslides.com/save-svg-as-an-image.)
+    - Offer embed codes.
+    - Option to upload data file into app.
+-->
+<link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/8.0.2/nouislider.min.css">
+<style>
+body {
+    font-family: "Helvetica Neue", Helvetica, sans-serif;
+    margin: 2%;
+}
+.entitylist {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    text-align: center;
+}
+#no-parameters {
+	display: none;
+	padding: 0 10%;
+}
+#data-select {
+	display: none;
+}
+#list-window {
+    margin-top: 0.5em;
+    overflow-x: scroll;
+    text-align: center;
+}
+#list-table {
+    margin: 0 auto;
+    text-align: center;
+}
+#list-table td {
+    vertical-align: top;
+}
+#list-table ul li {
+    white-space: nowrap;
+    max-width: 25em;
+    overflow: hidden;
+}
+#list-row h1 {
+    font-size: 12px;
+    font-weight: 400;
+    background: lightgray;
+    padding: 3px;
+    margin: 3px;
+    display: inline;
+}
+#data-select {
+    text-align: center;
+}
+#data-select button {
+    color: white;
+}
+#data-select form {
+    margin-top: 1em;
+}
+.pure-button-active {
+    background: rgb(66, 184, 221);
+}
+.word-cloud {
+    margin: 1em auto;
+    text-align: center;
+}
+.bubble-wrap {
+	margin: 1em auto;
+	text-align: center;
+}
+div.list-tooltip {
+    position: absolute;         
+    text-align: center;         
+    min-width: 60px;                    
+    min-height: 28px;                   
+    padding: 2px;               
+    font: 12px sans-serif;      
+    background: lightsteelblue; 
+    border: 0px;        
+    border-radius: 8px;         
+    pointer-events: none; 
+    opacity: 0;          
+}
+#list-msg {
+    padding: 5px 15px;
+    border-radius: 5px;
+    background-color: lightsteelblue;
+    position: absolute;
+    left: 50%;
+    top: 60%;
+    transform: translate(-50%, -50%); 
+    opacity: 0.9;
+    text-align: center;
+    font-size: large;
+    visibility: hidden;
+}
+#date-range-lower,
+#date-range-upper {
+    position: relative;
+    top: -15px ;
+    display: inline-block;
+    text-align: center;
+    width: 5.5em;
+    font-size: small;
+    color: darkgray;
+}
+#date-range-slider {
+    display: inline-block;
+    width: 25em;
+    margin: 0 auto 1em auto;
+}
+#timescale-label {
+    display: inline-block;
+    width: 3.5em;
+}
+.noUi-horizontal {
+    height: 8px;
+}
+.noUi-horizontal .noUi-handle {
+	width: 18px;
+	height: 14px;
+	left: -10px;
+	top: -4px;
+}
+.noUi-connect {
+    background: darkgray;
+}
+.noUi-handle:before,
+.noUi-handle:after {
+	height: 8px;
+	width: 1px;
+	left: 6px;
+	top: 2px;
+}
+.noUi-handle:after {
+	left: 9px;
+}
+</style>
+<script src="URI.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/8.0.2/nouislider.min.js"></script> 
+<script src="d3.layout.cloud.js"></script>
+<body>
+<h1>Named Entity Visualization</h1>
+<p id="csv-source"></p>
+
+<div id="data-select">
+    <button id="persButt" class="pure-button" onclick="updateEntityType('pers')">Persons
+    </button><button id="orgButt" class="pure-button" onclick="updateEntityType('org')">Organizations
+    </button><button id="locButt" class="pure-button" onclick="updateEntityType('loc')">Locations</button>
+
+    <form class="pure-form pure-form-stacked">
+        <label for="timescale-range">Time scale: <span id="timescale-label"></span></label>
+        <input type="range" name="timescale-range" id="timescale-range" onchange="updateTimescale(this.value)" oninput="setTimescaleText(this.value)" min="0" max="2" value="0">
+        <label for="date-range">Date range</label>
+    </form>
+	<div id="date-range-wrap">
+		<div id="date-range-lower"></div>
+		<div id="date-range-slider"></div>
+		<div id="date-range-upper"></div>
+	</div>
+</div>
+
+<div id="no-parameters">
+	<p>You must specify the data set you wish to visualize by passing the filename (located on 
+	this server) as a parameter, e.g., 
+	<i><script>document.write(location.href.split("?")[0])</script><b>?csv=fileName.csv</b></i>.</p>
+	<p>Try <script>document.write("<a href='"+location.href.split("?")[0]+"?csv=greenparty.csv'>")</script>this example</a>.</p>
+</div>
+
+<div id="list-window">
+    <span id="list-msg">Loading</span>
+    <table id="list-table"><tr id="list-row"></tr></table>
+</div>
+
+<div class="list-tooltip"></div>
+<script>
+var entityType = null;
+var allData = null;
+var nestedData = null;
+
+var fill = d3.scale.category20();
+var listTooltip = null;
+
+var timeScale = "0";
+var firstOverflow = true;
+
+function init() {
+    var csvFile = new URI().search(true).csv;
+
+	setTimescaleText(timeScale);
+	
+    if (!csvFile) {
+    	d3.select("#no-parameters").style("display", "block");
+        
+    } else {
+    	d3.select("#data-select").style("display", "block");
+        d3.select("#csv-source").html("Data source: <a href='" + csvFile + "'>" + csvFile + "</a>")
+        d3.select("#list-msg").style("opacity", .9).style("visibility", "visible");
+
+        // Load data
+        d3.text(csvFile, function(error, text) { 
+        	if (error) { 
+        		d3.select("#list-msg").text("Error loading data");
+        		throw error;
+        	} else { 
+				d3.select("#list-msg").style("opacity",0);
+				allData = d3.csv.parseRows(text, function(row) {
+					return { nerType: row[0], date: row[1], src: row[2], entity: row[3], freq: +row[4] }
+				});
+
+				// Prepare and create date range slider
+				// Get all months
+				var months = d3.keys(d3.nest().key(function(d) { return d.date; }).map(allData)).map(function(d) { return parseInt(d)});
+				var sliderRange = {}
+				var minDate = d3.min(months);
+				var maxDate = d3.max(months);
+				// Convert months to percentage locations on slider
+				for (i=0; i<months.length; i++) {
+					var pct;
+					if (i===0) {
+						sliderRange['min']=months[i];
+					} else if (i===(months.length-1)) {
+						sliderRange['max']=months[i];
+					} else {
+						pct = parseFloat((months[i]-minDate)/(maxDate-minDate)*100).toFixed(2); // 2 decimal places
+						sliderRange[pct+'%']=months[i];
+					}
+				}
+				// Create slider
+				var slider = d3.select("#date-range-slider").node();
+				noUiSlider.create(slider, {
+					range: sliderRange,
+					snap: true,
+					connect: true,
+					start: [minDate, maxDate],
+					format: {   // Otherwise uses default float format
+						to: function(v) { return v; },
+						from: function(v) { return v; }
+					}
+				});
+				var snapValues = [
+					d3.select('#date-range-lower').node(),
+					d3.select('#date-range-upper').node()
+				];
+				slider.noUiSlider.on('update', function(values, handle) {
+					snapValues[handle].innerHTML = values[handle];
+				});     
+				slider.noUiSlider.on('change', function(values) {
+					nestedData = nestData(allData, timeScale);
+					visualize(entityType, timeScale);
+				});
+
+				// Prepare data
+				nestedData = nestData(allData, timeScale);
+
+				// Do initial visualization				
+				updateEntityType("pers");  // calls visualize()
+			}
+        });
+    }
+}
+
+function nestData(data, view) {
+	// Returns nestData[entityType][date] for given view (all-time, year, or month).
+	// For list and word-cloud visualizations, this could be done more efficiently
+	// (roughly 3x) by processing only the selected entity-type, but other visualizations
+	// (e.g. bubbles) need data for all entity types. (Current none require data for
+	// multiple timescale views.)
+	var slider = d3.select("#date-range-slider").node();
+    var dateRange = slider.noUiSlider.get();
+	var filtered = data.filter(function(d) { return parseInt(d.date) >= dateRange[0] && parseInt(d.date) <= dateRange[1]});
+	var eTypes = ["pers", "org", "loc"];
+	var nd = {};
+	
+	var nestedView = d3.nest().key(function(d) { return d.nerType });		
+	
+	if (view === "0") {	// All-time view
+		nestedView = nestedView.map(filtered);
+		eTypes.forEach(function(item, index) {
+			nd[item] = {"all time": summarize(nestedView[item])}
+		});
+	} else if (view === "1") { // Year view
+		nestedView = nestedView.key(function(d) { return d.date.substring(0,4) })
+			.map(filtered);
+		eTypes.forEach(function(eType, eIndex) {
+			nd[eType] = {};
+			Object.keys(nestedView[eType]).forEach(function(year, yIndex) {
+				nd[eType][year] = summarize(nestedView[eType][year]);
+			});
+		});
+	} else if (view === "2") { // Month view
+		nestedView = nestedView.key(function(d) { return d.date })
+			.map(filtered);
+		eTypes.forEach(function(eType, eIndex) {
+			nd[eType] = {};
+			Object.keys(nestedView[eType]).forEach(function(yearMonth, yIndex) {
+				nd[eType][yearMonth] = summarize(nestedView[eType][yearMonth]);
+			});
+		});	
+	}
+	return nd;	
+}
+
+function summarize(entityMap) {
+    var summary = d3.nest().key(function(d){return d.entity}).sortKeys(d3.ascending)
+        .rollup(function (d) { return d3.sum(d, function (e){return e.freq})})
+        .entries(entityMap);
+    return summary.sort(function(a, b) { return b.values - a.values } );
+}
+
+function visualize(entityType) {
+	// Display lists, including buttons for other visualizations   
+    d3.selectAll(".word-cloud").remove();
+    d3.selectAll(".bubble-wrap").remove();
+    d3.select("#list-row").selectAll("td").remove();
+
+	Object.keys(nestedData[entityType]).forEach(function(t) {
+		listify(nestedData[entityType][t], t);
+	});
+    
+    var listWindow = d3.select("#list-window").node();
+    if (firstOverflow && listWindow.scrollWidth > listWindow.clientWidth) {
+        firstOverflow = false;
+        var infoMsg = d3.select("#list-msg").html("Scroll &#10140;"); 
+        infoMsg.style("left", "80%")
+        infoMsg.transition().duration(100).style("opacity", .9).transition().duration(2500).style("opacity", 0);
+    }
+}
+
+function listify(data, title) {
+	// Generate single list.
+	// title must correspond to date subset in data (e.g., "all time", "2009", "200510")
+    var maxFontSize = 28;
+    var minFontSize = 4;
+    var maxItems = 50; // max list size (i.e. top N values, by freq); set to data.size for all
+    var maxItemLength = 20;
+
+    var labelScale = d3.scale.log()
+        //.domain(d3.extent(data, function(d) { return d.freq }))
+        .domain(d3.extent(data, function(d) { return d.values }))
+        .range([minFontSize,maxFontSize]);
+
+    var sortedSliced = data.slice(0, maxItems).sort(function(a, b) {
+        if (a.key > b.key)  // key = entity
+            return 1;
+        if (a.key < b.key)
+            return -1;
+        return 0;
+    });
+
+    var list = d3.select("#list-row").append("td");
+    list.append("h1").text(title);
+    list.append("ul").attr("class", "entitylist").selectAll("li")
+        .data(sortedSliced)
+        .enter().append("li")
+            .style("font-size", function(d) { return Math.round(labelScale(parseFloat(d.values)))+"px" })
+            .text(function(d) { var s = (d.key.length > maxItemLength) ? d.key.substr(0,20)+"..." : d.key; return s })
+            .on("mouseover", function(d) {     // See http://bl.ocks.org/d3noob/a22c42db65eb00d4e369 
+            listTooltip = d3.selectAll("div.list-tooltip");
+            listTooltip.transition()        
+                .duration(200)      
+                .style("opacity", .9);      
+            listTooltip.html("<b>" + d.key + "</b><br /> " + d.values + " mentions")
+                .style("left", (d3.event.pageX) + "px")     
+                .style("top", (d3.event.pageY - 28) + "px");    
+            })                  
+            .on("mouseout", function(d) {       
+                listTooltip.transition()        
+                    .duration(500)      
+                    .style("opacity", 0);   
+            });
+    // Add word cloud button
+    list.append("button").classed("pure-button", "true").attr("onclick", "cloud('"+entityType+"','"+title+"')").text("cloud");
+    list.append("span").text(" ");
+    list.append("button").classed("pure-button", "true").attr("onclick", "bubble('"+title+"')").text("bubble");
+
+}
+
+function cloud(nerType, subsetIdx) {
+    var maxCloudItems = 250;
+    
+    data = nestedData[nerType][subsetIdx].slice(0, maxCloudItems);
+    
+    d3.selectAll(".word-cloud").remove();
+
+    var cloudScale = d3.scale.log()
+        .domain(d3.extent(data, function(d) { return d.values}))
+        .range([10,100]) 
+    var layout = d3.layout.cloud()
+        .size([1000,1000])
+        .words(data.map(function(d) { 
+            return {
+                text: d.key,
+                size: Math.round(cloudScale(d.values)),
+                freq: d.values
+            }}))
+        .font("Impact")
+        .fontSize(function(d) { return d.size; })
+        .on("end", drawCloud);
+
+    layout.start();
+    var e = d3.selectAll(".word-cloud").node();
+    e.scrollIntoView();
+}
+
+function drawCloud(words) {
+    d3.select("body").append("div").classed("word-cloud", true).append("svg")
+        .attr("width", 1000)
+        .attr("height", 1000)
+        .append("g")
+        .attr("transform", "translate(500,500)")
+        .selectAll("text")
+        .data(words)
+        .enter().append("text")
+        .style("font-size", function(d) { return d.size + "px"; })
+        .style("font-family", "Impact")
+        .style("fill", function(d, i) { return fill(i); })
+        .attr("text-anchor", "middle")
+        .attr("transform", function(d) {
+            return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+        })
+        .text(function(d) { return d.text; })
+        .on("mouseover", function(d) {
+            listTooltip.transition()        
+                .duration(200)      
+                .style("opacity", .9);      
+            listTooltip.html("<b>" + d.text + "</b><br /> " + d.freq + " mentions")  
+                .style("left", (d3.event.pageX) + "px")     
+                .style("top", (d3.event.pageY - 28) + "px");    
+            })                  
+		.on("mouseout", function(d) {       
+			listTooltip.transition()        
+				.duration(500)      
+				.style("opacity", 0);   
+		});
+}
+
+function bubble(subsetIdx) {
+	// Code borrowed from http://bl.ocks.org/mbostock/4063269
+	var diameter = 960,
+    	format = d3.format(",d"),
+    	color = d3.scale.category10();
+    	
+    d3.selectAll(".bubble-wrap").remove();
+
+	var bubble = d3.layout.pack()
+		.sort(null)
+		.size([diameter, diameter])
+		.padding(1.5);
+
+	var svg = d3.select("body").append("div").classed("bubble-wrap", true).append("svg")
+		.attr("width", diameter)
+		.attr("height", diameter)
+		.attr("class", "bubble");
+
+    var flatArr = flatten(nestedData, subsetIdx);
+    // Randomize array order to avoid concentric rings of same entity type
+    flatArr.sort(function() { return Math.random() - .5; });
+    var arrObj = {
+        children: flatArr
+    }
+
+	var node = svg.selectAll(".node")
+		.data(bubble.nodes(arrObj)			
+			.filter(function(d) { return !d.children; })) 
+		.enter().append("g")
+	  		.attr("class", "node")
+	  		.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+
+	node.append("circle")
+	  	.attr("r", function(d) { return d.r; })
+	  	.style("fill", function(d) { return color(d.nerType); });
+
+	node.append("text")
+	  	.attr("dy", ".3em")
+	  	.style("text-anchor", "middle")
+	  	.text(function(d) { return d.entity.substring(0, d.r / 3); })
+	  	.on("mouseover", function(d) {
+            listTooltip.transition()        
+                .duration(200)      
+                .style("opacity", .9);      
+            listTooltip.html("<b>" + d.entity + "</b><br /> " + d.value + " mentions") 
+                .style("left", (d3.event.pageX) + "px")     
+                .style("top", (d3.event.pageY - 28) + "px");    
+            })                  
+		.on("mouseout", function(d) {       
+			listTooltip.transition()        
+				.duration(500)      
+				.style("opacity", 0);   
+		});
+    var e = d3.selectAll(".bubble").node();
+    e.scrollIntoView();
+} 
+
+function flatten(nestedObj, subsetIdx) {
+	var flatArr = [];
+	Object.keys(nestedObj).forEach(function(eType) {		
+		Object.keys(nestedObj[eType]).forEach(function(subsetIdx) {
+			for (i=0; i<nestedObj[eType][subsetIdx].length; i++) {
+				flatArr.push({entity: nestedObj[eType][subsetIdx][i].key, nerType: eType, value: nestedObj[eType][subsetIdx][i].values});
+			}
+		});
+	});
+	return flatArr;
+}
+
+function updateEntityType(t) {
+    if (entityType !== t) {
+        entityType = t;
+        d3.select("#data-select").selectAll("button").classed("pure-button-active", false);
+        d3.select("#"+t+"Butt").classed("pure-button-active", true)
+        visualize(t, timeScale);
+    }
+}
+
+function setTimescaleText(t) {
+    e = d3.select("#timescale-label").node();
+    if (t === "0")
+        e.textContent = "All time";
+    else if (t === "1")
+        e.textContent = "Years";
+    else if (t === "2")
+        e.textContent = "Months";
+}
+
+function updateTimescale(t) {
+    timeScale = t;
+    nestedData = nestData(allData, timeScale);
+    visualize(entityType, t);
+}
+
+window.onload = init();
+</script>
+</body>
+</html>

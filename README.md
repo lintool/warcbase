@@ -58,29 +58,46 @@ Spark Quickstart
 
 For the impatient, let's do a simple analysis with Spark. Within the repo there's already a sample ARC file stored at `src/test/resources/arc/example.arc.gz`.
 
-Assuming you've already got Spark installed, you can go ahead and fire up the Spark shell:
+If you need to install Spark, [we have a walkthrough here for installation on OS X](https://github.com/lintool/warcbase/wiki/Installing-and-Running-Spark-under-OS-X). This page also has instructions on how to get Spark Notebook, an interactive web-based editor, running. 
+
+Once you've got Spark installed, you can go ahead and fire up the Spark shell:
 
 ```
 $ spark-shell --jars target/warcbase-0.1.0-SNAPSHOT-fatjar.jar
 ```
 
-Here's a simple script that extracts the crawl date, domain, URL, and plain text from HTML files in the sample ARC data (and saves the output to `out/`):
+Here's a simple script that extracts and counts the top-level domains (i.e., number of pages for each top-level domain) in the sample ARC data:
 
 ```
-import org.warcbase.spark.matchbox.ArcRecords
-import org.warcbase.spark.matchbox.ArcRecords._
+import org.warcbase.spark.matchbox._
+import org.warcbase.spark.rdd.RecordRDD._
 
-val r = ArcRecords.load("src/test/resources/arc/example.arc.gz", sc)
-  .keepMimeTypes(Set("text/html"))
-  .discardDate(null)
-  .extractCrawldateDomainUrlBody()
-
-r.saveAsTextFile("out/")
+val r = RecordLoader.loadArc("src/test/resources/arc/example.arc.gz", sc)
+  .keepValidPages()
+  .map(r => ExtractTopLevelDomain(r.getUrl))
+  .countItems()
+  .take(10)
 ```
 
 **Tip:** By default, commands in the Spark shell must be one line. To run multi-line commands, type `:paste` in Spark shell: you can then copy-paste the script above directly into Spark shell. Use Ctrl-D to finish the command.
 
 What to learn more? Check out [analyzing web archives with Spark](https://github.com/lintool/warcbase/wiki/Analyzing-Web-Archives-with-Spark).
+
+
+What About Pig?
+---------------
+
+Warcbase was originally conceived with Pig for analytics, but we have transitioned over to Spark as the language of choice for scholarly interactions with web archive data. Spark has several advantages, including a cleaner interface, easier to write user-defined functions (UDFs), as well as integration with different "notebook" frontends.
+
+
+Visualizations
+--------------
+
+The result of analyses of using Warcbase can serve as input to visualizations that help scholars interactively explore the data. Examples include:
+
++ [Basic crawl statistics](http://lintool.github.io/warcbase/vis/crawl-sites/index.html) from the Canadian Political Parties and Political Interest Groups collection.
++ [Interactive graph visualization](https://github.com/lintool/warcbase/wiki/Gephi:-Converting-Site-Link-Structure-into-Dynamic-Visualization) using Gephi.
++ [Shine interface](http://webarchives.ca/) for faceted full-text search.
 
 
 Next Steps
