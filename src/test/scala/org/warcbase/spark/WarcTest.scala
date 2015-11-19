@@ -6,7 +6,8 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfter, FunSuite}
-import org.warcbase.spark.matchbox.RecordLoader
+import org.warcbase.spark.matchbox.{ExtractTopLevelDomain, RecordLoader}
+import org.warcbase.spark.rdd.RecordRDD._
 import org.warcbase.spark.matchbox.RecordTransformers.WARecord
 
 @RunWith(classOf[JUnitRunner])
@@ -28,7 +29,16 @@ class WarcTest extends FunSuite with BeforeAndAfter {
 
   test("count records") {
     val warcRecords = RecordLoader.loadWarc(warcPath, sc)
-    assert(822L == warcRecords.count)
+    assert(299L == warcRecords.count)
+  }
+
+  test("warc extract domain") {
+    val r = RecordLoader.loadWarc(warcPath, sc)
+      .keepValidPages()
+      .map(r => ExtractTopLevelDomain(r.getUrl))
+      .countItems()
+      .take(10)
+    assert(r.length == 6)
   }
 
   after {

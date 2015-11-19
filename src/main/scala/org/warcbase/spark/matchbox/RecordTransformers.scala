@@ -48,16 +48,17 @@ object RecordTransformers {
 
   class WarcRecord(r: WARCRecord) extends WARecord {
     val ISO8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX")
+    private val content = WarcRecordUtils.getContent(r)
 
     override def getCrawldate: String = ArchiveUtils.get14DigitDate(ISO8601.parse(r.getHeader.getDate)).substring(0, 8)
 
     override def getDomain = ExtractTopLevelDomain(r.getHeader.getUrl).replace("^\\s*www\\.", "")
 
-    override def getMimeType = r.getHeader.getMimetype
+    override def getMimeType = WarcRecordUtils.getWarcResponseMimeType(content)
 
     override def getUrl = r.getHeader.getUrl
 
-    override def getBodyContent: String = new String(WarcRecordUtils.getBodyContent(r))
+    override def getBodyContent: String = new String(content)
 
     override def getRawBodyContent: String = ExtractRawText(new String(WarcRecordUtils.getBodyContent(r)))
   }
