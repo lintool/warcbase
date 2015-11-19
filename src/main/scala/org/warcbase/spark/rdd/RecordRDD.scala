@@ -30,7 +30,12 @@ object RecordRDD extends java.io.Serializable {
   implicit class WARecordRDD(rdd: RDD[WARecord]) extends java.io.Serializable {
 
     def keepValidPages(): RDD[WARecord] = {
-      rdd.discardDate(null).keepMimeTypes(Set("text/html"))
+      rdd.discardDate(null)
+        .filter(r =>
+          (r.getMimeType == "text/html"
+            || r.getUrl.endsWith("htm")
+            || r.getUrl.endsWith("html"))
+            && !r.getUrl.endsWith("robots.txt"))
     }
 
     def keepMimeTypes(mimeTypes: Set[String]) = {
