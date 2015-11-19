@@ -12,8 +12,10 @@ object RecordLoader {
     sc.newAPIHadoopFile(path, classOf[WacArcInputFormat], classOf[LongWritable], classOf[ArcRecordWritable])
       .map(r => r._2.getRecord)
   }
+
   def loadWarc(path: String, sc: SparkContext): RDD[WARecord] = {
     sc.newAPIHadoopFile(path, classOf[WacWarcInputFormat], classOf[LongWritable], classOf[WarcRecordWritable])
+      .filter(r => r._2.getRecord.getHeader.getHeaderValue("WARC-Type").equals("response"))
       .map(r => r._2.getRecord)
   }
 }
