@@ -52,7 +52,7 @@ object RecordTransformers {
 
     override def getCrawldate: String = ArchiveUtils.get14DigitDate(ISO8601.parse(r.getHeader.getDate)).substring(0, 8)
 
-    override def getDomain = ExtractTopLevelDomain(r.getHeader.getUrl).replace("^\\s*www\\.", "")
+    override def getDomain = ExtractTopLevelDomain(getUrl).replace("^\\s*www\\.", "")
 
     override def getMimeType = WarcRecordUtils.getWarcResponseMimeType(content)
 
