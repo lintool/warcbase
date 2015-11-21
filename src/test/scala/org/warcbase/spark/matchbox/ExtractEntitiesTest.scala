@@ -19,11 +19,15 @@ import scala.collection.mutable
 class ExtractEntitiesTest extends FunSuite with BeforeAndAfter {
   private val LOG = LogFactory.getLog(classOf[ExtractEntitiesTest])
   private val scrapePath = Resources.getResource("ner/example.txt").getPath
+  private val arcPath = Resources.getResource("arc/example.arc.gz").getPath
   private val master = "local[4]"
   private val appName = "example-spark"
   private var sc: SparkContext = _
   private var tempDir: File = _
   private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
+
+  private val iNerClassfierFile =
+    Resources.getResource("ner/classifiers/english.all.3class.distsim.crf.ser.gz").getPath
 
   before {
     val conf = new SparkConf()
@@ -47,6 +51,14 @@ class ExtractEntitiesTest extends FunSuite with BeforeAndAfter {
     expectedEntityMap.toStream.foreach(f => {
       assert(f._2 == actual.get(f._1.toString).get)
     })
+  }
+
+  test("ner3classifier") {
+    val rdd = RecordLoader.loadArc(arcPath, sc)
+      .map(r => (r.getCrawldate, r.getUrl, r.getRawBodyContent))
+    NER3Classifier.setClassifierFile(iNerClassfierFile)
+    val entities = rdd.map(r => (r._1, r._2, NER3Classifier.classify(r._3)))
+    entities.take(3).foreach(println)
   }
 
   after {

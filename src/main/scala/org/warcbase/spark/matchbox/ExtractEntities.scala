@@ -8,10 +8,6 @@ import org.apache.spark.rdd.RDD
   * Extracts entities
   */
 object ExtractEntities {
-  private val arcPath = Resources.getResource("arc/example.arc.gz").getPath
-  private val master = "local[4]"
-  private val appName = "example-spark"
-  private var sc: SparkContext = _
   private val iNerClassfierFile =
     Resources.getResource("ner/classifiers/english.all.3class.distsim.crf.ser.gz").getPath
 
@@ -47,7 +43,7 @@ object ExtractEntities {
     * @param outputFile path of output directory
     */
   def extractAndOutput(rdd: RDD[(String, String, String)], outputFile: String): RDD[(String, String, String)] = {
-    NER3Classifier.apply(iNerClassfierFile)
+    NER3Classifier.setClassifierFile(iNerClassfierFile)
     val r = rdd.map(r => (r._1, r._2, NER3Classifier.classify(r._3)))
     r.saveAsTextFile(outputFile)
     r

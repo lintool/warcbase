@@ -30,11 +30,12 @@ object NER3Classifier {
 
   }
 
-  def apply(file: String) = {
+  def setClassifierFile(file: String) = {
     serializedClassifier = file
   }
 
   def classify(input: String): String = {
+    require(serializedClassifier != null, "there must be a specified classifier file")
     val emptyString: String = "{\"PERSON\"=[], \"ORGANIZATION\"=[], \"LOCATION\"=[]}"
     val entitiesByType = mutable.LinkedHashMap[NERClassType.Value, mutable.Seq[String]]()
     for (t <- NERClassType.values) {
