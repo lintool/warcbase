@@ -9,7 +9,7 @@ import org.apache.spark.rdd.RDD
 object ExtractEntities {
 
   /**
-    * @param classifier path of NER3Classifier
+    * @param classifier NER3Classifier
     * @param inputRecordFile path of ARC or WARC file from which to extract entities
     * @param outputFile path of output directory
     */
@@ -20,7 +20,7 @@ object ExtractEntities {
   }
 
   /**
-    * @param classifier path of NER3Classifier
+    * @param classifier NER3Classifier
     * @param inputFile path of file with tuples (date: String, url: String, content: String)
     *                  from which to extract entities
     * @param outputFile path of output directory
