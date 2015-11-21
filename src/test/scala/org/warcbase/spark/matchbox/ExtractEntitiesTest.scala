@@ -11,7 +11,6 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfter, FunSuite}
-import org.warcbase.spark.matchbox.NER3Classifier.NERClassType
 
 import scala.collection.mutable
 
@@ -28,6 +27,7 @@ class ExtractEntitiesTest extends FunSuite with BeforeAndAfter {
 
   private val iNerClassfierFile =
     Resources.getResource("ner/classifiers/english.all.3class.distsim.crf.ser.gz").getPath
+  private val classifier = new NER3Classifier(iNerClassfierFile)
 
   before {
     val conf = new SparkConf()
@@ -39,7 +39,8 @@ class ExtractEntitiesTest extends FunSuite with BeforeAndAfter {
   }
 
   test("extract entities") {
-    val e = ExtractEntities.extractFromScrapeText(scrapePath, tempDir + "/scrapeTextEntities", sc).take(3).last
+    val classifier_ = classifier
+    val e = ExtractEntities.extractFromScrapeText(classifier_, scrapePath, tempDir + "/scrapeTextEntities", sc).take(3).last
     val expectedEntityMap = mutable.Map[NERClassType.Value, List[String]]()
     expectedEntityMap.put(NERClassType.PERSON, List())
     expectedEntityMap.put(NERClassType.LOCATION, List("Teoma"))
@@ -54,10 +55,10 @@ class ExtractEntitiesTest extends FunSuite with BeforeAndAfter {
   }
 
   test("ner3classifier") {
+    val classifier_ = classifier
     val rdd = RecordLoader.loadArc(arcPath, sc)
       .map(r => (r.getCrawldate, r.getUrl, r.getRawBodyContent))
-    NER3Classifier.setClassifierFile(iNerClassfierFile)
-    val entities = rdd.map(r => (r._1, r._2, NER3Classifier.classify(r._3)))
+    val entities = rdd.map(r => (r._1, r._2, classifier_.classify(r._3)))
     entities.take(3).foreach(println)
   }
 

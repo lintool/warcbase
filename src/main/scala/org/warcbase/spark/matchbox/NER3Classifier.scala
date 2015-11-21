@@ -14,27 +14,13 @@ import scala.collection.mutable
 /**
   * UDF which reads in a text string, and returns entities identified by the configured Stanford NER classifier
   */
-object NER3Classifier {
+class NER3Classifier(serializedClassifier: String) extends java.io.Serializable {
 
-  var serializedClassifier: String = _
   var classifier: AbstractSequenceClassifier[CoreLabel] = _
-  val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
-
-  object NERClassType extends Enumeration {
-    type NERClassType = Value
-    val PERSON, ORGANIZATION, LOCATION, O = Value
-
-    class NERClassTypeType extends TypeReference[NERClassType.type]
-
-    case class NERClassTypeHolder(@JsonScalaEnumeration(classOf[NERClassTypeType]) nerclasstype: NERClassType.NERClassType)
-
-  }
-
-  def setClassifierFile(file: String) = {
-    serializedClassifier = file
-  }
 
   def classify(input: String): String = {
+    val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
+
     require(serializedClassifier != null, "there must be a specified classifier file")
     val emptyString: String = "{\"PERSON\"=[], \"ORGANIZATION\"=[], \"LOCATION\"=[]}"
     val entitiesByType = mutable.LinkedHashMap[NERClassType.Value, mutable.Seq[String]]()
@@ -94,3 +80,14 @@ object NER3Classifier {
     }
   }
 }
+
+object NERClassType extends Enumeration {
+  type NERClassType = Value
+  val PERSON, ORGANIZATION, LOCATION, O = Value
+
+  class NERClassTypeType extends TypeReference[NERClassType.type]
+
+  case class NERClassTypeHolder(@JsonScalaEnumeration(classOf[NERClassTypeType]) nerclasstype: NERClassType.NERClassType)
+
+}
+
