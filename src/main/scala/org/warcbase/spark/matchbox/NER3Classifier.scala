@@ -35,7 +35,7 @@ object NER3Classifier {
   }
 
   def classify(input: String): String = {
-    val emptyString: String = "{\"PERSON\"=[], \"ORGANIZATION\"=[], \"LOCATION\"=[]}"
+    val emptyString: String = "{\"PERSON\":[],\"ORGANIZATION\"=[],\"LOCATION\"=[]}"
     val entitiesByType = mutable.LinkedHashMap[NERClassType.Value, mutable.Seq[String]]()
     for (t <- NERClassType.values) {
       if (t != NERClassType.O) entitiesByType.put(t, mutable.Seq())
@@ -47,7 +47,6 @@ object NER3Classifier {
     if (input == null) return emptyString
 
     try {
-      if (input == null) return emptyString
       if (classifier == null) classifier = CRFClassifier.getClassifier(serializedClassifier)
       val out: util.List[util.List[CoreLabel]] = classifier.classify(input)
       val outit = out.iterator()
