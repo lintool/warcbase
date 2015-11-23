@@ -8,14 +8,13 @@ import com.google.common.io.{Files, Resources}
 import org.apache.commons.io.FileUtils
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.{SparkConf, SparkContext}
-import org.junit.runner.RunWith
-import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.warcbase.spark.matchbox.NER3Classifier.NERClassType
 
 import scala.collection.mutable
 
-@RunWith(classOf[JUnitRunner])
+// There must be a valid classifier file with path `iNerClassifierFile` for this test to pass
+// @RunWith(classOf[JUnitRunner])
 class ExtractEntitiesTest extends FunSuite with BeforeAndAfter {
   private val LOG = LogFactory.getLog(classOf[ExtractEntitiesTest])
   private val scrapePath = Resources.getResource("ner/example.txt").getPath
@@ -24,6 +23,8 @@ class ExtractEntitiesTest extends FunSuite with BeforeAndAfter {
   private var sc: SparkContext = _
   private var tempDir: File = _
   private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
+  private val iNerClassifierFile =
+    Resources.getResource("ner/classifiers/english.all.3class.distsim.crf.ser.gz").getPath
 
   before {
     val conf = new SparkConf()
@@ -35,7 +36,7 @@ class ExtractEntitiesTest extends FunSuite with BeforeAndAfter {
   }
 
   test("extract entities") {
-    val e = ExtractEntities.extractFromScrapeText(scrapePath, tempDir + "/scrapeTextEntities", sc).take(3).last
+    val e = ExtractEntities.extractFromScrapeText(iNerClassifierFile, scrapePath, tempDir + "/scrapeTextEntities", sc).take(3).last
     val expectedEntityMap = mutable.Map[NERClassType.Value, List[String]]()
     expectedEntityMap.put(NERClassType.PERSON, List())
     expectedEntityMap.put(NERClassType.LOCATION, List("Teoma"))
