@@ -43,8 +43,10 @@ object ExtractEntities {
     * @param outputFile path of output directory
     */
   def extractAndOutput(iNerClassifierFile: String, rdd: RDD[(String, String, String)], outputFile: String): RDD[(String, String, String)] = {
-    NER3Classifier.apply(iNerClassifierFile)
-    val r = rdd.map(r => (r._1, r._2, NER3Classifier.classify(r._3)))
+    val r = rdd.mapPartitions(iter => {
+      NER3Classifier.apply(iNerClassifierFile)
+      iter.map(r => (r._1, r._2, NER3Classifier.classify(r._3)))
+    })
     r.saveAsTextFile(outputFile)
     r
   }
