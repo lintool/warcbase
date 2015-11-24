@@ -5,7 +5,7 @@ Warcbase is an open-source platform for managing web archives built on Hadoop an
 
 There are two main ways of using Warcbase:
 
-+ The first and most common is to analyze web archives using Spark (the preferred approach) or Pig (which is in the process of being deprecated).
++ The first and most common is to analyze web archives using [Spark](http://spark.apache.org/).
 + The second is to take advantage of HBase to provide random access as well as analytics capabilities. Random access allows Warcbase to provide temporal browsing of archived content (i.e., "wayback" functionality).
 
 You can use Warcbase without HBase, and since HBase requires more extensive setup, it is recommended that if you're just starting out, play with the Spark analytics and don't worry about HBase.
@@ -14,7 +14,6 @@ Warcbase is built against CDH 5.4.1:
 
 + Hadoop version: 2.6.0-cdh5.4.1
 + HBase version: 1.0.0-cdh5.4.1
-+ Pig version: 0.12.0-cdh5.4.1
 + Spark version: 1.3.0-cdh5.4.1
 
 The Hadoop ecosystem is evolving rapidly, so there may be incompatibilities with other versions.
