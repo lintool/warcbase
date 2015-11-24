@@ -9,6 +9,14 @@ class JsonUtil extends Serializable {
   mapper.registerModule(DefaultScalaModule)
   mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
+  def toJson(value: Map[Symbol, Any]): String = {
+    toJson(value map { case (k,v) => k.name -> v})
+  }
+
+  def toJson(value: Any): String = {
+    mapper.writeValueAsString(value)
+  }
+
   def fromJson[T](json: String)(implicit m : Manifest[T]): T = {
     mapper.readValue[T](json)
   }
@@ -43,5 +51,11 @@ val out = sc.textFile("hdfs:///user/jrwiebe/cpp.greenparty-arc-plaintext/")
       })
   })
   .reduceByKey( (a, b) => (a ++ b).keySet.map(r => (r, combineKeyCountLists(a(r), b(r)))).toMap)
-  .saveAsTextFile("nervis/")
+  .mapPartitions(iter => {
+    val jUtl = new JsonUtil
+    iter.map(r => {
+      (jUtl.toJson(r))
+    })
+  })
+  .saveAsTextFile("nerjson/")
 
