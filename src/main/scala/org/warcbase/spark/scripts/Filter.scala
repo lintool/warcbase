@@ -1,7 +1,7 @@
 package org.warcbase.spark.scripts
 
 import org.apache.spark.SparkContext
-import org.warcbase.spark.matchbox.RecordLoader
+import org.warcbase.spark.matchbox.{RemoveHTML, RecordLoader}
 import org.warcbase.spark.rdd.RecordRDD._
 
 object Filter {
@@ -10,7 +10,7 @@ object Filter {
       .keepMimeTypes(Set("text/html"))
       .discardDate(null)
       .keepDomains(Set("greenparty.ca"))
-      .map(r => (r.getCrawldate, r.getRawBodyContent))
+      .map(r => (r.getCrawldate, RemoveHTML(r.getContentString)))
     r.saveAsTextFile("/green")
   }
 }
