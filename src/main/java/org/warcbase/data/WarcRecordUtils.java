@@ -31,7 +31,7 @@ import java.util.regex.Pattern;
 /**
  * Utilities for working with {@code WARCRecord}s (from archive.org APIs).
  */
-public class WarcRecordUtils implements WARCConstants, RecordUtils {
+public class WarcRecordUtils implements WARCConstants {
   private static final Logger LOG = Logger.getLogger(WarcRecordUtils.class);
 
   // TODO: these methods work fine, but there's a lot of unnecessary buffer copying, which is
