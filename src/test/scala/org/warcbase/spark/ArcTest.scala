@@ -44,7 +44,7 @@ class ArcTest extends FunSuite with BeforeAndAfter {
 
   test("count links") {
     val links = RecordLoader.loadArc(arcPath, sc)
-      .map(r => ExtractLinks(r.getUrl, r.getBodyContent))
+      .map(r => ExtractLinks(r.getUrl, r.getContentString))
       .reduce((a, b) => a ++ b)
     assert(links.size == 664)
   }
@@ -52,7 +52,7 @@ class ArcTest extends FunSuite with BeforeAndAfter {
   test("detect language") {
     val languageCounts = RecordLoader.loadArc(arcPath, sc)
       .keepMimeTypes(Set("text/html"))
-      .map(r => ExtractRawText(r.getBodyContent))
+      .map(r => RemoveHTML(r.getContentString))
       .groupBy(content => DetectLanguage(content))
       .map(f => {
         (f._1, f._2.size)
@@ -72,7 +72,7 @@ class ArcTest extends FunSuite with BeforeAndAfter {
 
   test("detect mime type tika") {
     val mimeTypeCounts = RecordLoader.loadArc(arcPath, sc)
-      .map(r => ExtractRawText(r.getBodyContent))
+      .map(r => RemoveHTML(r.getContentString))
       .groupBy(content => DetectMimeTypeTika(content))
       .map(f => {
         println(f._1 + " : " + f._2.size)

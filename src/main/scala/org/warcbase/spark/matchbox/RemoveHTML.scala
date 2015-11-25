@@ -20,7 +20,7 @@ import java.io.IOException
 
 import org.jsoup.Jsoup
 
-object ExtractRawText {
+object RemoveHTML {
   def apply(content: String) = {
     try {
       Jsoup.parse(content).text().replaceAll("[\\r\\n]+", " ")
