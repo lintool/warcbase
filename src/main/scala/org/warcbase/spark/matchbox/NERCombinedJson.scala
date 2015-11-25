@@ -2,7 +2,6 @@ package org.warcbase.spark.matchbox
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
-import org.warcbase.spark.matchbox.NER3Classifier
 import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
