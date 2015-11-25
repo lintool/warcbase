@@ -51,6 +51,14 @@ $ mvn eclipse:eclipse
 
 You can then import the project into Eclipse.
 
+To generate Scaladocs:
+
+```
+$ mvn scala:doc
+```
+
+Generated Scaladocs will be under the `target/site` directory
+
 
 Spark Quickstart
 ----------------
