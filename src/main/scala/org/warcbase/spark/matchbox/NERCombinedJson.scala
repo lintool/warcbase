@@ -4,7 +4,6 @@ import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
-
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs._
 import org.apache.spark.rdd.RDD
@@ -12,6 +11,8 @@ import org.apache.spark.SparkContext
 import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+
+import scala.collection.mutable.MutableList
 import scala.util.Random
 
 /**
@@ -51,7 +52,9 @@ class NERCombinedJson extends Serializable {
                                                  // now is a file of JSON
     val outFile = new BufferedWriter(new OutputStreamWriter(fsOutStream))
     outFile.write("[")
-    Iterator.continually(inFile.readLine()).takeWhile(_ != null).foreach(outFile.write)
+    val line = inFile.readLine()
+    if (line != null) outFile.write(line)    
+    Iterator.continually(inFile.readLine()).takeWhile(_ != null).foreach(s => {outFile.write(", " + s)})
     outFile.write("]")
     outFile.close()
     
@@ -92,12 +95,38 @@ class NERCombinedJson extends Serializable {
       .mapPartitions(iter => {
         val jUtl = new JsonUtil
         iter.map(r => {
-          (jUtl.toJson(r))
+          val nerRec = new NerRecord(r._1._1, r._1._2)
+          r._2.foreach(entityMap => {  
+            // e.g., entityMap = "PERSON" -> List(("Jack", 1), ("Diane", 3))
+            val ec = new EntityCounts(entityMap._1)    
+            entityMap._2.foreach(e => {
+              ec.entities += new Entity(e._1, e._2)
+            })
+            nerRec.ner += ec
+          })
+          jUtl.toJson(nerRec)
         })
       })
       .saveAsTextFile(outputFile)
 
     partDirToFile(outputFile)
+  }
+
+  class Entity(iEntity: String, iFreq: Int) {
+    var entity: String = iEntity
+    var freq: Int = iFreq
+  }
+
+  class EntityCounts(iNerType: String) { 
+    var nerType: String = iNerType
+    var entities = MutableList[Entity]()
+  }
+
+  class NerRecord(recDate: String, recDomain: String) {
+    var date = recDate
+    var domain = recDomain
+
+    var ner = MutableList[EntityCounts]()
   }
 }
 
