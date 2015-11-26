@@ -154,16 +154,16 @@ div.list-tooltip {
 <script src="d3.layout.cloud.js"></script>
 <body>
 <h1>Named Entity Visualization</h1>
-<p id="csv-source"></p>
+<p id="json-source"></p>
 
 <div id="data-select">
-    <button id="persButt" class="pure-button" onclick="updateEntityType('pers')">Persons
-    </button><button id="orgButt" class="pure-button" onclick="updateEntityType('org')">Organizations
-    </button><button id="locButt" class="pure-button" onclick="updateEntityType('loc')">Locations</button>
+    <button id="PERSONButt" class="pure-button" onclick="updateEntityType('PERSON')">Persons
+    </button><button id="ORGANIZATIONButt" class="pure-button" onclick="updateEntityType('ORGANIZATION')">Organizations
+    </button><button id="LOCATIONButt" class="pure-button" onclick="updateEntityType('LOCATION')">Locations</button>
 
     <form class="pure-form pure-form-stacked">
         <label for="timescale-range">Time scale: <span id="timescale-label"></span></label>
-        <input type="range" name="timescale-range" id="timescale-range" onchange="updateTimescale(this.value)" oninput="setTimescaleText(this.value)" min="0" max="2" value="0">
+        <input type="range" name="timescale-range" id="timescale-range" onchange="updateTimescale(this.value)" oninput="setTimescaleText(this.value)" min="0" max="3" value="0">
         <label for="date-range">Date range</label>
     </form>
 	<div id="date-range-wrap">
@@ -176,8 +176,8 @@ div.list-tooltip {
 <div id="no-parameters">
 	<p>You must specify the data set you wish to visualize by passing the filename (located on 
 	this server) as a parameter, e.g., 
-	<i><script>document.write(location.href.split("?")[0])</script><b>?csv=fileName.csv</b></i>.</p>
-	<p>Try <script>document.write("<a href='"+location.href.split("?")[0]+"?csv=greenparty.csv'>")</script>this example</a>.</p>
+	<i><script>document.write(location.href.split("?")[0])</script><b>?json=fileName.json</b></i>.</p>
+	<p>Try <script>document.write("<a href='"+location.href.split("?")[0]+"?json=greenparty.json'>")</script>this example</a>.</p>
 </div>
 
 <div id="list-window">
@@ -198,28 +198,91 @@ var timeScale = "0";
 var firstOverflow = true;
 
 function init() {
-    var csvFile = new URI().search(true).csv;
+    var jsonFile = new URI().search(true).json;
 
 	setTimescaleText(timeScale);
 	
-    if (!csvFile) {
+    if (!jsonFile) {
     	d3.select("#no-parameters").style("display", "block");
         
     } else {
     	d3.select("#data-select").style("display", "block");
-        d3.select("#csv-source").html("Data source: <a href='" + csvFile + "'>" + csvFile + "</a>")
+        d3.select("#json-source").html("Data source: <a href='" + jsonFile + "'>" + jsonFile + "</a>")
         d3.select("#list-msg").style("opacity", .9).style("visibility", "visible");
 
         // Load data
-        d3.text(csvFile, function(error, text) { 
+        d3.json(jsonFile, function(error, json) { 
         	if (error) { 
         		d3.select("#list-msg").text("Error loading data");
         		throw error;
         	} else { 
 				d3.select("#list-msg").style("opacity",0);
-				allData = d3.csv.parseRows(text, function(row) {
-					return { nerType: row[0], date: row[1], src: row[2], entity: row[3], freq: +row[4] }
-				});
+        allData =  explodeNerObjs(json);
+        /** JSON FORMAT:
+        [{
+          "date": "200811",
+          "domain": "greenparty.ca",
+          "ner": [{
+            "nerType": "PERSON",
+            "entities": [{
+              "entity": "Elizabeth May",
+              "freq": 4
+            }, {
+              "entity": "Stephen Harper",
+              "freq": 2
+            }]
+          }, {
+            "nerType": "ORGANIZATION",
+            "entities": [{
+              "entity": "ABC",
+              "freq": 5
+            }, {
+              "entity": "XYZ",
+              "freq": 6
+            }]
+          }, {
+            "nerType": "LOCATION",
+            "entities": [{
+              "entity": "Winnipeg",
+              "freq": 7
+            }, {
+              "entity": "Toronto",
+              "freq": 2
+            }]
+          }]
+        }, {
+          "date": "200911",
+          "domain": "greenparty.ca",
+          "ner": [{
+            "nerType": "PERSON",
+            "entities": [{
+              "entity": "Geroge May",
+              "freq": 4
+            }, {
+              "entity": "Laureen Harper",
+              "freq": 2
+            }]
+          }, {
+            "nerType": "ORGANIZATION",
+            "entities": [{
+              "entity": "Green Party",
+              "freq": 5
+            }, {
+              "entity": "Red Party",
+              "freq": 6
+            }]
+          }, {
+            "nerType": "LOCATION",
+            "entities": [{
+              "entity": "Ajax",
+              "freq": 7
+            }, {
+              "entity": "Yellowknife",
+              "freq": 2
+            }]
+          }]
+        }]
+        */ 
 
 				// Prepare and create date range slider
 				// Get all months
@@ -259,7 +322,7 @@ function init() {
 					snapValues[handle].innerHTML = values[handle];
 				});     
 				slider.noUiSlider.on('change', function(values) {
-					nestedData = nestData(allData, timeScale);
+					nestedData = nestData(allData, timeScale); 
 					visualize(entityType, timeScale);
 				});
 
@@ -267,25 +330,46 @@ function init() {
 				nestedData = nestData(allData, timeScale);
 
 				// Do initial visualization				
-				updateEntityType("pers");  // calls visualize()
+				updateEntityType("PERSON");  // calls visualize()
 			}
         });
     }
 }
 
+function explodeNerObjs(data) {
+  var exploded = []
+  data.forEach(function(d) {
+    d.ner.forEach(function(e) {
+      e.entities.forEach(function(f) {
+        exploded.push({
+          "date": d.date,
+          "domain": d.domain,
+          "nerType": e.nerType,
+          "entity": f.entity,
+          "freq": f.freq
+        });
+      })
+    })
+  })
+  return exploded;
+}
+
 function nestData(data, view) {
-	// Returns nestData[entityType][date] for given view (all-time, year, or month).
+	// Returns nestedData[entityType][date] for given view (all-time, year, or month).
 	// For list and word-cloud visualizations, this could be done more efficiently
 	// (roughly 3x) by processing only the selected entity-type, but other visualizations
 	// (e.g. bubbles) need data for all entity types. (Current none require data for
 	// multiple timescale views.)
 	var slider = d3.select("#date-range-slider").node();
     var dateRange = slider.noUiSlider.get();
-	var filtered = data.filter(function(d) { return parseInt(d.date) >= dateRange[0] && parseInt(d.date) <= dateRange[1]});
-	var eTypes = ["pers", "org", "loc"];
+	var filtered = data.filter(function(d) { 
+    return parseInt(d.date) >= dateRange[0] && parseInt(d.date) <= dateRange[1]
+  });
+
+	var eTypes = ["PERSON", "ORGANIZATION", "LOCATION"];
 	var nd = {};
 	
-	var nestedView = d3.nest().key(function(d) { return d.nerType });		
+  var nestedView = d3.nest().key(function(d) { return d.nerType });   
 	
 	if (view === "0") {	// All-time view
 		nestedView = nestedView.map(filtered);
@@ -302,14 +386,23 @@ function nestData(data, view) {
 			});
 		});
 	} else if (view === "2") { // Month view
-		nestedView = nestedView.key(function(d) { return d.date })
+		nestedView = nestedView.key(function(d) { return d.date.substring(0,6) })
 			.map(filtered);
 		eTypes.forEach(function(eType, eIndex) {
 			nd[eType] = {};
 			Object.keys(nestedView[eType]).forEach(function(yearMonth, yIndex) {
 				nd[eType][yearMonth] = summarize(nestedView[eType][yearMonth]);
 			});
-		});	
+		});
+  } else if (view === "3") { // Day view
+    nestedView = nestedView.key(function(d) { return d.date })
+      .map(filtered);
+    eTypes.forEach(function(eType, eIndex) {
+      nd[eType] = {};
+      Object.keys(nestedView[eType]).forEach(function(yearMonth, yIndex) {
+        nd[eType][yearMonth] = summarize(nestedView[eType][yearMonth]);
+      });
+    });
 	}
 	return nd;	
 }
@@ -322,22 +415,23 @@ function summarize(entityMap) {
 }
 
 function visualize(entityType) {
-	// Display lists, including buttons for other visualizations   
-    d3.selectAll(".word-cloud").remove();
-    d3.selectAll(".bubble-wrap").remove();
-    d3.select("#list-row").selectAll("td").remove();
+	// Display lists, including buttons for other visualizations
+
+  d3.selectAll(".word-cloud").remove();
+  d3.selectAll(".bubble-wrap").remove();
+  d3.select("#list-row").selectAll("td").remove();
 
 	Object.keys(nestedData[entityType]).forEach(function(t) {
 		listify(nestedData[entityType][t], t);
 	});
     
-    var listWindow = d3.select("#list-window").node();
-    if (firstOverflow && listWindow.scrollWidth > listWindow.clientWidth) {
-        firstOverflow = false;
-        var infoMsg = d3.select("#list-msg").html("Scroll &#10140;"); 
-        infoMsg.style("left", "80%")
-        infoMsg.transition().duration(100).style("opacity", .9).transition().duration(2500).style("opacity", 0);
-    }
+  var listWindow = d3.select("#list-window").node();
+  if (firstOverflow && listWindow.scrollWidth > listWindow.clientWidth) {
+    firstOverflow = false;
+    var infoMsg = d3.select("#list-msg").html("Scroll &#10140;"); 
+    infoMsg.style("left", "80%")
+    infoMsg.transition().duration(100).style("opacity", .9).transition().duration(2500).style("opacity", 0);
+  }
 }
 
 function listify(data, title) {
@@ -534,6 +628,8 @@ function setTimescaleText(t) {
         e.textContent = "Years";
     else if (t === "2")
         e.textContent = "Months";
+    else if (t === "3")
+        e.textContent = "Days";
 }
 
 function updateTimescale(t) {
