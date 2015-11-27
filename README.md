@@ -20,6 +20,8 @@ The Hadoop ecosystem is evolving rapidly, so there may be incompatibilities with
 
 Detailed documentation is available in [this repository's wiki](https://github.com/lintool/warcbase/wiki).
 
+Supporting files can be found in the [warcbase-resources repository](https://github.com/lintool/warcbase-resources).
+
 
 Getting Started
 ---------------
