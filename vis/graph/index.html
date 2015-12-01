@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1">
+<head>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon"> 
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-switch/3.3.2/css/bootstrap2/bootstrap-switch.min.css">
+
+<link href="assets/nouislider.min.css" rel="stylesheet">
+<style>
+body {
+  font: 10px sans-serif;
+}
+
+.link {
+  stroke: #00CED1;
+  stroke-width: 0.5px;
+}
+
+.node circle{
+  cursor: move;
+  fill: #ccc;
+  stroke: #000;
+  stroke-width: 0.5px;
+  font
+}
+
+.node.fixed {
+  fill: #f00;
+}
+
+#graph {
+  height:80vh;
+}
+
+.loading{
+  font-size: 20px;
+  font-family: sans-serif;
+}
+
+.popup-tip{
+  padding: 2px 4px 2px 2px;
+  border: solid #444 1px;
+  border-radius: 6px;
+  font-size: 1em;
+  background-color: rgba(255,255,255,0.85);
+  font-family: sans-serif;
+}
+
+.noUi-handle{
+    width: 10px;
+    height: 5px;
+    background: #fff
+}
+
+.noUi-target{
+    height: 10px;
+    margin: 10px;
+}
+
+</style>
+</head>
+<body>
+
+<h1>Visualization of the Canadian Political Parties and Political Interest Groups Link Structures</h1>
+<div class="container-fluid">
+  <div class="row">
+      <div class="col-md-6">
+        <label for="threshold-nodes"> Max number of sites to display </label>
+        <div id="threshold-slider"></div>
+      </div>
+      <div class="col-md-6">
+        <label for="threshold-nodes"> Year </label>
+        <div id="date-slider"></div>
+      </div>
+  </div>
+  <div class="row">
+    <div id="display">
+      <div id="graph"></div>
+      <p>This visualization was created with d3, based on <a href="http://bl.ocks.org/mbostock/3750558">this example</a> and <a href="http://bl.ocks.org/mbostock/2706022">this example</a>. The raw data for this visualization comes from the output of a <a href="https://github.com/lintool/warcbase/wiki/Pig:-Analysis-of-Site-Link-Structure">Pig script</a>.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+<script src="assets/nouislider.min.js"></script>
+<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+<script>
+
+var width = document.getElementById("graph").offsetWidth;
+var height = document.getElementById("graph").offsetHeight;
+
+var force = d3.layout.force()
+  .size([width, height])
+    .linkStrength(0.5)
+    .friction(0.1)
+    .charge(-200)
+    .linkDistance(60)
+    .gravity(0.8)
+    .theta(0.8)
+  .on("tick", tick);
+
+var drag = force.drag()
+  .on("dragstart", dragstart);
+
+var graph = d3.select("#graph");
+var svg = graph.append("svg")
+  .attr("width", width)
+  .attr("height", height);
+
+var loading = svg.append("text")
+  .attr('x', width / 2)
+  .attr('y', height / 2)
+  .attr('class', 'loading')
+  .text("Simulating...");
+
+var link = svg.selectAll(".link");
+var node = svg.selectAll(".node");
+
+var allLinks = [];
+var allNodes= [];
+
+var nodesToLinks = {};
+var nodesByName = {};
+
+var threshold = 100;
+var rT = Math.log(threshold);
+
+var maxLinks = 1;
+var numNodes = 1;
+
+var minYear = 2005;
+var maxYear = 2009;
+
+var thisYear = 2005;
+
+var nodetip = d3.tip()
+   .attr('class', 'd3-tip')
+   .offset([-10, 0])
+   .html(function(d) { return "<div class='popup-tip'>" + d.name + "</div>"; });
+
+var linktip = d3.tip()
+   .attr('class', 'd3-tip')
+   .offset([-10, 0])
+  .html(function(l) { return "<div class='popup-tip'>" + "Link" + "<br>"
+    + "source: " + l.source.name + "<br>"
+    + "target: " + l.target.name + "<br>"
+    + "year: " + l.date + "<br>"
+    + "count: " + l.count + "<br>"
+    + "</div>"; });
+svg.call(nodetip);
+svg.call(linktip);
+
+d3.csv("nodes.csv", function(error, data){
+  allNodes = data.slice();
+  allNodes.forEach(function(n) {
+    nodesToLinks[n.name] = new Array();
+    nodesByName[n.name] = n;
+  });
+  numNodes = allNodes.length;
+  loadLinks();
+});
+
+function loadLinks(){
+  d3.csv("links.csv", function(error, data){
+    makeDateSlider();
+    makeThresholdSlider();
+    maxLinks = data[0].count;
+    allLinks = data.slice();
+    allLinks.forEach(function(l) {
+      var sourceString = l.source;
+      var targetString = l.target;
+      l.source = nodesByName[sourceString]
+      l.target = nodesByName[targetString]
+      nodesToLinks[sourceString].push(l);
+      if (sourceString != targetString) {
+        var l2 = JSON.parse(JSON.stringify(l));
+        l2.source = nodesByName[targetString];
+        l2.target = nodesByName[sourceString];
+        l2.date = l.date;
+        nodesToLinks[targetString].push(l2);
+      }
+    });
+    start();
+  });
+}
+
+function start(){
+  setTimeout(function() {
+    var links = [];
+    var nodes = {};
+
+    var nodeNames = new Set();
+    for (var i=0; i<threshold && i<allNodes.length; ++i) {
+      nodeNames.add(allNodes[i].name);
+    }
+    for (var i=0; i<threshold && i<allNodes.length; ++i) {
+      var n = allNodes[i];
+      n.px = n.py = i;
+      nodesToLinks[n.name].forEach(function(l) {
+        if (nodeNames.has(l.target.name)){
+          if(!nodes[l.source.name]) nodes[l.source.name] = l.source
+          if(!nodes[l.target.name]) nodes[l.target.name] = l.target
+          links.push(l)
+        }
+      });
+    }
+
+    force.nodes(d3.values(nodes))
+      .links(links)
+      .start();
+
+   update();
+
+   for(var i=25; i>0; --i) force.tick();
+   force.stop();
+   loading.attr("visibility", "hidden");
+  });
+}
+
+function update(){
+
+  link = link.data(force.links());
+
+  link.enter().append("line")
+    .attr("stroke-opacity", function(d) {
+      return Math.log(d.count)/Math.log(maxLinks);
+    })
+    .attr("class", function(d) { return "link date" + d.date; })
+    .on("mouseover", linktip.show)
+    .on("mouseout", linktip.hide);
+  node = node.data(force.nodes());
+  var nodeEnter = node.enter().append("g")
+    .attr("class", function(d) {
+      var dates = new Set();
+      var s = "node ";
+      nodesToLinks[d.name].forEach(function(l) { dates.add(l.date); });
+      dates.forEach(function(year) { s += "date" + year + " "; });
+      return s;
+    })
+    .on("mouseover", nodetip.show)
+    .on("mouseout", nodetip.hide)
+    .on("dblclick", dblclick)
+    .call(drag);
+
+  nodeEnter.append("circle")
+    .attr("r", 15/parseFloat(rT));
+
+  node.exit().remove();
+
+  link.exit().remove();
+  updateDate();
+}
+
+d3.selection.prototype.moveToFront = function() {
+  return this.each(function(){
+    this.parentNode.appendChild(this);
+  });
+};
+
+function updateThreshold() {
+  rT = Math.log(threshold);
+  start();
+}
+
+function updateDate() {
+  d3.selectAll(".link")
+    .attr("visibility", "hidden");
+  d3.selectAll(".node")
+    .attr("visibility", "hidden");
+  d3.selectAll(".date" + thisYear)
+    .attr("visibility", "visible");
+}
+
+function tick() {
+  link.attr("x1", function(d) { return d.source.x; })
+    .attr("y1", function(d) { return d.source.y; })
+    .attr("x2", function(d) { return d.target.x; })
+    .attr("y2", function(d) { return d.target.y; });
+
+  node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+}
+
+function dragstart(d) {
+  d3.select(this).classed("fixed", d.fixed = true);
+}
+
+function dblclick(d) {
+    d3.select(this).classed("fixed", d.fixed = false);
+}
+
+function makeDateSlider(){
+  var slider = document.getElementById('date-slider');
+  noUiSlider.create(slider, {
+    start: 0,
+    step: 1,
+    range: {
+      'min': [minYear],
+      'max': [maxYear]
+    },
+    pips: {
+      mode: 'steps',
+      density: '2',
+    }
+  });
+  slider.noUiSlider.on('change', function(){
+    thisYear = Math.floor(slider.noUiSlider.get());
+    updateDate();
+  });
+}
+
+function makeThresholdSlider(){
+  var thresholdSlider = document.getElementById('threshold-slider');
+  noUiSlider.create(thresholdSlider, {
+    start: 100,
+    step: 10,
+    range: {
+      'min': [0],
+      'max': [numNodes]
+    },
+    pips: {
+      mode: 'count',
+      values: 10,
+      density: 2,
+    }
+  });
+  thresholdSlider.noUiSlider.on('change', function(){
+    loading.moveToFront();
+    loading.attr("visibility", "visible");
+    threshold = Math.floor(thresholdSlider.noUiSlider.get());
+    updateThreshold();
+  });
+}
+</script>
+</body>
+</html>
