@@ -4,8 +4,8 @@ import com.google.common.io.Resources
 import org.apache.spark.{SparkConf, SparkContext}
 import org.archive.io.arc.ARCRecord
 import org.archive.io.warc.WARCRecord
-import org.warcbase.spark.matchbox.RecordTransformers.WARecord
-import org.warcbase.spark.matchbox.{ExtractLinks, RecordLoader}
+import org.warcbase.spark.matchbox.{ExtractLinks, ExtractTopLevelDomain, RecordLoader}
+import org.warcbase.spark.matchbox.RecordTransformers._
 import org.warcbase.spark.rdd.RecordRDD._
 
 object CrawlStatistics {
@@ -52,7 +52,18 @@ object CrawlStatistics {
     val linkStructure = RecordLoader.loadArc(arcPath, sc)
       .keepValidPages()
       .map(r => (r.getCrawldate.substring(0, 6), ExtractLinks(r.getUrl, r.getContentString)))
-      .flatMap(r => r._2.map(f => (r._1, f._1.replaceAll("^\\s*www\\.", ""), f._2.replaceAll("^\\s*www\\.", ""))))
+      .flatMap(r => r._2.map(f => (r._1, ExtractTopLevelDomain(f._1).replaceAll("^\\s*www\\.", ""), ExtractTopLevelDomain(f._2).replaceAll("^\\s*www\\.", ""))))
+      .filter(r => r._2 != null && r._3 != null)
+      .countItems()
+      .collect()
+    println(linkStructure.take(1).mkString)
+  }
+
+  def warclinkStructure(sc: SparkContext) = {
+    val linkStructure = RecordLoader.loadWarc(warcPath, sc)
+      .keepValidPages()
+      .map(r => (r.getCrawldate.substring(0, 6), ExtractLinks(r.getUrl, r.getContentString)))
+      .flatMap(r => r._2.map(f => (r._1, ExtractTopLevelDomain(f._1).replaceAll("^\\s*www\\.", ""), ExtractTopLevelDomain(f._2).replaceAll("^\\s*www\\.", ""))))
       .filter(r => r._2 != null && r._3 != null)
       .countItems()
       .collect()
@@ -67,9 +78,9 @@ object CrawlStatistics {
       .setAppName(appName)
       .set("spark.serializer", "org.apache.spark.serializer.KyroSerializer")
       .registerKryoClasses(
-        Array(classOf[ARCRecord],
+        Array(
+          classOf[ARCRecord],
           classOf[WARCRecord],
-          classOf[WARecordRDD],
           classOf[WARecord]
         ))
     val sc = new SparkContext(conf)
@@ -78,6 +89,7 @@ object CrawlStatistics {
       numLinksPerCrawl(sc)
       numPagesByDomain(sc)
       linkStructure(sc)
+      warclinkStructure(sc)
     } finally {
       sc.stop()
     }

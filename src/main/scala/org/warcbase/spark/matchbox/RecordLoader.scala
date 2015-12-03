@@ -21,7 +21,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.warcbase.io.{WarcRecordWritable, ArcRecordWritable}
 import org.warcbase.mapreduce.{WacWarcInputFormat, WacArcInputFormat}
-import org.warcbase.spark.matchbox.RecordTransformers.WARecord
+import org.warcbase.spark.matchbox.RecordTransformers._
 
 object RecordLoader {
   def loadArc(path: String, sc: SparkContext): RDD[WARecord] = {
