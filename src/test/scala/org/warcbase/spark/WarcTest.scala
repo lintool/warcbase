@@ -23,7 +23,7 @@ import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.warcbase.spark.matchbox.RecordLoader
-import org.warcbase.spark.matchbox.RecordTransformers.WARecord
+import org.warcbase.spark.matchbox.RecordTransformers._
 import org.warcbase.spark.rdd.RecordRDD._
 
 @RunWith(classOf[JUnitRunner])
@@ -44,18 +44,24 @@ class WarcTest extends FunSuite with BeforeAndAfter {
   }
 
   test("count records") {
-    val warcRecords = RecordLoader.loadWarc(warcPath, sc)
-    assert(299L == warcRecords.count)
+    assert(299L == records.count)
   }
 
   test("warc extract domain") {
-    val r = RecordLoader.loadWarc(warcPath, sc)
+    val r = records
       .keepValidPages()
       .map(r => r.getDomain)
       .countItems()
       .take(10)
 
     assert(r.length == 3)
+  }
+
+  test("warc get content") {
+    val a = RecordLoader.loadWarc(warcPath, sc)
+      .map(r => r.getContentString)
+      .take(1)
+    assert(a.head.nonEmpty)
   }
 
   after {

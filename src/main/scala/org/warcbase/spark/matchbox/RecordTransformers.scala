@@ -31,51 +31,47 @@ import org.warcbase.data.{ArcRecordUtils, WarcRecordUtils}
 object RecordTransformers {
 
   trait WARecord extends Serializable {
-    def getCrawldate: String
+    val getCrawldate: String
 
-    def getUrl: String
+    val getUrl: String
 
-    def getDomain: String
+    val getDomain: String
 
-    def getMimeType: String
+    val getMimeType: String
 
-    def getContentString: String
+    val getContentString: String
 
-    def getContentBytes: Array[Byte]
+    val getContentBytes: Array[Byte]
   }
 
-  implicit def toArcRecord(r: ARCRecord): WARecord = new ArcRecord(r)
+  implicit class ArcRecord(r: ARCRecord) extends WARecord {
+    lazy val getCrawldate: String = r.getMetaData.getDate.substring(0, 8)
 
-  implicit def toWarcRecord(r: WARCRecord): WARecord = new WarcRecord(r)
+    lazy val getDomain: String = ExtractTopLevelDomain(r.getMetaData.getUrl)
 
-  class ArcRecord(r: ARCRecord) extends WARecord {
-    override def getCrawldate: String = r.getMetaData.getDate.substring(0, 8)
+    lazy val getMimeType: String = r.getMetaData.getMimetype
 
-    override def getDomain: String = ExtractTopLevelDomain(r.getMetaData.getUrl)
+    lazy val getUrl: String = r.getMetaData.getUrl
 
-    override def getMimeType: String = r.getMetaData.getMimetype
+    lazy val getContentString: String = new String(getContentBytes)
 
-    override def getUrl: String = r.getMetaData.getUrl
-
-    override def getContentString: String = new String(getContentBytes)
-
-    override def getContentBytes: Array[Byte] = ArcRecordUtils.getBodyContent(r)
+    lazy val getContentBytes: Array[Byte] = ArcRecordUtils.getBodyContent(r)
   }
 
-  class WarcRecord(r: WARCRecord) extends WARecord {
+  implicit class WarcRecord(r: WARCRecord) extends WARecord {
     val ISO8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX")
 
-    override def getCrawldate: String = ArchiveUtils.get14DigitDate(ISO8601.parse(r.getHeader.getDate)).substring(0, 8)
+    lazy val getCrawldate: String = ArchiveUtils.get14DigitDate(ISO8601.parse(r.getHeader.getDate)).substring(0, 8)
 
-    override def getDomain = ExtractTopLevelDomain(getUrl).replace("^\\s*www\\.", "")
+    lazy val getDomain = ExtractTopLevelDomain(getUrl).replace("^\\s*www\\.", "")
 
-    override def getMimeType = WarcRecordUtils.getWarcResponseMimeType(getContentBytes)
+    lazy val getMimeType = WarcRecordUtils.getWarcResponseMimeType(getContentBytes)
 
-    override def getUrl = r.getHeader.getUrl
+    lazy val getUrl = r.getHeader.getUrl
 
-    override def getContentString: String = new String(getContentBytes)
+    lazy val getContentString: String = new String(getContentBytes)
 
-    override def getContentBytes: Array[Byte] = WarcRecordUtils.getContent(r)
+    lazy val getContentBytes: Array[Byte] = WarcRecordUtils.getContent(r)
   }
 
 }
