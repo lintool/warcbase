@@ -105,13 +105,38 @@ var force = d3.layout.force()
     .theta(0.8)
   .on("tick", tick);
 
+var size = d3.scale.pow().exponent(1)
+  .domain([1,100])
+  .range([8,24]);
 var drag = force.drag()
   .on("dragstart", dragstart);
 
 var graph = d3.select("#graph");
+var default_link_color = "#888";
+var nominal_base_node_size = 8;
+var nominal_text_size = 10;
+var max_text_size = 24;
+var nominal_stroke = 1.5;
+var max_stroke = 4.5;
+var max_base_node_size = 36;
+var min_zoom = 0.1;
+var max_zoom = 7;
 var svg = graph.append("svg")
   .attr("width", width)
   .attr("height", height);
+var zoom = d3.behavior.zoom().scaleExtent([min_zoom,max_zoom])
+var g = svg.append("g");
+zoom.on("zoom", function() {
+    var stroke = nominal_stroke;
+    if (nominal_stroke*zoom.scale() > max_stroke) stroke = max_stroke/zoom.scale();
+    link.style("stroke-width",stroke);
+    node.style("stroke-width",stroke);
+    var base_radius = nominal_base_node_size;
+    if (nominal_base_node_size*zoom.scale()>max_base_node_size) base_radius = max_base_node_size/zoom.scale();
+    //node.attr("r", function(d) { return Math.PI*Math.pow(size(d.size)*base_radius/nominal_base_node_size||base_radius,2); });
+    g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+});
+svg.call(zoom);
 
 var loading = svg.append("text")
   .attr('x', width / 2)
@@ -142,19 +167,9 @@ var thisYear = 2005;
 var nodetip = d3.tip()
    .attr('class', 'd3-tip')
    .offset([-10, 0])
-   .html(function(d) { return "<div class='popup-tip'>" + d.name + "</div>"; });
+   .html(function(d) { return "<a href=\"http://web.archive.org/web/*/" + d.name +"\">" + d.name + "</a>"; });
 
-var linktip = d3.tip()
-   .attr('class', 'd3-tip')
-   .offset([-10, 0])
-  .html(function(l) { return "<div class='popup-tip'>" + "Link" + "<br>"
-    + "source: " + l.source.name + "<br>"
-    + "target: " + l.target.name + "<br>"
-    + "year: " + l.date + "<br>"
-    + "count: " + l.count + "<br>"
-    + "</div>"; });
 svg.call(nodetip);
-svg.call(linktip);
 
 d3.csv("nodes.csv", function(error, data){
   allNodes = data.slice();
@@ -224,16 +239,12 @@ function start(){
 }
 
 function update(){
-
   link = link.data(force.links());
 
   link.enter().append("line")
-    .attr("stroke-opacity", function(d) {
-      return Math.log(d.count)/Math.log(maxLinks);
-    })
     .attr("class", function(d) { return "link date" + d.date; })
-    .on("mouseover", linktip.show)
-    .on("mouseout", linktip.hide);
+    .style("stroke-width",nominal_stroke)
+
   node = node.data(force.nodes());
   var nodeEnter = node.enter().append("g")
     .attr("class", function(d) {
@@ -243,8 +254,7 @@ function update(){
       dates.forEach(function(year) { s += "date" + year + " "; });
       return s;
     })
-    .on("mouseover", nodetip.show)
-    .on("mouseout", nodetip.hide)
+    .on("click", nodetip.show)
     .on("dblclick", dblclick)
     .call(drag);
 
@@ -291,7 +301,7 @@ function dragstart(d) {
 }
 
 function dblclick(d) {
-    d3.select(this).classed("fixed", d.fixed = false);
+  d3.select(this).classed("fixed", d.fixed = false);
 }
 
 function makeDateSlider(){
