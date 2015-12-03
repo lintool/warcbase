@@ -18,7 +18,7 @@ Warcbase is built against CDH 5.4.1:
 
 The Hadoop ecosystem is evolving rapidly, so there may be incompatibilities with other versions.
 
-Detailed documentation is available in [this repository's wiki](https://github.com/lintool/warcbase/wiki).
+Detailed documentation is available [here](http://lintool.github.io/warcbase-docs/).
 
 Supporting files can be found in the [warcbase-resources repository](https://github.com/lintool/warcbase-resources).
 
@@ -65,9 +65,9 @@ Generated Scaladocs will be under the `target/site` directory
 Spark Quickstart
 ----------------
 
-For the impatient, let's do a simple analysis with Spark. Within the repo there's already a sample ARC file stored at `src/test/resources/arc/example.arc.gz`.
+For the impatient, let's do a simple analysis with Spark. Within the repo there's already a sample ARC file stored at `src/test/resources/arc/example.arc.gz`. Our supporting resources repository also has [larger ARC and WARC files as real-world examples](https://github.com/lintool/warcbase-resources/tree/master/Sample-Data).
 
-If you need to install Spark, [we have a walkthrough here for installation on OS X](https://github.com/lintool/warcbase/wiki/Installing-and-Running-Spark-under-OS-X). This page also has instructions on how to get Spark Notebook, an interactive web-based editor, running. 
+If you need to install Spark, [we have a walkthrough here for installation on OS X](http://lintool.github.io/warcbase-docs/Installing-and-Running-Spark-under-OS-X/). This page also has instructions on how to get Spark Notebook, an interactive web-based editor, running.
 
 Once you've got Spark installed, you can go ahead and fire up the Spark shell:
 
@@ -90,7 +90,7 @@ val r = RecordLoader.loadArc("src/test/resources/arc/example.arc.gz", sc)
 
 **Tip:** By default, commands in the Spark shell must be one line. To run multi-line commands, type `:paste` in Spark shell: you can then copy-paste the script above directly into Spark shell. Use Ctrl-D to finish the command.
 
-What to learn more? Check out [analyzing web archives with Spark](https://github.com/lintool/warcbase/wiki/Analyzing-Web-Archives-with-Spark).
+What to learn more? Check out [detailed documentation on analyzing web archives with Spark](http://lintool.github.io/warcbase-docs/).
 
 
 What About Pig?
@@ -105,16 +105,16 @@ Visualizations
 The result of analyses of using Warcbase can serve as input to visualizations that help scholars interactively explore the data. Examples include:
 
 + [Basic crawl statistics](http://lintool.github.io/warcbase/vis/crawl-sites/index.html) from the Canadian Political Parties and Political Interest Groups collection.
-+ [Interactive graph visualization](https://github.com/lintool/warcbase/wiki/Gephi:-Converting-Site-Link-Structure-into-Dynamic-Visualization) using Gephi.
++ [Interactive graph visualization](http://lintool.github.io/warcbase-docs/Gephi:-Converting-Site-Link-Structure-into-Dynamic-Visualization/) using Gephi.
 + [Shine interface](http://webarchives.ca/) for faceted full-text search.
 
 
 Next Steps
 ----------
 
-+ [Ingesting content into HBase](https://github.com/lintool/warcbase/wiki/Ingesting-Content-into-HBase): loading ARC and WARC data into HBase
-+ [Warcbase/Wayback integration](https://github.com/lintool/warcbase/wiki/Warcbase-Wayback-Integration): guide to provide temporal browsing capabilities
-+ [Warcbase Java tools](https://github.com/lintool/warcbase/wiki/Warcbase-Java-Tools): building the URL mapping, extracting the webgraph
++ [Ingesting content into HBase](http://lintool.github.io/warcbase-docs/Ingesting-Content-into-HBase/): loading ARC and WARC data into HBase
++ [Warcbase/Wayback integration](http://lintool.github.io/warcbase-docs/Warcbase-Wayback-Integration/): guide to provide temporal browsing capabilities
++ [Warcbase Java tools](http://lintool.github.io/warcbase-docs/Warcbase-Java-Tools/): building the URL mapping, extracting the webgraph
 
 
 License
