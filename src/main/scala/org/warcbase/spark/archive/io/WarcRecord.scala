@@ -2,23 +2,24 @@ package org.warcbase.spark.archive.io
 
 import java.text.SimpleDateFormat
 
-import org.archive.io.warc.WARCRecord
+import org.apache.spark.SerializableWritable
 import org.archive.util.ArchiveUtils
 import org.warcbase.data.WarcRecordUtils
+import org.warcbase.io.WarcRecordWritable
 import org.warcbase.spark.matchbox.ExtractTopLevelDomain
 
-class WarcRecord(r: WARCRecord) extends ArchiveRecord {
+implicit class WarcRecord(r: SerializableWritable[WarcRecordWritable]) extends ArchiveRecord {
   val ISO8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX")
 
-  lazy val getCrawldate: String = ArchiveUtils.get14DigitDate(ISO8601.parse(r.getHeader.getDate)).substring(0, 8)
+  val getCrawldate: String = ArchiveUtils.get14DigitDate(ISO8601.parse(r.t.getRecord.getHeader.getDate)).substring(0, 8)
 
-  lazy val getDomain = ExtractTopLevelDomain(getUrl).replace("^\\s*www\\.", "")
+  val getContentBytes: Array[Byte] = WarcRecordUtils.getContent(r.t.getRecord)
 
-  lazy val getMimeType = WarcRecordUtils.getWarcResponseMimeType(getContentBytes)
+  val getContentString: String = new String(getContentBytes)
 
-  lazy val getUrl = r.getHeader.getUrl
+  val getMimeType = WarcRecordUtils.getWarcResponseMimeType(getContentBytes)
 
-  lazy val getContentString: String = new String(getContentBytes)
+  val getUrl = r.t.getRecord.getHeader.getUrl
 
-  lazy val getContentBytes: Array[Byte] = WarcRecordUtils.getContent(r)
+  val getDomain = ExtractTopLevelDomain(getUrl)
 }

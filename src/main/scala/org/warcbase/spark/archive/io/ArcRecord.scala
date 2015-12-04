@@ -1,19 +1,21 @@
 package org.warcbase.spark.archive.io
 
-import org.archive.io.arc.ARCRecord
+import org.apache.spark.SerializableWritable
 import org.warcbase.data.ArcRecordUtils
+import org.warcbase.io.ArcRecordWritable
 import org.warcbase.spark.matchbox.ExtractTopLevelDomain
 
-class ArcRecord(r: ARCRecord) extends ArchiveRecord {
-  lazy val getCrawldate: String = r.getMetaData.getDate.substring(0, 8)
+class ArcRecord(r: SerializableWritable[ArcRecordWritable]) extends ArchiveRecord {
+  val getCrawldate: String = r.t.getRecord.getMetaData.getDate.substring(0, 8)
 
-  lazy val getDomain: String = ExtractTopLevelDomain(r.getMetaData.getUrl)
+  val getMimeType: String = r.t.getRecord.getMetaData.getMimetype
 
-  lazy val getMimeType: String = r.getMetaData.getMimetype
+  val getUrl: String = r.t.getRecord.getMetaData.getUrl
 
-  lazy val getUrl: String = r.getMetaData.getUrl
+  val getDomain: String = ExtractTopLevelDomain(r.t.getRecord.getMetaData.getUrl)
 
-  lazy val getContentString: String = new String(getContentBytes)
+  val getContentBytes: Array[Byte] = ArcRecordUtils.getBodyContent(r.t.getRecord)
 
-  lazy val getContentBytes: Array[Byte] = ArcRecordUtils.getBodyContent(r)
+  val getContentString: String = new String(getContentBytes)
+
 }
