@@ -8,7 +8,7 @@ import org.warcbase.data.WarcRecordUtils
 import org.warcbase.io.WarcRecordWritable
 import org.warcbase.spark.matchbox.ExtractTopLevelDomain
 
-implicit class WarcRecord(r: SerializableWritable[WarcRecordWritable]) extends ArchiveRecord {
+class WarcRecord(r: SerializableWritable[WarcRecordWritable]) extends ArchiveRecord {
   val ISO8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX")
 
   val getCrawldate: String = ArchiveUtils.get14DigitDate(ISO8601.parse(r.t.getRecord.getHeader.getDate)).substring(0, 8)
