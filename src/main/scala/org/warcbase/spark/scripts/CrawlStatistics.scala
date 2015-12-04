@@ -3,6 +3,7 @@ package org.warcbase.spark.scripts
 import com.google.common.io.Resources
 import org.apache.spark.{SparkConf, SparkContext}
 import org.warcbase.spark.matchbox.{ExtractLinks, ExtractTopLevelDomain, RecordLoader}
+import org.warcbase.spark.matchbox._
 import org.warcbase.spark.rdd.RecordRDD._
 
 object CrawlStatistics {
@@ -63,8 +64,9 @@ object CrawlStatistics {
       .flatMap(r => r._2.map(f => (r._1, ExtractTopLevelDomain(f._1).replaceAll("^\\s*www\\.", ""), ExtractTopLevelDomain(f._2).replaceAll("^\\s*www\\.", ""))))
       .filter(r => r._2 != null && r._3 != null)
       .countItems()
+      .map(r => Formatter.tabDelimit(r.productIterator))
       .collect()
-    println(linkStructure.take(1).mkString)
+    println(linkStructure.take(1).head)
   }
 
   def main(args: Array[String]) = {
