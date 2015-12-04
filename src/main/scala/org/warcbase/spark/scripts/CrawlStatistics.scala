@@ -60,11 +60,11 @@ object CrawlStatistics {
   def warclinkStructure(sc: SparkContext) = {
     val linkStructure = RecordLoader.loadWarc(warcPath, sc)
       .keepValidPages()
-      .map(r => (ExtractDate(r.getCrawldate, ExtractDate.Date.YYYYMM), ExtractLinks(r.getUrl, r.getContentString)))
+      .map(r => (ExtractDate(r.getCrawldate, ExtractDate.DateComponent.YYYYMM), ExtractLinks(r.getUrl, r.getContentString)))
       .flatMap(r => r._2.map(f => (r._1, ExtractTopLevelDomain(f._1).replaceAll("^\\s*www\\.", ""), ExtractTopLevelDomain(f._2).replaceAll("^\\s*www\\.", ""))))
       .filter(r => r._2 != null && r._3 != null)
       .countItems()
-      .map(r => Formatter.tabDelimit(r.productIterator))
+      .map(r => TupleFormatter.tabDelimit(r.productIterator))
       .collect()
     println(linkStructure.take(1).head)
   }
