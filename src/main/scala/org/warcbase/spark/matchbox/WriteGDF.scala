@@ -18,8 +18,8 @@ package org.warcbase.spark.matchbox
 
 import java.io.BufferedWriter
 import java.io.OutputStreamWriter
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs._
+import java.nio.file.Files
+import java.nio.file.Paths
 import org.apache.spark.rdd.RDD
 
 /** 
@@ -36,14 +36,11 @@ object WriteGDF {
   def apply(rdd: RDD[((String, String, String), Int)], gdfPath: String): Unit = {
     if (gdfPath == "") return
 
-    val hadoopConfig = new Configuration()
-    val hdfs = FileSystem.get(hadoopConfig)
-    val fsOutStream = hdfs.create(new Path(gdfPath), true)
+    val outFile = Files.newBufferedWriter(Paths.get(gdfPath))
 
     val edges = rdd.map(r => (r._1._2, r._1._3, r._2, r._1._1)).collect
     val nodes = rdd.flatMap(r => List(r._1._2, r._1._3)).distinct.collect
 
-    val outFile = new BufferedWriter(new OutputStreamWriter(fsOutStream))
     outFile.write("nodedef> name VARCHAR\n")
     nodes.foreach(r => outFile.write(r + "\n"))
     outFile.write("edgedef> source VARCHAR, target VARCHAR, weight DOUBLE, timeint VARCHAR\n")
