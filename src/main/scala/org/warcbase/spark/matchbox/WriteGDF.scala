@@ -18,6 +18,7 @@ package org.warcbase.spark.matchbox
 
 import java.io.BufferedWriter
 import java.io.OutputStreamWriter
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
 import org.apache.spark.rdd.RDD
@@ -36,7 +37,7 @@ object WriteGDF {
   def apply(rdd: RDD[((String, String, String), Int)], gdfPath: String): Unit = {
     if (gdfPath == "") return
 
-    val outFile = Files.newBufferedWriter(Paths.get(gdfPath))
+    val outFile = Files.newBufferedWriter(Paths.get(gdfPath), StandardCharsets.UTF_8)
 
     val edges = rdd.map(r => (r._1._2, r._1._3, r._2, r._1._1)).collect
     val nodes = rdd.flatMap(r => List(r._1._2, r._1._3)).distinct.collect
