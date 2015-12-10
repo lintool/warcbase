@@ -4,8 +4,8 @@ import com.google.common.io.Resources
 import org.apache.spark.{SparkConf, SparkContext}
 import org.archive.io.arc.ARCRecord
 import org.archive.io.warc.WARCRecord
+import org.warcbase.spark.archive.io.ArchiveRecord
 import org.warcbase.spark.matchbox.{ExtractLinks, ExtractTopLevelDomain, RecordLoader}
-import org.warcbase.spark.matchbox.RecordTransformers._
 import org.warcbase.spark.rdd.RecordRDD._
 
 object CrawlStatistics {
@@ -81,7 +81,7 @@ object CrawlStatistics {
         Array(
           classOf[ARCRecord],
           classOf[WARCRecord],
-          classOf[WARecord]
+          classOf[ArchiveRecord]
         ))
     val sc = new SparkContext(conf)
     try {

@@ -17,8 +17,8 @@
 package org.warcbase.spark.rdd
 
 import org.apache.spark.rdd.RDD
+import org.warcbase.spark.archive.io.ArchiveRecord
 import org.warcbase.spark.matchbox.ExtractTopLevelDomain
-import org.warcbase.spark.matchbox.RecordTransformers.WARecord
 
 import scala.reflect.ClassTag
 
@@ -43,9 +43,9 @@ object RecordRDD extends java.io.Serializable {
     *
     * To load such an RDD, please see [[org.warcbase.spark.matchbox.RecordLoader]]
     */
-  implicit class WARecordRDD(rdd: RDD[WARecord]) extends java.io.Serializable {
+  implicit class WARecordRDD(rdd: RDD[ArchiveRecord]) extends java.io.Serializable {
 
-    def keepValidPages(): RDD[WARecord] = {
+    def keepValidPages(): RDD[ArchiveRecord] = {
       rdd.filter(r =>
         r.getCrawldate != null
           && (r.getMimeType == "text/html"
