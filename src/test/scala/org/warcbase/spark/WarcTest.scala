@@ -22,8 +22,8 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfter, FunSuite}
+import org.warcbase.spark.archive.io.ArchiveRecord
 import org.warcbase.spark.matchbox.RecordLoader
-import org.warcbase.spark.matchbox.RecordTransformers._
 import org.warcbase.spark.rdd.RecordRDD._
 
 @RunWith(classOf[JUnitRunner])
@@ -33,7 +33,7 @@ class WarcTest extends FunSuite with BeforeAndAfter {
   private val master = "local[2]"
   private val appName = "example-spark"
   private var sc: SparkContext = _
-  private var records: RDD[WARecord] = _
+  private var records: RDD[ArchiveRecord] = _
 
   before {
     val conf = new SparkConf()

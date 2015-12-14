@@ -2,10 +2,7 @@ package org.warcbase.spark.scripts
 
 import com.google.common.io.Resources
 import org.apache.spark.{SparkConf, SparkContext}
-import org.archive.io.arc.ARCRecord
-import org.archive.io.warc.WARCRecord
 import org.warcbase.spark.matchbox.{ExtractLinks, ExtractTopLevelDomain, RecordLoader}
-import org.warcbase.spark.matchbox.RecordTransformers._
 import org.warcbase.spark.rdd.RecordRDD._
 
 object CrawlStatistics {
@@ -76,13 +73,6 @@ object CrawlStatistics {
     val conf = new SparkConf()
       .setMaster(master)
       .setAppName(appName)
-      .set("spark.serializer", "org.apache.spark.serializer.KyroSerializer")
-      .registerKryoClasses(
-        Array(
-          classOf[ARCRecord],
-          classOf[WARCRecord],
-          classOf[WARecord]
-        ))
     val sc = new SparkContext(conf)
     try {
       numPagesPerCrawl(sc)
