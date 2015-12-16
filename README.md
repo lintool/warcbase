@@ -105,7 +105,7 @@ Visualizations
 The result of analyses of using Warcbase can serve as input to visualizations that help scholars interactively explore the data. Examples include:
 
 + [Basic crawl statistics](http://lintool.github.io/warcbase/vis/crawl-sites/index.html) from the Canadian Political Parties and Political Interest Groups collection.
-+ [Interactive graph visualization](http://lintool.github.io/warcbase-docs/Gephi:-Converting-Site-Link-Structure-into-Dynamic-Visualization/) using Gephi.
++ [Interactive graph visualization](http://lintool.github.io/warcbase-docs/Gephi-Converting-Site-Link-Structure-into-Dynamic-Visualization/) using Gephi.
 + [Shine interface](http://webarchives.ca/) for faceted full-text search.
 
 
