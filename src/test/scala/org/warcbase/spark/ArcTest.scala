@@ -21,6 +21,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfter, FunSuite}
+import org.warcbase.spark.matchbox.ExtractDate.DateComponent
 import org.warcbase.spark.matchbox._
 import org.warcbase.spark.rdd.RecordRDD._
 
@@ -40,6 +41,17 @@ class ArcTest extends FunSuite with BeforeAndAfter {
 
   test("count records") {
     assert(RecordLoader.loadArc(arcPath, sc).count == 300L)
+  }
+
+  test("filter date") {
+    val four = RecordLoader.loadArc(arcPath, sc)
+      .keepDate("200804", DateComponent.YYYYMM)
+      .collect()
+    val five = RecordLoader.loadArc(arcPath, sc)
+      .keepDate("200805", DateComponent.YYYYMM)
+      .collect()
+    four.foreach(r => assert(r.getCrawldate.substring(0, 6) == "200804"))
+    five.foreach(r => assert(r.getCrawldate.substring(0, 6) == "200805"))
   }
 
   test("count links") {
