@@ -64,7 +64,7 @@ object CrawlStatistics {
       .flatMap(r => r._2.map(f => (r._1, ExtractTopLevelDomain(f._1).replaceAll("^\\s*www\\.", ""), ExtractTopLevelDomain(f._2).replaceAll("^\\s*www\\.", ""))))
       .filter(r => r._2 != null && r._3 != null)
       .countItems()
-      .map(r => TupleFormatter.tabDelimit(r.productIterator))
+      .map(r => TupleFormatter.tabDelimit(r))
       .collect()
     println(linkStructure.take(1).head)
   }

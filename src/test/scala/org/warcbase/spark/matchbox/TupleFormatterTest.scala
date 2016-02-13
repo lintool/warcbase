@@ -8,6 +8,6 @@ import org.scalatest.junit.JUnitRunner
 class TupleFormatterTest extends FunSuite {
   test("tab delimit") {
     val tuple = (("a", "b", ("c", 9)), "d", 5, ("hi", 1))
-    assert(TupleFormatter.tabDelimit(tuple.productIterator) == "a\tb\tc\t9\td\t5\thi\t1")
+    assert(TupleFormatter.tabDelimit(tuple) == "a\tb\tc\t9\td\t5\thi\t1")
   }
 }
