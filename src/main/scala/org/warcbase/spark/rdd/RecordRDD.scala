@@ -18,7 +18,9 @@ package org.warcbase.spark.rdd
 
 import org.apache.spark.rdd.RDD
 import org.warcbase.spark.archive.io.ArchiveRecord
-import org.warcbase.spark.matchbox.{RemoveHTML, ExtractTopLevelDomain, DetectLanguage}
+import org.warcbase.spark.matchbox.{DetectLanguage, ExtractDate, ExtractTopLevelDomain, RemoveHTML}
+import org.warcbase.spark.matchbox.ExtractDate.DateComponent
+import org.warcbase.spark.matchbox.ExtractDate.DateComponent.DateComponent
 
 import scala.reflect.ClassTag
 
@@ -58,8 +60,8 @@ object RecordRDD extends java.io.Serializable {
       rdd.filter(r => mimeTypes.contains(r.getMimeType))
     }
 
-    def keepDate(date: String) = {
-      rdd.filter(r => r.getCrawldate == date)
+    def keepDate(date: String, component: DateComponent = DateComponent.YYYYMMDD) = {
+      rdd.filter(r => ExtractDate(r.getCrawldate, component) == date)
     }
 
     def keepUrls(urls: Set[String]) = {
