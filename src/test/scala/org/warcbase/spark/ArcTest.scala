@@ -55,9 +55,12 @@ class ArcTest extends FunSuite with BeforeAndAfter {
   }
 
   test("filter url pattern") {
-    val matchingPages = RecordLoader.loadArc(arcPath, sc)
+    val keepMatches = RecordLoader.loadArc(arcPath, sc)
       .keepUrlPatterns(Set("http://www.archive.org/about/.*".r))
-    assert(matchingPages.count == 16L)
+    val discardMatches = RecordLoader.loadArc(arcPath, sc)
+        .discardUrlPatterns(Set("http://www.archive.org/about/.*".r))
+    assert(keepMatches.count == 16L)
+    assert(discardMatches.count == 284L)
   }
 
   test("count links") {

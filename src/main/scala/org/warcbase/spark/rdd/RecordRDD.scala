@@ -98,10 +98,18 @@ object RecordRDD extends java.io.Serializable {
       rdd.filter(r => !urls.contains(r.getUrl))
     }
 
+    def discardUrlPatterns(urlREs: Set[Regex]) = {
+      rdd.filter(r =>
+        !urlREs.map(re =>
+          r.getUrl match {
+            case re() => true
+            case _ => false
+          }).exists(identity))
+    }
+
     def discardDomains(urls: Set[String]) = {
       rdd.filter(r => !urls.contains(r.getDomain))
     }
   }
 
 }
-
