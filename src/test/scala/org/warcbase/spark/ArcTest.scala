@@ -54,6 +54,12 @@ class ArcTest extends FunSuite with BeforeAndAfter {
     five.foreach(r => assert(r.getCrawldate.substring(0, 6) == "200805"))
   }
 
+  test("filter url pattern") {
+    val matchingPages = RecordLoader.loadArc(arcPath, sc)
+      .keepUrlPatterns(Set("http://www.archive.org/about/.*".r))
+    assert(matchingPages.count == 16L)
+  }
+
   test("count links") {
     val links = RecordLoader.loadArc(arcPath, sc)
       .map(r => ExtractLinks(r.getUrl, r.getContentString))
