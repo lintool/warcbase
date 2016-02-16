@@ -23,6 +23,7 @@ import org.warcbase.spark.matchbox.ExtractDate.DateComponent
 import org.warcbase.spark.matchbox.ExtractDate.DateComponent.DateComponent
 
 import scala.reflect.ClassTag
+import scala.util.matching.Regex
 
 /**
   * RDD wrappers for working with Records
@@ -68,6 +69,15 @@ object RecordRDD extends java.io.Serializable {
       rdd.filter(r => urls.contains(r.getUrl))
     }
 
+    def keepUrlPatterns(urlREs: Set[Regex]) = {
+      rdd.filter(r =>
+        urlREs.map(re =>
+          r.getUrl match {
+            case re() => true
+            case _ => false
+          }).exists(identity))
+    }
+
     def keepDomains(urls: Set[String]) = {
       rdd.filter(r => urls.contains(ExtractTopLevelDomain(r.getUrl).replace("^\\s*www\\.", "")))
     }
@@ -86,6 +96,15 @@ object RecordRDD extends java.io.Serializable {
 
     def discardUrls(urls: Set[String]) = {
       rdd.filter(r => !urls.contains(r.getUrl))
+    }
+
+    def discardUrlPatterns(urlREs: Set[Regex]) = {
+      rdd.filter(r =>
+        !urlREs.map(re =>
+          r.getUrl match {
+            case re() => true
+            case _ => false
+          }).exists(identity))
     }
 
     def discardDomains(urls: Set[String]) = {
