@@ -33,19 +33,16 @@ import org.archive.io.ArchiveReaderFactory;
 import org.archive.io.ArchiveRecord;
 import org.archive.io.arc.ARCReader;
 import org.archive.io.arc.ARCReaderFactory.CompressedARCReader;
-import org.archive.io.arc.ARCRecord;
 import org.archive.io.warc.WARCReader;
 import org.archive.io.warc.WARCReaderFactory.CompressedWARCReader;
-import org.archive.io.warc.WARCRecord;
 import org.warcbase.io.GenericArchiveRecordWritable;
+import org.warcbase.io.GenericArchiveRecordWritable.ArchiveFormat;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.util.Iterator;
 
 public class WacGenericInputFormat extends FileInputFormat<LongWritable, GenericArchiveRecordWritable> {
-  private enum ArchiveFormat {ARC, WARC}
-
   @Override
   public RecordReader<LongWritable, GenericArchiveRecordWritable> createRecordReader(InputSplit split,
       TaskAttemptContext context) throws IOException, InterruptedException {

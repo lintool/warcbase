@@ -9,6 +9,7 @@ import org.archive.io.warc.WARCRecord
 import org.archive.util.ArchiveUtils
 import org.warcbase.data.{ArcRecordUtils, WarcRecordUtils}
 import org.warcbase.io.GenericArchiveRecordWritable
+import org.warcbase.io.GenericArchiveRecordWritable.ArchiveFormat
 import org.warcbase.spark.matchbox.ExtractDate.DateComponent
 import org.warcbase.spark.matchbox.{ExtractDate, ExtractTopLevelDomain}
 
@@ -16,15 +17,16 @@ class GenericArchiveRecord(r: SerializableWritable[GenericArchiveRecordWritable]
   var arcRecord: ARCRecord = null
   var warcRecord: WARCRecord = null
 
-  if (r.t.getFormat == "ARC")
+  if (r.t.getFormat == ArchiveFormat.ARC)
     arcRecord = r.t.getRecord.asInstanceOf[ARCRecord]
-  else
+  else if (r.t.getFormat == ArchiveFormat.WARC)
     warcRecord = r.t.getRecord.asInstanceOf[WARCRecord]
+
 
   val ISO8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX")
 
   val getCrawldate: String = {
-    if (r.t.getFormat == "ARC") {
+    if (r.t.getFormat == ArchiveFormat.ARC) {
       ExtractDate(arcRecord.getMetaData.getDate, DateComponent.YYYYMMDD)
     } else {
       ExtractDate(ArchiveUtils.get14DigitDate(ISO8601.parse(warcRecord.getHeader.getDate)), DateComponent.YYYYMMDD)
@@ -32,7 +34,7 @@ class GenericArchiveRecord(r: SerializableWritable[GenericArchiveRecordWritable]
   }
 
   val getContentBytes: Array[Byte] = {
-    if (r.t.getFormat == "ARC") {
+    if (r.t.getFormat == ArchiveFormat.ARC) {
       ArcRecordUtils.getBodyContent(arcRecord)
     } else {
       WarcRecordUtils.getContent(warcRecord)
@@ -42,7 +44,7 @@ class GenericArchiveRecord(r: SerializableWritable[GenericArchiveRecordWritable]
   val getContentString: String = new String(getContentBytes)
 
   val getMimeType = {
-    if (r.t.getFormat == "ARC") {
+    if (r.t.getFormat == ArchiveFormat.ARC) {
       arcRecord.getMetaData.getMimetype
     } else {
       WarcRecordUtils.getWarcResponseMimeType(getContentBytes)
@@ -50,7 +52,7 @@ class GenericArchiveRecord(r: SerializableWritable[GenericArchiveRecordWritable]
   }
 
   val getUrl = {
-    if (r.t.getFormat == "ARC") {
+    if (r.t.getFormat == ArchiveFormat.ARC) {
       arcRecord.getMetaData.getUrl
     } else {
       warcRecord.getHeader.getUrl

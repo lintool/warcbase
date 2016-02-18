@@ -23,35 +23,47 @@ import org.archive.io.warc.WARCRecord;
 import org.warcbase.data.ArcRecordUtils;
 import org.warcbase.data.WarcRecordUtils;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+
+import java.io.*;
 
 public class GenericArchiveRecordWritable implements Writable {
+  public enum ArchiveFormat {UNKNOWN, ARC, WARC}
+  private ArchiveFormat format = ArchiveFormat.UNKNOWN;
+
   private ArchiveRecord record = null;
 
   public GenericArchiveRecordWritable() {}
 
   public GenericArchiveRecordWritable(ArchiveRecord r) {
     this.record = r;
+    detectFormat();
   }
 
   public void setRecord(ArchiveRecord r) {
     this.record = r;
+    detectFormat();
   }
 
   public ArchiveRecord getRecord() {
     return record;
   }
 
-  public String getFormat() {
+  public void detectFormat() {
     if (record instanceof ARCRecord) {
-      return "ARC";
+      format = ArchiveFormat.ARC;
     } else if (record instanceof WARCRecord)  {
-      return "WARC";
+      format = ArchiveFormat.WARC;
     } else {
-      return "Unknown";
+      format = ArchiveFormat.UNKNOWN;
     }
+  }
+
+  public ArchiveFormat getFormat() {
+    return format;
+  }
+
+  public void setFormat(ArchiveFormat f) {
+    this.format = f;
   }
 
   @Override
@@ -65,10 +77,12 @@ public class GenericArchiveRecordWritable implements Writable {
     byte[] bytes = new byte[len];
     in.readFully(bytes);
 
-    if (record instanceof ARCRecord) {
+    if (getFormat() == ArchiveFormat.ARC) {
       this.record = ArcRecordUtils.fromBytes(bytes);
-    } else {
+    } else if (getFormat() == ArchiveFormat.WARC) {
       this.record = WarcRecordUtils.fromBytes(bytes);
+    } else {
+      this.record = null;
     }
   }
 
@@ -78,10 +92,13 @@ public class GenericArchiveRecordWritable implements Writable {
       out.writeInt(0);
     }
     byte[] bytes;
-    if (record instanceof ARCRecord) {
+
+    if (getFormat() == ArchiveFormat.ARC) {
       bytes = ArcRecordUtils.toBytes((ARCRecord) record);
-    } else {
+    } else if (getFormat() == ArchiveFormat.WARC) {
       bytes = WarcRecordUtils.toBytes((WARCRecord) record);
+    } else {
+      bytes = null;
     }
 
     out.writeInt(bytes.length);

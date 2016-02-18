@@ -19,6 +19,7 @@ package org.warcbase.spark.matchbox
 import org.apache.hadoop.io.LongWritable
 import org.apache.spark.{SerializableWritable, SparkContext}
 import org.apache.spark.rdd.RDD
+import org.warcbase.io.GenericArchiveRecordWritable.ArchiveFormat
 import org.warcbase.io.{GenericArchiveRecordWritable, WarcRecordWritable, ArcRecordWritable}
 import org.warcbase.mapreduce.{WacGenericInputFormat, WacWarcInputFormat, WacArcInputFormat}
 import org.warcbase.spark.archive.io.{WarcRecord, ArcRecord, ArchiveRecord, GenericArchiveRecord}
@@ -37,8 +38,8 @@ object RecordLoader {
 
   def loadArchives(path: String, sc: SparkContext): RDD[ArchiveRecord] = {
     sc.newAPIHadoopFile(path, classOf[WacGenericInputFormat], classOf[LongWritable], classOf[GenericArchiveRecordWritable])
-      .filter(r => r._2.getFormat.equals("ARC") ||
-        (r._2.getFormat.equals("WARC") && r._2.getRecord.getHeader.getHeaderValue("WARC-Type").equals("response")))
+      .filter(r => (r._2.getFormat == ArchiveFormat.ARC) ||
+        ((r._2.getFormat == ArchiveFormat.WARC) && r._2.getRecord.getHeader.getHeaderValue("WARC-Type").equals("response")))
       .map(r => new GenericArchiveRecord(new SerializableWritable(r._2)))
   }
 }
