@@ -31,7 +31,7 @@ object ExtractLinks {
   /**
     * @param src the src link.
     * @param html the content from which links are to be extracted.
-    * @param base an optional base domain.
+    * @param base an optional base URI.
     *
     * Returns a sequence of (source, target, anchortext)
     */
