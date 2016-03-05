@@ -19,6 +19,8 @@ package org.warcbase.spark.matchbox
 import org.apache.hadoop.io.LongWritable
 import org.apache.spark.{SerializableWritable, SparkContext}
 import org.apache.spark.rdd.RDD
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
 import org.warcbase.io.GenericArchiveRecordWritable.ArchiveFormat
 import org.warcbase.io.{GenericArchiveRecordWritable, WarcRecordWritable, ArcRecordWritable}
 import org.warcbase.mapreduce.{WacGenericInputFormat, WacWarcInputFormat, WacArcInputFormat}
@@ -41,5 +43,9 @@ object RecordLoader {
       .filter(r => (r._2.getFormat == ArchiveFormat.ARC) ||
         ((r._2.getFormat == ArchiveFormat.WARC) && r._2.getRecord.getHeader.getHeaderValue("WARC-Type").equals("response")))
       .map(r => new GenericArchiveRecord(new SerializableWritable(r._2)))
+  }
+
+  def loadTweets(path: String, sc: SparkContext): RDD[String] = {
+    sc.textFile(path).filter(line => !line.startsWith("{\"delete\":"))
   }
 }
