@@ -45,7 +45,6 @@ object RecordLoader {
       .map(r => new GenericArchiveRecord(new SerializableWritable(r._2)))
   }
 
-  def loadTweets(path: String, sc: SparkContext): RDD[String] = {
-    sc.textFile(path).filter(line => !line.startsWith("{\"delete\":"))
-  }
+  def loadTweets(path: String, sc: SparkContext): RDD[JValue] =
+    sc.textFile(path).filter(line => !line.startsWith("{\"delete\":")).map(line => parse(line))
 }

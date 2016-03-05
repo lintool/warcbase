@@ -467,7 +467,8 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
     <dependency>
       <groupId>org.json4s</groupId>
       <artifactId>json4s-jackson_2.10</artifactId>
-      <version>3.3.0</version>
+      <version>3.2.10</version>
+      <!-- see this issue: http://stackoverflow.com/questions/32400061/spark-streaming-json4s-jackson-dependency-problems -->
     </dependency>
 
     <dependency>
