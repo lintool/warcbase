@@ -1,0 +1,12 @@
+language: java
+sudo: false
+jdk:
+  - oraclejdk7
+  - oraclejdk8
+  - openjdk7
+before_install:  
+ - "echo $JAVA_OPTS"
+ - "export JAVA_OPTS=-Xmx512m"
+
+script:
+ - mvn clean package appassembler:assemble
