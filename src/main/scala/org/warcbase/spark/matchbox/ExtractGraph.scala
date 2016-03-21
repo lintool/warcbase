@@ -35,35 +35,46 @@ object ExtractGraph {
     url.hashCode.toLong
   }
 
-  case class RichVertex(domain: String, pageRank: Double, inDegree: Int, outDegree: Int)
-  case class RichEdge(date: String, src: String, dst: String, count: Long)
+  case class VertexData(domain: String, pageRank: Double, inDegree: Int, outDegree: Int)
+  case class EdgeData(date: String, src: String, dst: String)
 
-  def apply(records: RDD[ArchiveRecord], nodesPath: String, linksPath: String) {
-    val vertices: RDD[(VertexId, RichVertex)] = records.keepValidPages()
+  def apply(records: RDD[ArchiveRecord]): Graph[VertexData, EdgeData] = {
+    val vertices: RDD[(VertexId, VertexData)] = records.keepValidPages()
       .flatMap(r => ExtractLinks(r.getUrl, r.getContentString))
       .flatMap(r => List(ExtractTopLevelDomain(r._1).replaceAll("^\\s*www\\.", ""), ExtractTopLevelDomain(r._2).replaceAll("^\\s*www\\.", "")))
       .distinct
-      .map(r => (pageHash(r), RichVertex(r, 0.0, 0, 0)))
+      .map(r => (pageHash(r), VertexData(r, 0.0, 0, 0)))
 
-    val edges: RDD[Edge[RichEdge]] = records.keepValidPages()
+    val edges: RDD[Edge[EdgeData]] = records.keepValidPages()
       .map(r => (r.getCrawldate, ExtractLinks(r.getUrl, r.getContentString)))
       .flatMap(r => r._2.map(f => (r._1, ExtractTopLevelDomain(f._1).replaceAll("^\\s*www\\.", ""), ExtractTopLevelDomain(f._2).replaceAll("^\\s*www\\.", ""))))
-      .filter(r => r._2 != null && r._3 != null)
-      .countItems()
-      .map(r => Edge(pageHash(r._1._2), pageHash(r._1._3), RichEdge(r._1._1, r._1._2, r._1._3, r._2)))
+      .filter(r => r._2 != "" && r._3 != "")
+      .map(r => Edge(pageHash(r._2), pageHash(r._3), EdgeData(r._1, r._2, r._3)))
 
     val graph = Graph(vertices, edges)
 
-    val richGraph = graph.outerJoinVertices(graph.inDegrees) {
-      case (vid, rv, inDegOpt) => RichVertex(rv.domain, rv.pageRank, inDegOpt.getOrElse(0), rv.outDegree)
+    graph.outerJoinVertices(graph.inDegrees) {
+      case (vid, rv, inDegOpt) => VertexData(rv.domain, rv.pageRank, inDegOpt.getOrElse(0), rv.outDegree)
     }.outerJoinVertices(graph.outDegrees) {
-      case (vid, rv, outDegOpt) => RichVertex(rv.domain, rv.pageRank, rv.inDegree, outDegOpt.getOrElse(0))
+      case (vid, rv, outDegOpt) => VertexData(rv.domain, rv.pageRank, rv.inDegree, outDegOpt.getOrElse(0))
     }.outerJoinVertices(graph.pageRank(0.00001).vertices) {
-      case (vid, rv, pageRankOpt) => RichVertex(rv.domain, pageRankOpt.getOrElse(0.0), rv.inDegree, rv.outDegree)
+      case (vid, rv, pageRankOpt) => VertexData(rv.domain, pageRankOpt.getOrElse(0.0), rv.inDegree, rv.outDegree)
     }
+  }
 
-    richGraph.vertices.map(r => JsonUtil.toJson(r._2)).saveAsTextFile(nodesPath)
-    richGraph.edges.map(r => JsonUtil.toJson(r.attr)).saveAsTextFile(linksPath)
+  implicit class GraphWriter(graph: Graph[VertexData, EdgeData]) {
+    def writeAsJson(verticesPath: String, edgesPath: String) = {
+      // Combine edges of a given (date, src, dst) combination into single record with count value.
+      val edgesCounted = graph.edges.countItems().map {
+        r => Map("date" -> r._1.attr.date,
+          "src" -> r._1.attr.src,
+          "dst" -> r._1.attr.dst,
+          "count" -> r._2)
+      }
+
+      edgesCounted.map(r => JsonUtil.toJson(r)).saveAsTextFile(edgesPath)
+      graph.vertices.map(r => JsonUtil.toJson(r._2)).saveAsTextFile(verticesPath)
+    }
   }
 }
 
