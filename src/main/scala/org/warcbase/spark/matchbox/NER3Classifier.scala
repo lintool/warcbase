@@ -51,7 +51,7 @@ object NER3Classifier {
   }
 
   def classify(input: String): String = {
-    val emptyString: String = "{\"PERSON\":[],\"ORGANIZATION\"=[],\"LOCATION\"=[]}"
+    val emptyString: String = "{\"PERSON\":[],\"ORGANIZATION\":[],\"LOCATION\":[]}"
     val entitiesByType = mutable.LinkedHashMap[NERClassType.Value, mutable.Seq[String]]()
     for (t <- NERClassType.values) {
       if (t != NERClassType.O) entitiesByType.put(t, mutable.Seq())
