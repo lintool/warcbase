@@ -15,7 +15,12 @@ import scala.util.Random
   */
 
 object NERCombinedJson extends Serializable {
-  class NerRecord(recDate: String, recDomain: String, entityMap: Map[String, Map[String, Int]]) {
+  class EntityCounts(iNerType: String, iEntities: List[(String, Int)]) {
+    var nerType = iNerType
+    var entities = iEntities
+  }
+
+  class NerRecord(recDate: String, recDomain: String, entityMap: List[EntityCounts]) {
     var date = recDate
     var domain = recDomain
     var ner = entityMap
@@ -34,12 +39,13 @@ object NERCombinedJson extends Serializable {
         val classifiedJson = NER3Classifier.classify(r._3)  // TODO: Should classify to Map
         val classifiedMap = JsonUtil.fromJson(classifiedJson)
         val classifiedMapCountTuples = classifiedMap.map {
-          case (nerType, entityList: List[String]) => (nerType, entityList.groupBy(identity).map(r => (r._1, r._2.size)))
+          case (nerType, entityList: List[String]) => (nerType, entityList.groupBy(identity).map(r => (r._1, r._2.size)).toList)
         }
         ((r._1, r._2), classifiedMapCountTuples)
       })
     })
-    .reduceByKey((a, b) => (a ++ b).keySet.map(k => (k, combineCountMaps(a(k), b(k)))).toMap)
+    .reduceByKey((a, b) => (a ++ b).keySet.map(k => (k, combineCountLists(a(k), b(k)))).toMap)
+    .map(r => (r._1, r._2.map(x => new EntityCounts(x._1, x._2)).toList))
     .map(r => JsonUtil.toJson(new NerRecord(r._1._1, r._1._2, r._2)))
   }
 
@@ -79,8 +85,8 @@ object NERCombinedJson extends Serializable {
     hdfs.delete(tmpPath, false)
   }
 
-  def combineCountMaps(m1: Map[String, Int], m2: Map[String, Int]): Map[String, Int] = {
-    m1 ++ m2.map{ case (k,v) => k -> (v + m1.getOrElse(k,0)) }
+  def combineCountLists(l1: List[(String, Int)], l2: List[(String, Int)]): List[(String, Int)] = {
+    (l1 ++ l2).groupBy(_._1).map{ case (k,v) => (k, v.map(_._2).sum) }.toList
   }
 }
 

@@ -187,458 +187,476 @@ div.list-tooltip {
 
 <div class="list-tooltip"></div>
 <script>
-var entityType = null;
-var allData = null;
-var nestedData = null;
+    var entityType = null;
+    var allData = null;
+    var nestedData = null;
 
-var fill = d3.scale.category20();
-var listTooltip = null;
+    var fill = d3.scale.category20();
+    var listTooltip = null;
 
-var timeScale = "0";
-var firstOverflow = true;
+    var timeScale = "0";
+    var firstOverflow = true;
 
-function init() {
-    var jsonFile = new URI().search(true).json;
+    function init() {
+        var jsonFile = new URI().search(true).json;
 
-	setTimescaleText(timeScale);
-	
-    if (!jsonFile) {
-    	d3.select("#no-parameters").style("display", "block");
-        
-    } else {
-    	d3.select("#data-select").style("display", "block");
-        d3.select("#json-source").html("Data source: <a href='" + jsonFile + "'>" + jsonFile + "</a>")
-        d3.select("#list-msg").style("opacity", .9).style("visibility", "visible");
+        setTimescaleText(timeScale);
 
-        // Load data
-        d3.json(jsonFile, function(error, json) { 
-        	if (error) { 
-        		d3.select("#list-msg").text("Error loading data");
-        		throw error;
-        	} else { 
-				d3.select("#list-msg").style("opacity",0);
-        allData =  explodeNerObjs(json);
-        /** JSON FORMAT:
-        [{
-          "date": "200811",
-          "domain": "greenparty.ca",
-          "ner": [{
-            "nerType": "PERSON",
-            "entities": [{
-              "entity": "Elizabeth May",
-              "freq": 4
-            }, {
-              "entity": "Stephen Harper",
-              "freq": 2
-            }]
-          }, {
-            "nerType": "ORGANIZATION",
-            "entities": [{
-              "entity": "ABC",
-              "freq": 5
-            }, {
-              "entity": "XYZ",
-              "freq": 6
-            }]
-          }, {
-            "nerType": "LOCATION",
-            "entities": [{
-              "entity": "Winnipeg",
-              "freq": 7
-            }, {
-              "entity": "Toronto",
-              "freq": 2
-            }]
-          }]
-        }, {
-          "date": "200911",
-          "domain": "greenparty.ca",
-          "ner": [{
-            "nerType": "PERSON",
-            "entities": [{
-              "entity": "Geroge May",
-              "freq": 4
-            }, {
-              "entity": "Laureen Harper",
-              "freq": 2
-            }]
-          }, {
-            "nerType": "ORGANIZATION",
-            "entities": [{
-              "entity": "Green Party",
-              "freq": 5
-            }, {
-              "entity": "Red Party",
-              "freq": 6
-            }]
-          }, {
-            "nerType": "LOCATION",
-            "entities": [{
-              "entity": "Ajax",
-              "freq": 7
-            }, {
-              "entity": "Yellowknife",
-              "freq": 2
-            }]
-          }]
-        }]
-        */ 
+        if (!jsonFile) {
+            d3.select("#no-parameters").style("display", "block");
 
-				// Prepare and create date range slider
-				// Get all months
-				var months = d3.keys(d3.nest().key(function(d) { return d.date; }).map(allData)).map(function(d) { return parseInt(d)});
-				var sliderRange = {}
-				var minDate = d3.min(months);
-				var maxDate = d3.max(months);
-				// Convert months to percentage locations on slider
-				for (i=0; i<months.length; i++) {
-					var pct;
-					if (i===0) {
-						sliderRange['min']=months[i];
-					} else if (i===(months.length-1)) {
-						sliderRange['max']=months[i];
-					} else {
-						pct = parseFloat((months[i]-minDate)/(maxDate-minDate)*100).toFixed(2); // 2 decimal places
-						sliderRange[pct+'%']=months[i];
-					}
-				}
-				// Create slider
-				var slider = d3.select("#date-range-slider").node();
-				noUiSlider.create(slider, {
-					range: sliderRange,
-					snap: true,
-					connect: true,
-					start: [minDate, maxDate],
-					format: {   // Otherwise uses default float format
-						to: function(v) { return v; },
-						from: function(v) { return v; }
-					}
-				});
-				var snapValues = [
-					d3.select('#date-range-lower').node(),
-					d3.select('#date-range-upper').node()
-				];
-				slider.noUiSlider.on('update', function(values, handle) {
-					snapValues[handle].innerHTML = values[handle];
-				});     
-				slider.noUiSlider.on('change', function(values) {
-					nestedData = nestData(allData, timeScale); 
-					visualize(entityType, timeScale);
-				});
+        } else {
+            d3.select("#data-select").style("display", "block");
+            d3.select("#json-source").html("Data source: <a href='" + jsonFile + "'>" + jsonFile + "</a>")
+            d3.select("#list-msg").style("opacity", .9).style("visibility", "visible");
 
-				// Prepare data
-				nestedData = nestData(allData, timeScale);
+            // Load data
+            d3.json(jsonFile, function (error, json) {
+                if (error) {
+                    d3.select("#list-msg").text("Error loading data");
+                    throw error;
+                } else {
+                    d3.select("#list-msg").style("opacity", 0);
+                    allData = explodeNerObjs(json);
+                    /** JSON FORMAT:
+                     [{
+                        "date": "200811",
+                        "domain": "greenparty.ca",
+                        "ner": [{
+                          "nerType": "PERSON",
+                          "entities": [["Elizabeth May", 4], ["Stephen Harper", 2]]
+                        },
+                        {
+                          "nerType": "ORGANIZATION",
+                          "entities": [["ABC", 5], ["XYZ", 6]]
+                        },
+                        {
+                          "nerType": "LOCATION",
+                          "entities": [["Winnipeg", 7], ["Toronto", 2]]
+                        }]
+                     },
+                     {
+                        [...]
+                     }]
+                    */
 
-				// Do initial visualization				
-				updateEntityType("PERSON");  // calls visualize()
-			}
-        });
-    }
-}
+                    // Prepare and create date range slider
+                    // Get all months
+                    var months = d3.keys(d3.nest().key(function (d) {
+                        return d.date;
+                    }).map(allData)).map(function (d) {
+                        return parseInt(d)
+                    });
+                    var sliderRange = {}
+                    var minDate = d3.min(months);
+                    var maxDate = d3.max(months);
+                    console.log(maxDate);
+                    // Convert months to percentage locations on slider
+                    for (i = 0; i < months.length; i++) {
+                        var pct;
+                        if (i === 0) {
+                            sliderRange['min'] = months[i];
+                            if (months.length === 1)
+                                sliderRange['max'] = months[i];
+                        } else if (i === (months.length - 1)) {
+                            sliderRange['max'] = months[i];
+                        } else {
+                            pct = parseFloat((months[i] - minDate) / (maxDate - minDate) * 100).toFixed(2); // 2 decimal places
+                            sliderRange[pct + '%'] = months[i];
+                        }
+                    }
+                    console.log(sliderRange);
+                    // Create slider
+                    var slider = d3.select("#date-range-slider").node();
+                    noUiSlider.create(slider, {
+                        range: sliderRange,
+                        snap: true,
+                        connect: true,
+                        start: [minDate, maxDate],
+                        format: {   // Otherwise uses default float format
+                            to: function (v) {
+                                return v;
+                            },
+                            from: function (v) {
+                                return v;
+                            }
+                        }
+                    });
+                    var snapValues = [
+                        d3.select('#date-range-lower').node(),
+                        d3.select('#date-range-upper').node()
+                    ];
+                    slider.noUiSlider.on('update', function (values, handle) {
+                        snapValues[handle].innerHTML = values[handle];
+                    });
+                    slider.noUiSlider.on('change', function (values) {
+                        nestedData = nestData(allData, timeScale);
+                        visualize(entityType, timeScale);
+                    });
 
-function explodeNerObjs(data) {
-  var exploded = []
-  data.forEach(function(d) {
-    d.ner.forEach(function(e) {
-      e.entities.forEach(function(f) {
-        exploded.push({
-          "date": d.date,
-          "domain": d.domain,
-          "nerType": e.nerType,
-          "entity": f.entity,
-          "freq": f.freq
-        });
-      })
-    })
-  })
-  return exploded;
-}
+                    // Prepare data
+                    nestedData = nestData(allData, timeScale);
 
-function nestData(data, view) {
-	// Returns nestedData[entityType][date] for given view (all-time, year, or month).
-	// For list and word-cloud visualizations, this could be done more efficiently
-	// (roughly 3x) by processing only the selected entity-type, but other visualizations
-	// (e.g. bubbles) need data for all entity types. (Current none require data for
-	// multiple timescale views.)
-	var slider = d3.select("#date-range-slider").node();
-    var dateRange = slider.noUiSlider.get();
-	var filtered = data.filter(function(d) { 
-    return parseInt(d.date) >= dateRange[0] && parseInt(d.date) <= dateRange[1]
-  });
-
-	var eTypes = ["PERSON", "ORGANIZATION", "LOCATION"];
-	var nd = {};
-	
-  var nestedView = d3.nest().key(function(d) { return d.nerType });   
-	
-	if (view === "0") {	// All-time view
-		nestedView = nestedView.map(filtered);
-		eTypes.forEach(function(item, index) {
-			nd[item] = {"all time": summarize(nestedView[item])}
-		});
-	} else if (view === "1") { // Year view
-		nestedView = nestedView.key(function(d) { return d.date.substring(0,4) })
-			.map(filtered);
-		eTypes.forEach(function(eType, eIndex) {
-			nd[eType] = {};
-			Object.keys(nestedView[eType]).forEach(function(year, yIndex) {
-				nd[eType][year] = summarize(nestedView[eType][year]);
-			});
-		});
-	} else if (view === "2") { // Month view
-		nestedView = nestedView.key(function(d) { return d.date.substring(0,6) })
-			.map(filtered);
-		eTypes.forEach(function(eType, eIndex) {
-			nd[eType] = {};
-			Object.keys(nestedView[eType]).forEach(function(yearMonth, yIndex) {
-				nd[eType][yearMonth] = summarize(nestedView[eType][yearMonth]);
-			});
-		});
-  } else if (view === "3") { // Day view
-    nestedView = nestedView.key(function(d) { return d.date })
-      .map(filtered);
-    eTypes.forEach(function(eType, eIndex) {
-      nd[eType] = {};
-      Object.keys(nestedView[eType]).forEach(function(yearMonth, yIndex) {
-        nd[eType][yearMonth] = summarize(nestedView[eType][yearMonth]);
-      });
-    });
-	}
-	return nd;	
-}
-
-function summarize(entityMap) {
-    var summary = d3.nest().key(function(d){return d.entity}).sortKeys(d3.ascending)
-        .rollup(function (d) { return d3.sum(d, function (e){return e.freq})})
-        .entries(entityMap);
-    return summary.sort(function(a, b) { return b.values - a.values } );
-}
-
-function visualize(entityType) {
-	// Display lists, including buttons for other visualizations
-
-  d3.selectAll(".word-cloud").remove();
-  d3.selectAll(".bubble-wrap").remove();
-  d3.select("#list-row").selectAll("td").remove();
-
-	Object.keys(nestedData[entityType]).forEach(function(t) {
-		listify(nestedData[entityType][t], t);
-	});
-    
-  var listWindow = d3.select("#list-window").node();
-  if (firstOverflow && listWindow.scrollWidth > listWindow.clientWidth) {
-    firstOverflow = false;
-    var infoMsg = d3.select("#list-msg").html("Scroll &#10140;"); 
-    infoMsg.style("left", "80%")
-    infoMsg.transition().duration(100).style("opacity", .9).transition().duration(2500).style("opacity", 0);
-  }
-}
-
-function listify(data, title) {
-	// Generate single list.
-	// title must correspond to date subset in data (e.g., "all time", "2009", "200510")
-    var maxFontSize = 28;
-    var minFontSize = 4;
-    var maxItems = 50; // max list size (i.e. top N values, by freq); set to data.size for all
-    var maxItemLength = 20;
-
-    var labelScale = d3.scale.log()
-        //.domain(d3.extent(data, function(d) { return d.freq }))
-        .domain(d3.extent(data, function(d) { return d.values }))
-        .range([minFontSize,maxFontSize]);
-
-    var sortedSliced = data.slice(0, maxItems).sort(function(a, b) {
-        if (a.key > b.key)  // key = entity
-            return 1;
-        if (a.key < b.key)
-            return -1;
-        return 0;
-    });
-
-    var list = d3.select("#list-row").append("td");
-    list.append("h1").text(title);
-    list.append("ul").attr("class", "entitylist").selectAll("li")
-        .data(sortedSliced)
-        .enter().append("li")
-            .style("font-size", function(d) { return Math.round(labelScale(parseFloat(d.values)))+"px" })
-            .text(function(d) { var s = (d.key.length > maxItemLength) ? d.key.substr(0,20)+"..." : d.key; return s })
-            .on("mouseover", function(d) {     // See http://bl.ocks.org/d3noob/a22c42db65eb00d4e369 
-            listTooltip = d3.selectAll("div.list-tooltip");
-            listTooltip.transition()        
-                .duration(200)      
-                .style("opacity", .9);      
-            listTooltip.html("<b>" + d.key + "</b><br /> " + d.values + " mentions")
-                .style("left", (d3.event.pageX) + "px")     
-                .style("top", (d3.event.pageY - 28) + "px");    
-            })                  
-            .on("mouseout", function(d) {       
-                listTooltip.transition()        
-                    .duration(500)      
-                    .style("opacity", 0);   
+                    // Do initial visualization
+                    updateEntityType("PERSON");  // calls visualize()
+                }
             });
-    // Add word cloud button
-    list.append("button").classed("pure-button", "true").attr("onclick", "cloud('"+entityType+"','"+title+"')").text("cloud");
-    list.append("span").text(" ");
-    list.append("button").classed("pure-button", "true").attr("onclick", "bubble('"+title+"')").text("bubble");
+        }
+    }
 
-}
-
-function cloud(nerType, subsetIdx) {
-    var maxCloudItems = 250;
-    
-    data = nestedData[nerType][subsetIdx].slice(0, maxCloudItems);
-    
-    d3.selectAll(".word-cloud").remove();
-
-    var cloudScale = d3.scale.log()
-        .domain(d3.extent(data, function(d) { return d.values}))
-        .range([10,100]) 
-    var layout = d3.layout.cloud()
-        .size([1000,1000])
-        .words(data.map(function(d) { 
-            return {
-                text: d.key,
-                size: Math.round(cloudScale(d.values)),
-                freq: d.values
-            }}))
-        .font("Impact")
-        .fontSize(function(d) { return d.size; })
-        .on("end", drawCloud);
-
-    layout.start();
-    var e = d3.selectAll(".word-cloud").node();
-    e.scrollIntoView();
-}
-
-function drawCloud(words) {
-    d3.select("body").append("div").classed("word-cloud", true).append("svg")
-        .attr("width", 1000)
-        .attr("height", 1000)
-        .append("g")
-        .attr("transform", "translate(500,500)")
-        .selectAll("text")
-        .data(words)
-        .enter().append("text")
-        .style("font-size", function(d) { return d.size + "px"; })
-        .style("font-family", "Impact")
-        .style("fill", function(d, i) { return fill(i); })
-        .attr("text-anchor", "middle")
-        .attr("transform", function(d) {
-            return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+    function explodeNerObjs(data) {
+        var exploded = []
+        data.forEach(function (d) {
+            d.ner.forEach(function (e) {
+                e.entities.forEach(function (f) {
+                    exploded.push({
+                        "date": d.date,
+                        "domain": d.domain,
+                        "nerType": e.nerType,
+                        "entity": f[0],
+                        "freq": f[1]
+                    });
+                })
+            })
         })
-        .text(function(d) { return d.text; })
-        .on("mouseover", function(d) {
-            listTooltip.transition()        
-                .duration(200)      
-                .style("opacity", .9);      
-            listTooltip.html("<b>" + d.text + "</b><br /> " + d.freq + " mentions")  
-                .style("left", (d3.event.pageX) + "px")     
-                .style("top", (d3.event.pageY - 28) + "px");    
-            })                  
-		.on("mouseout", function(d) {       
-			listTooltip.transition()        
-				.duration(500)      
-				.style("opacity", 0);   
-		});
-}
-
-function bubble(subsetIdx) {
-	// Code borrowed from http://bl.ocks.org/mbostock/4063269
-	var diameter = 960,
-    	format = d3.format(",d"),
-    	color = d3.scale.category10();
-    	
-    d3.selectAll(".bubble-wrap").remove();
-
-	var bubble = d3.layout.pack()
-		.sort(null)
-		.size([diameter, diameter])
-		.padding(1.5);
-
-	var svg = d3.select("body").append("div").classed("bubble-wrap", true).append("svg")
-		.attr("width", diameter)
-		.attr("height", diameter)
-		.attr("class", "bubble");
-
-    var flatArr = flatten(nestedData, subsetIdx);
-    // Randomize array order to avoid concentric rings of same entity type
-    flatArr.sort(function() { return Math.random() - .5; });
-    var arrObj = {
-        children: flatArr
+        return exploded;
     }
 
-	var node = svg.selectAll(".node")
-		.data(bubble.nodes(arrObj)			
-			.filter(function(d) { return !d.children; })) 
-		.enter().append("g")
-	  		.attr("class", "node")
-	  		.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+    function nestData(data, view) {
+        // Returns nestedData[entityType][date] for given view (all-time, year, or month).
+        // For list and word-cloud visualizations, this could be done more efficiently
+        // (roughly 3x) by processing only the selected entity-type, but other visualizations
+        // (e.g. bubbles) need data for all entity types. (Current none require data for
+        // multiple timescale views.)
+        var slider = d3.select("#date-range-slider").node();
+        var dateRange = slider.noUiSlider.get();
+        var filtered = data.filter(function (d) {
+            return parseInt(d.date) >= dateRange[0] && parseInt(d.date) <= dateRange[1]
+        });
 
-	node.append("circle")
-	  	.attr("r", function(d) { return d.r; })
-	  	.style("fill", function(d) { return color(d.nerType); });
+        var eTypes = ["PERSON", "ORGANIZATION", "LOCATION"];
+        var nd = {};
 
-	node.append("text")
-	  	.attr("dy", ".3em")
-	  	.style("text-anchor", "middle")
-	  	.text(function(d) { return d.entity.substring(0, d.r / 3); })
-	  	.on("mouseover", function(d) {
-            listTooltip.transition()        
-                .duration(200)      
-                .style("opacity", .9);      
-            listTooltip.html("<b>" + d.entity + "</b><br /> " + d.value + " mentions") 
-                .style("left", (d3.event.pageX) + "px")     
-                .style("top", (d3.event.pageY - 28) + "px");    
-            })                  
-		.on("mouseout", function(d) {       
-			listTooltip.transition()        
-				.duration(500)      
-				.style("opacity", 0);   
-		});
-    var e = d3.selectAll(".bubble").node();
-    e.scrollIntoView();
-} 
+        var nestedView = d3.nest().key(function (d) {
+            return d.nerType
+        });
 
-function flatten(nestedObj, subsetIdx) {
-	var flatArr = [];
-	Object.keys(nestedObj).forEach(function(eType) {		
-		Object.keys(nestedObj[eType]).forEach(function(subsetIdx) {
-			for (i=0; i<nestedObj[eType][subsetIdx].length; i++) {
-				flatArr.push({entity: nestedObj[eType][subsetIdx][i].key, nerType: eType, value: nestedObj[eType][subsetIdx][i].values});
-			}
-		});
-	});
-	return flatArr;
-}
-
-function updateEntityType(t) {
-    if (entityType !== t) {
-        entityType = t;
-        d3.select("#data-select").selectAll("button").classed("pure-button-active", false);
-        d3.select("#"+t+"Butt").classed("pure-button-active", true)
-        visualize(t, timeScale);
+        if (view === "0") {	// All-time view
+            nestedView = nestedView.map(filtered);
+            eTypes.forEach(function (item, index) {
+                nd[item] = {"all time": summarize(nestedView[item])}
+            });
+        } else if (view === "1") { // Year view
+            nestedView = nestedView.key(function (d) {
+                        return d.date.substring(0, 4)
+                    })
+                    .map(filtered);
+            eTypes.forEach(function (eType, eIndex) {
+                nd[eType] = {};
+                Object.keys(nestedView[eType]).forEach(function (year, yIndex) {
+                    nd[eType][year] = summarize(nestedView[eType][year]);
+                });
+            });
+        } else if (view === "2") { // Month view
+            nestedView = nestedView.key(function (d) {
+                        return d.date.substring(0, 6)
+                    })
+                    .map(filtered);
+            eTypes.forEach(function (eType, eIndex) {
+                nd[eType] = {};
+                Object.keys(nestedView[eType]).forEach(function (yearMonth, yIndex) {
+                    nd[eType][yearMonth] = summarize(nestedView[eType][yearMonth]);
+                });
+            });
+        } else if (view === "3") { // Day view
+            nestedView = nestedView.key(function (d) {
+                        return d.date
+                    })
+                    .map(filtered);
+            eTypes.forEach(function (eType, eIndex) {
+                nd[eType] = {};
+                Object.keys(nestedView[eType]).forEach(function (yearMonth, yIndex) {
+                    nd[eType][yearMonth] = summarize(nestedView[eType][yearMonth]);
+                });
+            });
+        }
+        return nd;
     }
-}
 
-function setTimescaleText(t) {
-    e = d3.select("#timescale-label").node();
-    if (t === "0")
-        e.textContent = "All time";
-    else if (t === "1")
-        e.textContent = "Years";
-    else if (t === "2")
-        e.textContent = "Months";
-    else if (t === "3")
-        e.textContent = "Days";
-}
+    function summarize(entityMap) {
+        var summary = d3.nest().key(function (d) {
+            return d.entity
+        }).sortKeys(d3.ascending)
+                .rollup(function (d) {
+                    return d3.sum(d, function (e) {
+                        return e.freq
+                    })
+                })
+                .entries(entityMap);
+        return summary.sort(function (a, b) {
+            return b.values - a.values
+        });
+    }
 
-function updateTimescale(t) {
-    timeScale = t;
-    nestedData = nestData(allData, timeScale);
-    visualize(entityType, t);
-}
+    function visualize(entityType) {
+        // Display lists, including buttons for other visualizations
 
-window.onload = init();
+        d3.selectAll(".word-cloud").remove();
+        d3.selectAll(".bubble-wrap").remove();
+        d3.select("#list-row").selectAll("td").remove();
+
+        Object.keys(nestedData[entityType]).forEach(function (t) {
+            listify(nestedData[entityType][t], t);
+        });
+
+        var listWindow = d3.select("#list-window").node();
+        if (firstOverflow && listWindow.scrollWidth > listWindow.clientWidth) {
+            firstOverflow = false;
+            var infoMsg = d3.select("#list-msg").html("Scroll &#10140;");
+            infoMsg.style("left", "80%")
+            infoMsg.transition().duration(100).style("opacity", .9).transition().duration(2500).style("opacity", 0);
+        }
+    }
+
+    function listify(data, title) {
+        // Generate single list.
+        // title must correspond to date subset in data (e.g., "all time", "2009", "200510")
+        var maxFontSize = 28;
+        var minFontSize = 4;
+        var maxItems = 50; // max list size (i.e. top N values, by freq); set to data.size for all
+        var maxItemLength = 20;
+
+        var labelScale = d3.scale.log()
+                //.domain(d3.extent(data, function(d) { return d.freq }))
+                .domain(d3.extent(data, function (d) {
+                    return d.values
+                }))
+                .range([minFontSize, maxFontSize]);
+
+        var sortedSliced = data.slice(0, maxItems).sort(function (a, b) {
+            if (a.key > b.key)  // key = entity
+                return 1;
+            if (a.key < b.key)
+                return -1;
+            return 0;
+        });
+
+        var list = d3.select("#list-row").append("td");
+        list.append("h1").text(title);
+        list.append("ul").attr("class", "entitylist").selectAll("li")
+                .data(sortedSliced)
+                .enter().append("li")
+                .style("font-size", function (d) {
+                    return Math.round(labelScale(parseFloat(d.values))) + "px"
+                })
+                .text(function (d) {
+                    var s = (d.key.length > maxItemLength) ? d.key.substr(0, 20) + "..." : d.key;
+                    return s
+                })
+                .on("mouseover", function (d) {     // See http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
+                    listTooltip = d3.selectAll("div.list-tooltip");
+                    listTooltip.transition()
+                            .duration(200)
+                            .style("opacity", .9);
+                    listTooltip.html("<b>" + d.key + "</b><br /> " + d.values + " mentions")
+                            .style("left", (d3.event.pageX) + "px")
+                            .style("top", (d3.event.pageY - 28) + "px");
+                })
+                .on("mouseout", function (d) {
+                    listTooltip.transition()
+                            .duration(500)
+                            .style("opacity", 0);
+                });
+        // Add word cloud button
+        list.append("button").classed("pure-button", "true").attr("onclick", "cloud('" + entityType + "','" + title + "')").text("cloud");
+        list.append("span").text(" ");
+        list.append("button").classed("pure-button", "true").attr("onclick", "bubble('" + title + "')").text("bubble");
+
+    }
+
+    function cloud(nerType, subsetIdx) {
+        var maxCloudItems = 250;
+
+        data = nestedData[nerType][subsetIdx].slice(0, maxCloudItems);
+
+        d3.selectAll(".word-cloud").remove();
+
+        var cloudScale = d3.scale.log()
+                .domain(d3.extent(data, function (d) {
+                    return d.values
+                }))
+                .range([10, 100])
+        var layout = d3.layout.cloud()
+                .size([1000, 1000])
+                .words(data.map(function (d) {
+                    return {
+                        text: d.key,
+                        size: Math.round(cloudScale(d.values)),
+                        freq: d.values
+                    }
+                }))
+                .font("Impact")
+                .fontSize(function (d) {
+                    return d.size;
+                })
+                .on("end", drawCloud);
+
+        layout.start();
+        var e = d3.selectAll(".word-cloud").node();
+        e.scrollIntoView();
+    }
+
+    function drawCloud(words) {
+        d3.select("body").append("div").classed("word-cloud", true).append("svg")
+                .attr("width", 1000)
+                .attr("height", 1000)
+                .append("g")
+                .attr("transform", "translate(500,500)")
+                .selectAll("text")
+                .data(words)
+                .enter().append("text")
+                .style("font-size", function (d) {
+                    return d.size + "px";
+                })
+                .style("font-family", "Impact")
+                .style("fill", function (d, i) {
+                    return fill(i);
+                })
+                .attr("text-anchor", "middle")
+                .attr("transform", function (d) {
+                    return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+                })
+                .text(function (d) {
+                    return d.text;
+                })
+                .on("mouseover", function (d) {
+                    listTooltip.transition()
+                            .duration(200)
+                            .style("opacity", .9);
+                    listTooltip.html("<b>" + d.text + "</b><br /> " + d.freq + " mentions")
+                            .style("left", (d3.event.pageX) + "px")
+                            .style("top", (d3.event.pageY - 28) + "px");
+                })
+                .on("mouseout", function (d) {
+                    listTooltip.transition()
+                            .duration(500)
+                            .style("opacity", 0);
+                });
+    }
+
+    function bubble(subsetIdx) {
+        // Code borrowed from http://bl.ocks.org/mbostock/4063269
+        var diameter = 960,
+                format = d3.format(",d"),
+                color = d3.scale.category10();
+
+        d3.selectAll(".bubble-wrap").remove();
+
+        var bubble = d3.layout.pack()
+                .sort(null)
+                .size([diameter, diameter])
+                .padding(1.5);
+
+        var svg = d3.select("body").append("div").classed("bubble-wrap", true).append("svg")
+                .attr("width", diameter)
+                .attr("height", diameter)
+                .attr("class", "bubble");
+
+        var flatArr = flatten(nestedData, subsetIdx);
+        // Randomize array order to avoid concentric rings of same entity type
+        flatArr.sort(function () {
+            return Math.random() - .5;
+        });
+        var arrObj = {
+            children: flatArr
+        }
+
+        var node = svg.selectAll(".node")
+                .data(bubble.nodes(arrObj)
+                        .filter(function (d) {
+                            return !d.children;
+                        }))
+                .enter().append("g")
+                .attr("class", "node")
+                .attr("transform", function (d) {
+                    return "translate(" + d.x + "," + d.y + ")";
+                });
+
+        node.append("circle")
+                .attr("r", function (d) {
+                    return d.r;
+                })
+                .style("fill", function (d) {
+                    return color(d.nerType);
+                });
+
+        node.append("text")
+                .attr("dy", ".3em")
+                .style("text-anchor", "middle")
+                .text(function (d) {
+                    return d.entity.substring(0, d.r / 3);
+                })
+                .on("mouseover", function (d) {
+                    listTooltip.transition()
+                            .duration(200)
+                            .style("opacity", .9);
+                    listTooltip.html("<b>" + d.entity + "</b><br /> " + d.value + " mentions")
+                            .style("left", (d3.event.pageX) + "px")
+                            .style("top", (d3.event.pageY - 28) + "px");
+                })
+                .on("mouseout", function (d) {
+                    listTooltip.transition()
+                            .duration(500)
+                            .style("opacity", 0);
+                });
+        var e = d3.selectAll(".bubble").node();
+        e.scrollIntoView();
+    }
+
+    function flatten(nestedObj, subsetIdx) {
+        var flatArr = [];
+        Object.keys(nestedObj).forEach(function (eType) {
+            Object.keys(nestedObj[eType]).forEach(function (subsetIdx) {
+                for (i = 0; i < nestedObj[eType][subsetIdx].length; i++) {
+                    flatArr.push({
+                        entity: nestedObj[eType][subsetIdx][i].key,
+                        nerType: eType,
+                        value: nestedObj[eType][subsetIdx][i].values
+                    });
+                }
+            });
+        });
+        return flatArr;
+    }
+
+    function updateEntityType(t) {
+        if (entityType !== t) {
+            entityType = t;
+            d3.select("#data-select").selectAll("button").classed("pure-button-active", false);
+            d3.select("#" + t + "Butt").classed("pure-button-active", true)
+            visualize(t, timeScale);
+        }
+    }
+
+    function setTimescaleText(t) {
+        e = d3.select("#timescale-label").node();
+        if (t === "0")
+            e.textContent = "All time";
+        else if (t === "1")
+            e.textContent = "Years";
+        else if (t === "2")
+            e.textContent = "Months";
+        else if (t === "3")
+            e.textContent = "Days";
+    }
+
+    function updateTimescale(t) {
+        timeScale = t;
+        nestedData = nestData(allData, timeScale);
+        visualize(entityType, t);
+    }
+
+    window.onload = init();
 </script>
 </body>
 </html>
