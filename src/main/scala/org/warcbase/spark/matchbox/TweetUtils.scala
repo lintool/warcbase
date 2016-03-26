@@ -1,9 +1,9 @@
-package org.warcbase.util
+package org.warcbase.spark.matchbox
 
 import org.json4s.JsonAST._
 
-object TweetJsonFunctions {
-  implicit class JValueFunctions(tweet: JValue) {
+object TweetUtils {
+  implicit class JsonTweet(tweet: JValue) {
     implicit lazy val formats = org.json4s.DefaultFormats
 
     def id(): String = (tweet \ "id_str").extract[String]
