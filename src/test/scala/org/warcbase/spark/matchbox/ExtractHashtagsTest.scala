@@ -16,7 +16,18 @@
 
 package org.warcbase.spark.matchbox
 
-object ExtractUrls {
-  val pattern = """https?://[^ ]+""".r
-  def apply(src: String): List[String] = pattern.findAllIn(src).toList
+import org.junit.runner.RunWith
+import org.scalatest.FunSuite
+import org.scalatest.junit.JUnitRunner
+
+@RunWith(classOf[JUnitRunner])
+class ExtractHashtagTest extends FunSuite {
+  test("simple") {
+    val tweet = "Here are #some #hashtags #TeSTing"
+    val extracted = ExtractHashtags(tweet).toList
+    assert(extracted.size == 3)
+    assert("#some" == extracted(0))
+    assert("#hashtags" == extracted(1))
+    assert("#TeSTing" == extracted(2))
+  }
 }
