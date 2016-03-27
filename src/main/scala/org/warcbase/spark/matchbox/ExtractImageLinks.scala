@@ -28,8 +28,8 @@ import scala.collection.mutable
   */
 object ExtractImageLinks {
   /**
-    * @param src the src link.
-    * @param html the content from which links are to be extracted.
+    * @param src the src link
+    * @param html the content from which links are to be extracted
     *
     * Returns a sequence of image links
     */
