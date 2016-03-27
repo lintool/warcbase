@@ -24,31 +24,27 @@ import org.jsoup.select.Elements
 import scala.collection.mutable
 
 /**
-  * UDF for extracting links from a webpage given the HTML content (using Jsoup).
-  *
+  * UDF for extracting image links from a webpage given the HTML content (using Jsoup).
   */
-object ExtractLinks {
+object ExtractImageLinks {
   /**
-    * @param src the src link.
-    * @param html the content from which links are to be extracted.
-    * @param base an optional base URI.
+    * @param src the src link
+    * @param html the content from which links are to be extracted
     *
-    * Returns a sequence of (source, target, anchortext)
+    * Returns a sequence of image links
     */
-  def apply(src: String, html: String, base: String = ""): Seq[(String, String, String)] = {
+  def apply(src: String, html: String): Seq[String] = {
     if (html.isEmpty) return Nil
     try {
-      val output = mutable.MutableList[(String, String, String)]()
+      val output = mutable.MutableList[String]()
       val doc = Jsoup.parse(html)
-      val links: Elements = doc.select("a[href]")
+      val links: Elements = doc.select("img[src]")
       val it = links.iterator()
       while (it.hasNext) {
         val link = it.next()
-        if (base.nonEmpty) link.setBaseUri(base)
-        val target = link.attr("abs:href")
-        if (target.nonEmpty) {
-          output += ((src, target, link.text))
-        }
+        link.setBaseUri(src)
+        val target = link.attr("abs:src")
+        output += (target)
       }
       output
     } catch {
