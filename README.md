@@ -81,7 +81,7 @@ Here's a simple script that extracts and counts the top-level domains (i.e., num
 import org.warcbase.spark.matchbox._
 import org.warcbase.spark.rdd.RecordRDD._
 
-val r = RecordLoader.loadArc("src/test/resources/arc/example.arc.gz", sc)
+val r = RecordLoader.loadArchives("src/test/resources/arc/example.arc.gz", sc)
   .keepValidPages()
   .map(r => ExtractTopLevelDomain(r.getUrl))
   .countItems()
