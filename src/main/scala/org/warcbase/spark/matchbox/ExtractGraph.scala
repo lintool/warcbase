@@ -38,7 +38,8 @@ object ExtractGraph {
   case class VertexData(domain: String, pageRank: Double, inDegree: Int, outDegree: Int)
   case class EdgeData(date: String, src: String, dst: String)
 
-  def apply(records: RDD[ArchiveRecord]): Graph[VertexData, EdgeData] = {
+  def apply(records: RDD[ArchiveRecord], dynamic: Boolean = false,
+            tolerance: Double = 0.001, numIter: Int = 3): Graph[VertexData, EdgeData] = {
     val vertices: RDD[(VertexId, VertexData)] = records.keepValidPages()
       .flatMap(r => ExtractLinks(r.getUrl, r.getContentString))
       .flatMap(r => List(ExtractTopLevelDomain(r._1).replaceAll("^\\s*www\\.", ""), ExtractTopLevelDomain(r._2).replaceAll("^\\s*www\\.", "")))
@@ -53,12 +54,20 @@ object ExtractGraph {
 
     val graph = Graph(vertices, edges)
 
-    graph.outerJoinVertices(graph.inDegrees) {
+    val graphInOut = graph.outerJoinVertices(graph.inDegrees) {
       case (vid, rv, inDegOpt) => VertexData(rv.domain, rv.pageRank, inDegOpt.getOrElse(0), rv.outDegree)
     }.outerJoinVertices(graph.outDegrees) {
       case (vid, rv, outDegOpt) => VertexData(rv.domain, rv.pageRank, rv.inDegree, outDegOpt.getOrElse(0))
-    }.outerJoinVertices(graph.pageRank(0.00001).vertices) {
-      case (vid, rv, pageRankOpt) => VertexData(rv.domain, pageRankOpt.getOrElse(0.0), rv.inDegree, rv.outDegree)
+    }
+
+    if (dynamic) {
+      graphInOut.outerJoinVertices(graph.pageRank(tolerance).vertices) {
+        case (vid, rv, pageRankOpt) => VertexData(rv.domain, pageRankOpt.getOrElse(0.0), rv.inDegree, rv.outDegree)
+      }
+    } else {
+      graphInOut.outerJoinVertices(graph.staticPageRank(numIter).vertices) {
+        case (vid, rv, pageRankOpt) => VertexData(rv.domain, pageRankOpt.getOrElse(0.0), rv.inDegree, rv.outDegree)
+      }
     }
   }
 
