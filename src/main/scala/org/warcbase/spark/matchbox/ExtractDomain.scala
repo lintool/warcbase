@@ -18,7 +18,7 @@ package org.warcbase.spark.matchbox
 
 import java.net.URL
 
-object ExtractTopLevelDomain {
+object ExtractDomain {
   def apply(url: String, source: String = ""): String = {
     if (url == null) return null
     var host: String = null

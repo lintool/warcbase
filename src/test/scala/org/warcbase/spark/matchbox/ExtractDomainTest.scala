@@ -21,7 +21,7 @@ import org.scalatest.FunSuite
 import org.scalatest.junit.JUnitRunner
 
 @RunWith(classOf[JUnitRunner])
-class ExtractTopLevelDomainTest extends FunSuite {
+class ExtractDomainTest extends FunSuite {
 
   private val data1: Seq[(String, String)] = Seq.newBuilder.+=(
     ("http://www.umiacs.umd.edu/~jimmylin/", "www.umiacs.umd.edu"),
@@ -35,12 +35,12 @@ class ExtractTopLevelDomainTest extends FunSuite {
 
   test("simple") {
     data1.foreach {
-      case (link, domain) => assert(ExtractTopLevelDomain(link) == domain)
+      case (link, domain) => assert(ExtractDomain(link) == domain)
     }
   }
   test("withBase") {
     data2.foreach {
-      case (link, base, domain) => assert(ExtractTopLevelDomain(link, base) == domain)
+      case (link, base, domain) => assert(ExtractDomain(link, base) == domain)
     }
   }
 }
