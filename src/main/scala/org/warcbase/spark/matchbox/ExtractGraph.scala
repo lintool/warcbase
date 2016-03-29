@@ -19,6 +19,7 @@ package org.warcbase.spark.matchbox
 import org.apache.spark.graphx._
 import org.apache.spark.rdd.RDD
 import org.warcbase.spark.archive.io.ArchiveRecord
+import org.warcbase.spark.matchbox.StringUtils._
 import org.warcbase.spark.rdd.RecordRDD._
 import org.warcbase.spark.utils.JsonUtil
 
@@ -42,13 +43,13 @@ object ExtractGraph {
             tolerance: Double = 0.001, numIter: Int = 3): Graph[VertexData, EdgeData] = {
     val vertices: RDD[(VertexId, VertexData)] = records.keepValidPages()
       .flatMap(r => ExtractLinks(r.getUrl, r.getContentString))
-      .flatMap(r => List(ExtractTopLevelDomain(r._1).replaceAll("^\\s*www\\.", ""), ExtractTopLevelDomain(r._2).replaceAll("^\\s*www\\.", "")))
+      .flatMap(r => List(ExtractDomain(r._1).removePrefixWWW(), ExtractDomain(r._2).removePrefixWWW()))
       .distinct
       .map(r => (pageHash(r), VertexData(r, 0.0, 0, 0)))
 
     val edges: RDD[Edge[EdgeData]] = records.keepValidPages()
       .map(r => (r.getCrawldate, ExtractLinks(r.getUrl, r.getContentString)))
-      .flatMap(r => r._2.map(f => (r._1, ExtractTopLevelDomain(f._1).replaceAll("^\\s*www\\.", ""), ExtractTopLevelDomain(f._2).replaceAll("^\\s*www\\.", ""))))
+      .flatMap(r => r._2.map(f => (r._1, ExtractDomain(f._1).removePrefixWWW(), ExtractDomain(f._2).removePrefixWWW())))
       .filter(r => r._2 != "" && r._3 != "")
       .map(r => Edge(pageHash(r._2), pageHash(r._3), EdgeData(r._1, r._2, r._3)))
 

@@ -4,6 +4,7 @@ import com.google.common.io.Resources
 import org.apache.spark.{SparkConf, SparkContext}
 import org.warcbase.spark.matchbox.{ExtractLinks, ExtractDomain, RecordLoader}
 import org.warcbase.spark.matchbox._
+import org.warcbase.spark.matchbox.StringUtils._
 import org.warcbase.spark.rdd.RecordRDD._
 
 object CrawlStatistics {
@@ -38,7 +39,7 @@ object CrawlStatistics {
     val b = RecordLoader.loadWarc(warcPath, sc)
     val domainCounts = a.union(b)
       .keepValidPages()
-      .map(r => (r.getCrawldate.substring(0, 6), r.getDomain.replaceAll("^\\s*www\\.", "")))
+      .map(r => (r.getCrawldate.substring(0, 6), r.getDomain.removePrefixWWW()))
       .countItems()
       .filter(f => f._2 > 10)
       .sortBy(f => (f._1, f._2))
@@ -50,7 +51,7 @@ object CrawlStatistics {
     val linkStructure = RecordLoader.loadArc(arcPath, sc)
       .keepValidPages()
       .map(r => (r.getCrawldate.substring(0, 6), ExtractLinks(r.getUrl, r.getContentString)))
-      .flatMap(r => r._2.map(f => (r._1, ExtractDomain(f._1).replaceAll("^\\s*www\\.", ""), ExtractDomain(f._2).replaceAll("^\\s*www\\.", ""))))
+      .flatMap(r => r._2.map(f => (r._1, ExtractDomain(f._1).removePrefixWWW(), ExtractDomain(f._2).removePrefixWWW())))
       .filter(r => r._2 != null && r._3 != null)
       .countItems()
       .collect()
@@ -61,7 +62,7 @@ object CrawlStatistics {
     val linkStructure = RecordLoader.loadWarc(warcPath, sc)
       .keepValidPages()
       .map(r => (ExtractDate(r.getCrawldate, ExtractDate.DateComponent.YYYYMM), ExtractLinks(r.getUrl, r.getContentString)))
-      .flatMap(r => r._2.map(f => (r._1, ExtractDomain(f._1).replaceAll("^\\s*www\\.", ""), ExtractDomain(f._2).replaceAll("^\\s*www\\.", ""))))
+      .flatMap(r => r._2.map(f => (r._1, ExtractDomain(f._1).removePrefixWWW(), ExtractDomain(f._2).removePrefixWWW())))
       .filter(r => r._2 != null && r._3 != null)
       .countItems()
       .map(r => TupleFormatter.tabDelimit(r))
