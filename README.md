@@ -83,7 +83,7 @@ import org.warcbase.spark.rdd.RecordRDD._
 
 val r = RecordLoader.loadArchives("src/test/resources/arc/example.arc.gz", sc)
   .keepValidPages()
-  .map(r => ExtractTopLevelDomain(r.getUrl))
+  .map(r => ExtractDomain(r.getUrl))
   .countItems()
   .take(10)
 ```

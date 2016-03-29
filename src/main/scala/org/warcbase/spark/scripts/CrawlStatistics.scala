@@ -2,7 +2,7 @@ package org.warcbase.spark.scripts
 
 import com.google.common.io.Resources
 import org.apache.spark.{SparkConf, SparkContext}
-import org.warcbase.spark.matchbox.{ExtractLinks, ExtractTopLevelDomain, RecordLoader}
+import org.warcbase.spark.matchbox.{ExtractLinks, ExtractDomain, RecordLoader}
 import org.warcbase.spark.matchbox._
 import org.warcbase.spark.rdd.RecordRDD._
 
@@ -50,7 +50,7 @@ object CrawlStatistics {
     val linkStructure = RecordLoader.loadArc(arcPath, sc)
       .keepValidPages()
       .map(r => (r.getCrawldate.substring(0, 6), ExtractLinks(r.getUrl, r.getContentString)))
-      .flatMap(r => r._2.map(f => (r._1, ExtractTopLevelDomain(f._1).replaceAll("^\\s*www\\.", ""), ExtractTopLevelDomain(f._2).replaceAll("^\\s*www\\.", ""))))
+      .flatMap(r => r._2.map(f => (r._1, ExtractDomain(f._1).replaceAll("^\\s*www\\.", ""), ExtractDomain(f._2).replaceAll("^\\s*www\\.", ""))))
       .filter(r => r._2 != null && r._3 != null)
       .countItems()
       .collect()
@@ -61,7 +61,7 @@ object CrawlStatistics {
     val linkStructure = RecordLoader.loadWarc(warcPath, sc)
       .keepValidPages()
       .map(r => (ExtractDate(r.getCrawldate, ExtractDate.DateComponent.YYYYMM), ExtractLinks(r.getUrl, r.getContentString)))
-      .flatMap(r => r._2.map(f => (r._1, ExtractTopLevelDomain(f._1).replaceAll("^\\s*www\\.", ""), ExtractTopLevelDomain(f._2).replaceAll("^\\s*www\\.", ""))))
+      .flatMap(r => r._2.map(f => (r._1, ExtractDomain(f._1).replaceAll("^\\s*www\\.", ""), ExtractDomain(f._2).replaceAll("^\\s*www\\.", ""))))
       .filter(r => r._2 != null && r._3 != null)
       .countItems()
       .map(r => TupleFormatter.tabDelimit(r))

@@ -11,7 +11,7 @@ import org.warcbase.data.{ArcRecordUtils, WarcRecordUtils}
 import org.warcbase.io.GenericArchiveRecordWritable
 import org.warcbase.io.GenericArchiveRecordWritable.ArchiveFormat
 import org.warcbase.spark.matchbox.ExtractDate.DateComponent
-import org.warcbase.spark.matchbox.{ExtractDate, ExtractTopLevelDomain}
+import org.warcbase.spark.matchbox.{ExtractDate, ExtractDomain}
 
 class GenericArchiveRecord(r: SerializableWritable[GenericArchiveRecordWritable]) extends ArchiveRecord {
   var arcRecord: ARCRecord = null
@@ -59,5 +59,5 @@ class GenericArchiveRecord(r: SerializableWritable[GenericArchiveRecordWritable]
     }
   }
 
-  val getDomain: String = ExtractTopLevelDomain(getUrl)
+  val getDomain: String = ExtractDomain(getUrl)
 }

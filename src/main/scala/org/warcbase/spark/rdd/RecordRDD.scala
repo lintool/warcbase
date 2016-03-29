@@ -18,7 +18,7 @@ package org.warcbase.spark.rdd
 
 import org.apache.spark.rdd.RDD
 import org.warcbase.spark.archive.io.ArchiveRecord
-import org.warcbase.spark.matchbox.{DetectLanguage, ExtractDate, ExtractTopLevelDomain, RemoveHTML}
+import org.warcbase.spark.matchbox.{DetectLanguage, ExtractDate, ExtractDomain, RemoveHTML}
 import org.warcbase.spark.matchbox.ExtractDate.DateComponent
 import org.warcbase.spark.matchbox.ExtractDate.DateComponent.DateComponent
 
@@ -79,7 +79,7 @@ object RecordRDD extends java.io.Serializable {
     }
 
     def keepDomains(urls: Set[String]) = {
-      rdd.filter(r => urls.contains(ExtractTopLevelDomain(r.getUrl).replace("^\\s*www\\.", "")))
+      rdd.filter(r => urls.contains(ExtractDomain(r.getUrl).replace("^\\s*www\\.", "")))
     }
 
     def keepLanguages(lang: Set[String]) = {
