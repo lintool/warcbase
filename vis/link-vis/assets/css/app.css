@@ -1,0 +1,88 @@
+body {
+  font: 10px sans-serif;
+}
+
+footer {
+  clear: both;
+}
+
+/* -------------------------
+ D3 styles
+ --------------------------- */
+
+.link {
+  stroke: #2f9e9e;
+  stroke-width: 0.5px;
+}
+
+.node {
+  position: relative;
+}
+.node circle {
+  cursor: move;
+  fill: #ccc;
+  stroke: #999;
+  stroke-width: 1px;
+}
+.node.fixed {
+  fill: #f00;
+}
+.node text {
+  pointer-events: none;
+  position: absolute;
+  z-index: 100;
+}
+
+/* D3 graphs */
+
+.d3-graph {
+  border: 1px solid #eee;
+  border-width: 1px 0;
+  height: 80vh;
+  margin: 1em 0;
+  min-height: 600px;
+}
+
+
+/* -------------------------
+ Customized plugin styles
+ --------------------------- */
+
+/* noUi sliders */
+.sliders > div {
+  height: 75px;
+}
+
+/* D3 tip plugin */
+
+.popup-tip {
+  padding: 2px 4px 2px 2px;
+  border: solid #444 1px;
+  border-radius: 6px;
+  font-size: 1em;
+  background-color: #fff;
+  background-color: rgba(255, 255, 255, 0.85);
+  font-family: sans-serif;
+}
+
+ /* jQuery isLoading plugin */
+
+.isloading-overlay {
+  position: relative;
+  text-align: center;
+}
+.isloading-overlay .isloading-wrapper {
+  -webkit-border-radius: 7px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 7px;
+  -moz-background-clip: padding;
+  border-radius: 7px;
+  background-clip: padding-box;
+
+  background: #fff;
+  display: inline-block;
+  margin: 0 auto;
+  padding: 10px 20px;
+  top: 10%;
+  z-index: 9000;
+}
