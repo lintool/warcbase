@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="data:image/x-icon" type="image/x-icon">
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+    <!-- noUiSlider -->
+    <link rel="stylesheet" href="assets/css/lib/nouislider.min.css">
+    <!-- App -->
+    <link href="assets/css/app.css" rel="stylesheet">
+  </head>
+
+  <body>
+    <div class="container-fluid">
+      <header>
+        <div class="page-header">
+          <h1>Visualization of the Canadian Political Parties and Political Interest Groups Link Structures</h1>
+        </div>
+      </header>
+
+      <section>
+        <div class="row sliders">
+          <div class="col-md-6">
+            <label for="threshold-nodes">Max sites to display</label>
+            <div id="threshold-slider"></div>
+          </div>
+          <div class="col-md-6">
+            <label for="threshold-nodes">Year</label>
+            <div id="date-slider"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div id="display" class="col-md-12">
+            <div id="graph" class="d3-graph"></div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="affix-bottom">
+        <p>
+          This visualization was created with d3, based on
+          <a href="http://bl.ocks.org/mbostock/3750558">this example</a>
+          and
+          <a href="http://bl.ocks.org/mbostock/2706022">this example</a>. The raw data for this visualization comes from the output of a
+          <a href="https://github.com/lintool/warcbase/wiki/Pig:-Analysis-of-Site-Link-Structure">Pig script</a>.
+        </p>
+      </footer>
+    </div>
+
+    <!-- jQuery -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="/assets/js/lib/jquery.isloading.min.js"></script>
+    <!-- Bootstrap -->
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+    <script src="/assets/js/lib/d3.tip.v0.6.3.js"></script>
+    <!-- noUiSlider -->
+    <script src="/assets/js/lib/nouislider.min.js"></script>
+    <!-- Misc -->
+    <script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+    <!-- App -->
+    <script src="/assets/js/app.js"></script>
+  </body>
+</html>
