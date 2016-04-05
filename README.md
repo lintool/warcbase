@@ -126,4 +126,5 @@ Licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/
 Acknowledgments
 ---------------
 
-This work is supported in part by the National Science Foundation and by the Mellon Foundation (via Columbia University). Any opinions, findings, and conclusions or recommendations expressed are those of the researchers and do not necessarily reflect the views of the sponsors.
+This work is supported in part by the U.S. National Science Foundation, the Social Sciences and Humanities Research Council of Canada, and the Mellon Foundation (via Columbia University). Any opinions, findings, and conclusions or recommendations expressed are those of the researchers and do not necessarily reflect the views of the sponsors.
+
