@@ -18,7 +18,7 @@ Warcbase is built against CDH 5.4.1:
 
 The Hadoop ecosystem is evolving rapidly, so there may be incompatibilities with other versions.
 
-Detailed documentation is available [here](http://lintool.github.io/warcbase-docs/).
+**Detailed documentation is available [here](http://lintool.github.io/warcbase-docs/).**
 
 Supporting files can be found in the [warcbase-resources repository](https://github.com/lintool/warcbase-resources).
 
@@ -77,7 +77,7 @@ $ spark-shell --jars target/warcbase-0.1.0-SNAPSHOT-fatjar.jar
 
 Here's a simple script that extracts and counts the top-level domains (i.e., number of pages for each top-level domain) in the sample ARC data:
 
-```
+```scala
 import org.warcbase.spark.matchbox._
 import org.warcbase.spark.rdd.RecordRDD._
 
@@ -90,7 +90,7 @@ val r = RecordLoader.loadArchives("src/test/resources/arc/example.arc.gz", sc)
 
 **Tip:** By default, commands in the Spark shell must be one line. To run multi-line commands, type `:paste` in Spark shell: you can then copy-paste the script above directly into Spark shell. Use Ctrl-D to finish the command.
 
-What to learn more? Check out [detailed documentation on analyzing web archives with Spark](http://lintool.github.io/warcbase-docs/).
+What to learn more? Check out our [detailed documentation](http://lintool.github.io/warcbase-docs/).
 
 
 What About Pig?
@@ -106,6 +106,7 @@ The result of analyses of using Warcbase can serve as input to visualizations th
 
 + [Basic crawl statistics](http://lintool.github.io/warcbase/vis/crawl-sites/index.html) from the Canadian Political Parties and Political Interest Groups collection.
 + [Interactive graph visualization](http://lintool.github.io/warcbase-docs/Gephi-Converting-Site-Link-Structure-into-Dynamic-Visualization/) using Gephi.
++ [Named entity visualization](http://lintool.github.io/warcbase-docs/Spark-NER-Visualization/) for exploring relative frequencies of people, places, and locations.
 + [Shine interface](http://webarchives.ca/) for faceted full-text search.
 
 
