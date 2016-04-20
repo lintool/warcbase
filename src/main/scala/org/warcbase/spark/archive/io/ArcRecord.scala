@@ -9,6 +9,8 @@ import org.warcbase.spark.matchbox.{ExtractDate, ExtractDomain}
 class ArcRecord(r: SerializableWritable[ArcRecordWritable]) extends ArchiveRecord {
   val getCrawldate: String = ExtractDate(r.t.getRecord.getMetaData.getDate, DateComponent.YYYYMMDD)
 
+  val getCrawlmonth: String = ExtractDate(r.t.getRecord.getMetaData.getDate, DateComponent.YYYYMM)
+
   val getMimeType: String = r.t.getRecord.getMetaData.getMimetype
 
   val getUrl: String = r.t.getRecord.getMetaData.getUrl

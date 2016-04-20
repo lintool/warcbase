@@ -14,6 +14,8 @@ class WarcRecord(r: SerializableWritable[WarcRecordWritable]) extends ArchiveRec
 
   val getCrawldate: String = ExtractDate(ArchiveUtils.get14DigitDate(ISO8601.parse(r.t.getRecord.getHeader.getDate)), DateComponent.YYYYMMDD)
 
+  val getCrawlmonth: String = ExtractDate(ArchiveUtils.get14DigitDate(ISO8601.parse(r.t.getRecord.getHeader.getDate)), DateComponent.YYYYMM)
+
   val getContentBytes: Array[Byte] = WarcRecordUtils.getContent(r.t.getRecord)
 
   val getContentString: String = new String(getContentBytes)
