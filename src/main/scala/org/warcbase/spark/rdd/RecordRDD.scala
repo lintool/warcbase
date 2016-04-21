@@ -50,7 +50,7 @@ object RecordRDD extends java.io.Serializable {
 
     def keepValidPages(): RDD[ArchiveRecord] = {
       rdd.filter(r =>
-        r.getCrawldate != null
+        r.getCrawlDate != null
           && (r.getMimeType == "text/html"
           || r.getUrl.endsWith("htm")
           || r.getUrl.endsWith("html"))
@@ -62,7 +62,7 @@ object RecordRDD extends java.io.Serializable {
     }
 
     def keepDate(date: String, component: DateComponent = DateComponent.YYYYMMDD) = {
-      rdd.filter(r => ExtractDate(r.getCrawldate, component) == date)
+      rdd.filter(r => ExtractDate(r.getCrawlDate, component) == date)
     }
 
     def keepUrls(urls: Set[String]) = {
@@ -91,7 +91,7 @@ object RecordRDD extends java.io.Serializable {
     }
 
     def discardDate(date: String) = {
-      rdd.filter(r => r.getCrawldate != date)
+      rdd.filter(r => r.getCrawlDate != date)
     }
 
     def discardUrls(urls: Set[String]) = {

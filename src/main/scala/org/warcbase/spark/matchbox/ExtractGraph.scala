@@ -48,7 +48,7 @@ object ExtractGraph {
       .map(r => (pageHash(r), VertexData(r, 0.0, 0, 0)))
 
     val edges: RDD[Edge[EdgeData]] = records.keepValidPages()
-      .map(r => (r.getCrawldate, ExtractLinks(r.getUrl, r.getContentString)))
+      .map(r => (r.getCrawlDate, ExtractLinks(r.getUrl, r.getContentString)))
       .flatMap(r => r._2.map(f => (r._1, ExtractDomain(f._1).removePrefixWWW(), ExtractDomain(f._2).removePrefixWWW())))
       .filter(r => r._2 != "" && r._3 != "")
       .map(r => Edge(pageHash(r._2), pageHash(r._3), EdgeData(r._1, r._2, r._3)))
