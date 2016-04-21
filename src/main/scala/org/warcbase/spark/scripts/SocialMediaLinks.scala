@@ -24,7 +24,7 @@ object SocialMediaLinks {
 
   def socialMediaLinksCount(sc: SparkContext) = {
     RecordLoader.loadArc("/shared/collections/CanadianPoliticalParties/arc/", sc)
-      .map(r => (r.getCrawldate, r.getDomain, ExtractLinks(r.getUrl, r.getContentString)))
+      .map(r => (r.getCrawlDate, r.getDomain, ExtractLinks(r.getUrl, r.getContentString)))
       .flatMap(r => r._3
         .filter(f => f._2.matches(".*(twitter|facebook|youtube).*"))
         .map(f => (r._1, r._2, f._2)))
