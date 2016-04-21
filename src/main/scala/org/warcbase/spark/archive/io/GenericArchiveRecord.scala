@@ -25,7 +25,7 @@ class GenericArchiveRecord(r: SerializableWritable[GenericArchiveRecordWritable]
 
   val ISO8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX")
 
-  val getCrawldate: String = {
+  val getCrawlDate: String = {
     if (r.t.getFormat == ArchiveFormat.ARC) {
       ExtractDate(arcRecord.getMetaData.getDate, DateComponent.YYYYMMDD)
     } else {
@@ -33,7 +33,7 @@ class GenericArchiveRecord(r: SerializableWritable[GenericArchiveRecordWritable]
     }
   }
 
-  val getCrawlmonth: String = {
+  val getCrawlMonth: String = {
     if (r.t.getFormat == ArchiveFormat.ARC) {
       ExtractDate(arcRecord.getMetaData.getDate, DateComponent.YYYYMM)
     } else {
