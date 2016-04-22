@@ -26,7 +26,7 @@ object Filter {
       .keepMimeTypes(Set("text/html"))
       .discardDate(null)
       .keepDomains(Set("greenparty.ca"))
-      .map(r => (r.getCrawldate, RemoveHTML(r.getContentString)))
+      .map(r => (r.getCrawlDate, RemoveHTML(r.getContentString)))
     r.saveAsTextFile("/green")
   }
 }

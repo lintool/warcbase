@@ -12,7 +12,9 @@ import org.warcbase.spark.matchbox.{ExtractDate, ExtractDomain}
 class WarcRecord(r: SerializableWritable[WarcRecordWritable]) extends ArchiveRecord {
   val ISO8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX")
 
-  val getCrawldate: String = ExtractDate(ArchiveUtils.get14DigitDate(ISO8601.parse(r.t.getRecord.getHeader.getDate)), DateComponent.YYYYMMDD)
+  val getCrawlDate: String = ExtractDate(ArchiveUtils.get14DigitDate(ISO8601.parse(r.t.getRecord.getHeader.getDate)), DateComponent.YYYYMMDD)
+
+  val getCrawlMonth: String = ExtractDate(ArchiveUtils.get14DigitDate(ISO8601.parse(r.t.getRecord.getHeader.getDate)), DateComponent.YYYYMM)
 
   val getContentBytes: Array[Byte] = WarcRecordUtils.getContent(r.t.getRecord)
 

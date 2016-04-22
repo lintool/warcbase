@@ -1,7 +1,9 @@
 package org.warcbase.spark.archive.io
 
 trait ArchiveRecord extends Serializable {
-  val getCrawldate: String
+  val getCrawlDate: String
+
+  val getCrawlMonth: String
 
   val getUrl: String
 
