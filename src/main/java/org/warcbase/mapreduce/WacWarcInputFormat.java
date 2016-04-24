@@ -32,6 +32,8 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.archive.io.ArchiveRecord;
 import org.archive.io.warc.WARCReader;
 import org.archive.io.warc.WARCReaderFactory;
@@ -40,6 +42,8 @@ import org.archive.io.warc.WARCRecord;
 import org.warcbase.io.WarcRecordWritable;
 
 public class WacWarcInputFormat extends FileInputFormat<LongWritable, WarcRecordWritable> {
+  private static final Logger LOG = Logger.getLogger(WacWarcInputFormat.class);
+
   @Override
   public RecordReader<LongWritable, WarcRecordWritable> createRecordReader(InputSplit split,
       TaskAttemptContext context) throws IOException, InterruptedException {
@@ -71,6 +75,9 @@ public class WacWarcInputFormat extends FileInputFormat<LongWritable, WarcRecord
 
       FileSystem fs = file.getFileSystem(job);
       FSDataInputStream fileIn = fs.open(split.getPath());
+
+      LOG.setLevel(Level.INFO);
+      LOG.info("Loading " + split.getPath().toString());
 
       reader = (WARCReader) WARCReaderFactory.get(split.getPath().toString(),
           new BufferedInputStream(fileIn), true);
