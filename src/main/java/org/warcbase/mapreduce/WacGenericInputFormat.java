@@ -28,6 +28,8 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.archive.io.ArchiveReader;
 import org.archive.io.ArchiveReaderFactory;
 import org.archive.io.ArchiveRecord;
@@ -43,6 +45,8 @@ import java.io.IOException;
 import java.util.Iterator;
 
 public class WacGenericInputFormat extends FileInputFormat<LongWritable, GenericArchiveRecordWritable> {
+  private static final Logger LOG = Logger.getLogger(WacGenericInputFormat.class);
+
   @Override
   public RecordReader<LongWritable, GenericArchiveRecordWritable> createRecordReader(InputSplit split,
       TaskAttemptContext context) throws IOException, InterruptedException {
@@ -75,6 +79,9 @@ public class WacGenericInputFormat extends FileInputFormat<LongWritable, Generic
 
       FileSystem fs = file.getFileSystem(job);
       FSDataInputStream fileIn = fs.open(split.getPath());
+
+      LOG.setLevel(Level.INFO);
+      LOG.info("Loading " + split.getPath().toString());
 
       reader = ArchiveReaderFactory.get(split.getPath().toString(),
           new BufferedInputStream(fileIn), true);
