@@ -46,5 +46,6 @@ object RecordLoader {
   }
 
   def loadTweets(path: String, sc: SparkContext): RDD[JValue] =
-    sc.textFile(path).filter(line => !line.startsWith("{\"delete\":")).map(line => parse(line))
+    sc.textFile(path).filter(line => !line.startsWith("{\"delete\":"))
+      .map(line => try { parse(line) } catch { case e: Exception => null }).filter(x => x != null)
 }
