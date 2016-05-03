@@ -16,6 +16,8 @@ import scala.util.Random
   */
 
 class NERCombinedJson extends Serializable {
+  case class StringList(list: List[String]) // Used to prevent unchecked type-argument error
+
   def combineKeyCountLists (l1: List[(String, Int)], l2: List[(String, Int)]): List[(String, Int)] = {
     (l1 ++ l2).groupBy(_._1 ).map {
       case (key, tuples) => (key, tuples.map( _._2).sum) 
@@ -71,19 +73,14 @@ class NERCombinedJson extends Serializable {
       .mapPartitions(iter => {
         NER3Classifier.apply(iNerClassifierFile)
         iter.map(line => {
-            val ind1 = line.indexOf(",")
-            val ind2 = line.indexOf(",", ind1 + 1)
-            (line.substring(1, ind1),
-            line.substring(ind1 + 1, ind2),
-            line.substring(ind2 + 1, line.length - 1))
+            val substrs = line.split(",", 3)
+            (substrs(0), substrs(1), substrs(2))
           })
           .map(r => {
             val classifiedJson = NER3Classifier.classify(r._3)
-            //val jUtl = new JsonUtil
-            //val classifiedMap = JsonUtil.fromJson[Map[String,List[String]]](classifiedJson)
             val classifiedMap = JsonUtil.fromJson(classifiedJson)
             val classifiedMapCountTuples: Map[String, List[(String, Int)]] = classifiedMap.map {
-              case (nerType, entityList: List[String]) => (nerType, entityList.groupBy(identity).mapValues(_.size).toList)
+              case (nerType, entities: StringList) => (nerType, entities.list.groupBy(identity).mapValues(_.size).toList)
             }
             ((r._1, r._2), classifiedMapCountTuples)
           })
