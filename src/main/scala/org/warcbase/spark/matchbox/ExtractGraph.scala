@@ -41,15 +41,17 @@ object ExtractGraph {
 
   def apply(records: RDD[ArchiveRecord], dynamic: Boolean = false,
             tolerance: Double = 0.001, numIter: Int = 3): Graph[VertexData, EdgeData] = {
-    val vertices: RDD[(VertexId, VertexData)] = records.keepValidPages()
-      .flatMap(r => ExtractLinks(r.getUrl, r.getContentString))
-      .flatMap(r => List(ExtractDomain(r._1).removePrefixWWW(), ExtractDomain(r._2).removePrefixWWW()))
+    val extractedLinks = records.keepValidPages()
+      .map(r => (r.getCrawlDate, ExtractLinks(r.getUrl, r.getContentString)))
+      .flatMap(r => r._2.map(f => (r._1, ExtractDomain(f._1).removePrefixWWW(), ExtractDomain(f._2).removePrefixWWW())))
+      .persist()
+
+    val vertices: RDD[(VertexId, VertexData)] = extractedLinks
+      .flatMap(r => List(ExtractDomain(r._2).removePrefixWWW(), ExtractDomain(r._3).removePrefixWWW()))
       .distinct
       .map(r => (pageHash(r), VertexData(r, 0.0, 0, 0)))
 
-    val edges: RDD[Edge[EdgeData]] = records.keepValidPages()
-      .map(r => (r.getCrawlDate, ExtractLinks(r.getUrl, r.getContentString)))
-      .flatMap(r => r._2.map(f => (r._1, ExtractDomain(f._1).removePrefixWWW(), ExtractDomain(f._2).removePrefixWWW())))
+    val edges: RDD[Edge[EdgeData]] = extractedLinks
       .filter(r => r._2 != "" && r._3 != "")
       .map(r => Edge(pageHash(r._2), pageHash(r._3), EdgeData(r._1, r._2, r._3)))
 
