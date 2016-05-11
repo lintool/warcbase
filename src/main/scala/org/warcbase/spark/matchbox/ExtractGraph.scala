@@ -44,15 +44,15 @@ object ExtractGraph {
     val extractedLinks = records.keepValidPages()
       .map(r => (r.getCrawlDate, ExtractLinks(r.getUrl, r.getContentString)))
       .flatMap(r => r._2.map(f => (r._1, ExtractDomain(f._1).removePrefixWWW(), ExtractDomain(f._2).removePrefixWWW())))
+      .filter(r => r._2 != "" && r._3 != "")
       .persist()
 
     val vertices: RDD[(VertexId, VertexData)] = extractedLinks
-      .flatMap(r => List(ExtractDomain(r._2).removePrefixWWW(), ExtractDomain(r._3).removePrefixWWW()))
+      .flatMap(r => List(r._2, r._3))
       .distinct
       .map(r => (pageHash(r), VertexData(r, 0.0, 0, 0)))
 
     val edges: RDD[Edge[EdgeData]] = extractedLinks
-      .filter(r => r._2 != "" && r._3 != "")
       .map(r => Edge(pageHash(r._2), pageHash(r._3), EdgeData(r._1, r._2, r._3)))
 
     val graph = Graph(vertices, edges)
