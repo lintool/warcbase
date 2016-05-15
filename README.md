@@ -44,15 +44,6 @@ For the impatient, to skip tests:
 $ mvn clean package appassembler:assemble -DskipTests
 ```
 
-To create Eclipse project files:
-
-```
-$ mvn eclipse:clean
-$ mvn eclipse:eclipse
-```
-
-You can then import the project into Eclipse.
-
 To generate Scaladocs:
 
 ```
@@ -93,12 +84,6 @@ val r = RecordLoader.loadArchives("src/test/resources/arc/example.arc.gz", sc)
 What to learn more? Check out our [detailed documentation](http://lintool.github.io/warcbase-docs/).
 
 
-What About Pig?
----------------
-
-Warcbase was originally conceived with Pig for analytics, but we have transitioned over to Spark as the language of choice for scholarly interactions with web archive data. Spark has several advantages, including a cleaner interface, easier to write user-defined functions (UDFs), as well as integration with different "notebook" frontends.
-
-
 Visualizations
 --------------
 
@@ -127,5 +112,5 @@ Licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/
 Acknowledgments
 ---------------
 
-This work is supported in part by the U.S. National Science Foundation, the Social Sciences and Humanities Research Council of Canada, the Ontario Ministry of Research and Innovation's Early Researcher Award program, and the Mellon Foundation (via Columbia University). Any opinions, findings, and conclusions or recommendations expressed are those of the researchers and do not necessarily reflect the views of the sponsors.
+This work is supported in part by the U.S. National Science Foundation, the Natural Sciences and Engineering Research Council of Canada, the Social Sciences and Humanities Research Council of Canada, the Ontario Ministry of Research and Innovation's Early Researcher Award program, and the Mellon Foundation (via Columbia University). Any opinions, findings, and conclusions or recommendations expressed are those of the researchers and do not necessarily reflect the views of the sponsors.
 
