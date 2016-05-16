@@ -86,6 +86,15 @@ object RecordRDD extends java.io.Serializable {
       rdd.filter(r => lang.contains(DetectLanguage(RemoveHTML(r.getContentString))))
     }
 
+    def keepContent(contentREs: Set[Regex]) = {
+      rdd.filter(r =>
+        contentREs.map(re =>
+          (re findFirstIn r.getContentString) match {
+            case Some(v) => true
+            case None => false
+          }).exists(identity))
+    }
+
     def discardMimeTypes(mimeTypes: Set[String]) = {
       rdd.filter(r => !mimeTypes.contains(r.getMimeType))
     }
@@ -109,6 +118,15 @@ object RecordRDD extends java.io.Serializable {
 
     def discardDomains(urls: Set[String]) = {
       rdd.filter(r => !urls.contains(r.getDomain))
+    }
+
+    def discardContent(contentREs: Set[Regex]) = {
+      rdd.filter(r =>
+        !contentREs.map(re =>
+          (re findFirstIn r.getContentString) match {
+            case Some(v) => true
+            case None => false
+          }).exists(identity))
     }
   }
 
