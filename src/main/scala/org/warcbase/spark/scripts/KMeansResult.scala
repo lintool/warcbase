@@ -1,11 +1,10 @@
 package org.warcbase.spark.scripts
 
-import org.apache.spark.{HashPartitioner, SparkContext}
-import org.apache.spark.mllib.clustering.{LDA, KMeansModel}
+import org.apache.spark.mllib.clustering.{KMeansModel, LDA}
 import org.apache.spark.mllib.feature.HashingTF
+import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.mllib.clustering.KMeansModel
-import org.apache.spark.mllib.linalg.{Vectors, Vector}
+import org.apache.spark.{HashPartitioner, SparkContext}
 import org.warcbase.spark.archive.io.ArchiveRecord
 
 import scala.collection.mutable.ArrayBuffer
@@ -29,54 +28,48 @@ class KMeansResult(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized: RDD[Se
   }
 
   def getSampleDocs(numDocs: Int=10): RDD[(Int, String)] ={
-    val sampleDocs = new ArrayBuffer[(Int, String)]
+    var res:RDD[(Int, String)] = sc.emptyRDD[(Int, String)]
     for (i <- 0 to clusters.k-1) {
       val cluster = clusterRdds(i)
       val p= clusters.clusterCenters(i)
       val docs = cluster.map(r=> (Vectors.sqdist(p, r._1), r._2)).takeOrdered(numDocs)(Ordering[Double].on(x=>x._1))
-      docs.foreach(doc => {
-        sampleDocs += Tuple2(i, doc._2)
-      })
+      res = res.union(sc.parallelize(docs).map(r=>(i, r._2)))
     }
-    sc.parallelize(sampleDocs)
+    res
   }
 
   def saveSampleDocs(output: String) = {
-    getSampleDocs().partitionBy(new HashPartitioner(clusters.k)).saveAsTextFile(output)
+    getSampleDocs().partitionBy(new HashPartitioner(clusters.k)).map(r=>r._2).saveAsTextFile(output)
+    this
   }
 
-  def computeLDA(output: String, numTopics: Int = 3) = {
+  def computeLDA(output: String, numTopics: Int = 3, numWordsPerTopic: Int = 10) = {
+    var res:RDD[(Int, (Long, Seq[String], Double))] = sc.emptyRDD[(Int, (Long, Seq[String], Double))]
     for (i <- 0 to clusters.k-1) {
       val cluster = tfidf.filter(v => clusters.predict(v) == i).persist()
       println(s"cluster size ${cluster.count()}")
       val corpus = cluster.zipWithIndex.map(_.swap).cache()
       val ldaModel = new LDA().setK(numTopics).run(corpus)
-      println("Learned topics (as distributions over vocab of " + ldaModel.vocabSize + " words):")
-      val topics = ldaModel.topicsMatrix
-      val topWords = sc.parallelize(topics.toArray).zipWithIndex.takeOrdered(15)(Ordering[Double].reverse.on(x=>x._1))
-      val topWordsTuples = topWords.map{ case (k, v) => (k, indexToTerm.lookup((v / numTopics).toInt), v % numTopics, (v / numTopics).toInt)}
-      val res = topWordsTuples.sortBy(tuple => tuple._3)
-      res.foreach(println)
-
-      for (topic <- Range(0, numTopics)) {
-        print("Topic " + topic + ":")
-        for (word <- Range(0, 30)) { print(" " + word + " . topic : " + topic + " " + topics(word, topic)); }
-
-        println()
-      }
+      val topicArr:Array[(Array[Int], Array[Double])] = ldaModel.describeTopics(numWordsPerTopic)
+      val topicRdd:RDD[(Array[Seq[String]], Array[Double])] = sc.parallelize(
+        topicArr.map(topic => (topic._1.map(index=>hashIndexToTerm.lookup(index)), topic._2))).cache()
+      val topicWords = topicRdd.zipWithIndex().map(_.swap).flatMap(r=>r._2._1.map(word=>(r._1, word)))
+      val topicScores = topicRdd.flatMap(r=>r._2.map(word=>word))
+      val topics = topicWords.zip(topicScores)
+      res = res.union(topics.map(r=>(i, (r._1._1, r._1._2, r._2))))
     }
+    res.partitionBy(new HashPartitioner(clusters.k)).map(r=>r._2).saveAsTextFile(output)
+    this
   }
 
   def topNWords(output: String, limit: Int = 10) = {
-    clusters.clusterCenters.foreach(v => {
-      val topWords = sc.parallelize(v.toArray).zipWithIndex.takeOrdered(limit)(Ordering[Double].reverse.on(x=>x._1));
-      val res = topWords.map{ case (k, i) => (k, hashIndexToTerm.lookup(i.toInt))}
-      res.foreach{
-        case(k, arr) =>
-      }
-      println
-      // sc.parallelize(res).saveAsTextFile(output)
-    })
+    var res:RDD[(Int, (Double, Seq[String]))] = sc.emptyRDD[(Int, (Double, Seq[String]))]
+    for (v <- 0 to clusters.k-1) {
+      val cluster = clusters.clusterCenters(v)
+      val topWords = sc.parallelize(cluster.toArray).zipWithIndex.takeOrdered(limit)(Ordering[Double].reverse.on(x=>x._1));
+      res = res.union(sc.parallelize(topWords.map{ case (k, i) => (v, (k, hashIndexToTerm.lookup(i.toInt)))}))
+    }
+    res.partitionBy(new HashPartitioner(clusters.k)).map(r=>r._2).saveAsTextFile(output)
     this
   }
 }
