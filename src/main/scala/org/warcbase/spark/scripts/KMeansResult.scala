@@ -10,8 +10,8 @@ import org.warcbase.spark.archive.io.ArchiveRecord
 import scala.collection.mutable.ArrayBuffer
 
 
-class KMeansResult(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized: RDD[Seq[String]], sc: SparkContext,
-                   rec: RDD[ArchiveRecord]) {
+class KMeansResult(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized: RDD[Seq[String]],
+                   rec: RDD[ArchiveRecord]) extends Serializable{
   val hashingTF = new HashingTF()
   lazy val allWords = lemmatized.flatMap(seq => seq.map(f=>f)).persist()
   lazy val hashIndexToTerm = allWords.map(s=>(hashingTF.indexOf(s), s)).distinct().cache()
@@ -27,7 +27,7 @@ class KMeansResult(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized: RDD[Se
     rdds
   }
 
-  def getSampleDocs(numDocs: Int=10): RDD[(Int, String)] ={
+  def getSampleDocs(sc: SparkContext, numDocs: Int=10): RDD[(Int, String)] ={
     var res:RDD[(Int, String)] = sc.emptyRDD[(Int, String)]
     for (i <- 0 to clusters.k-1) {
       val cluster = clusterRdds(i)
@@ -38,12 +38,12 @@ class KMeansResult(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized: RDD[Se
     res
   }
 
-  def saveSampleDocs(output: String) = {
-    getSampleDocs().partitionBy(new HashPartitioner(clusters.k)).map(r=>r._2).saveAsTextFile(output)
+  def saveSampleDocs(output: String, sc: SparkContext) = {
+    getSampleDocs(sc).partitionBy(new HashPartitioner(clusters.k)).map(r=>r._2).saveAsTextFile(output)
     this
   }
 
-  def computeLDA(output: String, numTopics: Int = 3, numWordsPerTopic: Int = 10) = {
+  def computeLDA(output: String, sc: SparkContext, numTopics: Int = 3, numWordsPerTopic: Int = 10) = {
     var res:RDD[(Int, (Long, Seq[String], Double))] = sc.emptyRDD[(Int, (Long, Seq[String], Double))]
     for (i <- 0 to clusters.k-1) {
       val cluster = tfidf.filter(v => clusters.predict(v) == i).persist()
@@ -62,7 +62,7 @@ class KMeansResult(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized: RDD[Se
     this
   }
 
-  def topNWords(output: String, limit: Int = 10) = {
+  def topNWords(output: String, sc: SparkContext, limit: Int = 10) = {
     var res:RDD[(Int, (Double, Seq[String]))] = sc.emptyRDD[(Int, (Double, Seq[String]))]
     for (v <- 0 to clusters.k-1) {
       val cluster = clusters.clusterCenters(v)
