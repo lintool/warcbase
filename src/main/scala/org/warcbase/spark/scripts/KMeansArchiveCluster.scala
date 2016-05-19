@@ -10,12 +10,11 @@ import org.warcbase.spark.archive.io.ArchiveRecord
 import scala.collection.mutable.ArrayBuffer
 
 
-class KMeansResult(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized: RDD[Seq[String]],
-                   rec: RDD[ArchiveRecord]) extends Serializable{
+class KMeansArchiveCluster(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized: RDD[Seq[String]],
+                           rec: RDD[ArchiveRecord]) extends Serializable{
   val hashingTF = new HashingTF()
   lazy val allWords = lemmatized.flatMap(seq => seq.map(f=>f)).persist()
   lazy val hashIndexToTerm = allWords.map(s=>(hashingTF.indexOf(s), s)).distinct().cache()
-  lazy val indexToTerm = allWords.zipWithIndex().map(s=>(s._2, s._1)).cache()
   lazy val clusterRdds = getClusterRdds()
 
   private def getClusterRdds() = {
@@ -32,8 +31,8 @@ class KMeansResult(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized: RDD[Se
     for (i <- 0 to clusters.k-1) {
       val cluster = clusterRdds(i)
       val p= clusters.clusterCenters(i)
-      val docs = cluster.map(r=> (Vectors.sqdist(p, r._1), r._2)).takeOrdered(numDocs)(Ordering[Double].on(x=>x._1))
-      res = res.union(sc.parallelize(docs).map(r=>(i, r._2)))
+      val docs = cluster.map(r => (Vectors.sqdist(p, r._1), r._2)).takeOrdered(numDocs)(Ordering[Double].on(x=>x._1))
+      res = res.union(sc.parallelize(docs).map(r => (i, r._2)))
     }
     res
   }
@@ -52,11 +51,11 @@ class KMeansResult(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized: RDD[Se
       val ldaModel = new LDA().setK(numTopics).run(corpus)
       val topicArr:Array[(Array[Int], Array[Double])] = ldaModel.describeTopics(numWordsPerTopic)
       val topicRdd:RDD[(Array[Seq[String]], Array[Double])] = sc.parallelize(
-        topicArr.map(topic => (topic._1.map(index=>hashIndexToTerm.lookup(index)), topic._2))).cache()
-      val topicWords = topicRdd.zipWithIndex().map(_.swap).flatMap(r=>r._2._1.map(word=>(r._1, word)))
-      val topicScores = topicRdd.flatMap(r=>r._2.map(word=>word))
+        topicArr.map(topic => (topic._1.map(index => hashIndexToTerm.lookup(index)), topic._2))).cache()
+      val topicWords = topicRdd.zipWithIndex().map(_.swap).flatMap(r => r._2._1.map(word => (r._1, word)))
+      val topicScores = topicRdd.flatMap(r => r._2.map(word=>word))
       val topics = topicWords.zip(topicScores)
-      res = res.union(topics.map(r=>(i, (r._1._1, r._1._2, r._2))))
+      res = res.union(topics.map(r => (i, (r._1._1, r._1._2, r._2))))
     }
     res.partitionBy(new HashPartitioner(clusters.k)).map(r=>r._2).saveAsTextFile(output)
     this
