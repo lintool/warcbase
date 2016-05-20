@@ -11,7 +11,7 @@ import scala.collection.mutable.ArrayBuffer
 
 
 class KMeansArchiveCluster(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized: RDD[Seq[String]],
-                           rec: RDD[ArchiveRecord]) extends Serializable{
+                           rec: RDD[String]) extends Serializable{
   val hashingTF = new HashingTF()
   lazy val allWords = lemmatized.flatMap(seq => seq.map(f=>f)).persist()
   lazy val hashIndexToTerm = allWords.map(s=>(hashingTF.indexOf(s), s)).distinct().cache()
@@ -19,7 +19,7 @@ class KMeansArchiveCluster(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized
 
   private def getClusterRdds() = {
     val rdds = new ArrayBuffer[RDD[(Vector, String)]]
-    val merged = tfidf.zip(rec).map(r=>(r._1, r._2.getContentString))
+    val merged = tfidf.zip(rec).map(r=>(r._1, r._2))
     for (i <- 0 to clusters.k-1) {
       rdds += merged.filter(v => clusters.predict(v._1) == i).persist()
     }
