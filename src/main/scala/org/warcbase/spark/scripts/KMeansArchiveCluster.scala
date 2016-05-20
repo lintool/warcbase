@@ -44,7 +44,7 @@ class KMeansArchiveCluster(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized
   def computeLDA(output: String, sc: SparkContext, numTopics: Int = 3, numWordsPerTopic: Int = 10) = {
     var res:RDD[(Int, (Long, Seq[String], Double))] = sc.emptyRDD[(Int, (Long, Seq[String], Double))]
     clusterRdds.par.foreach(c => {
-      val cluster = c._2.map(x=>x._1)
+      val cluster = c._2.map(x=>x._1).persist()
       println(s"cluster size ${cluster.count()}")
       val corpus = cluster.zipWithIndex.map(_.swap).cache()
       val ldaModel = new LDA().setK(numTopics).run(corpus)
@@ -62,11 +62,12 @@ class KMeansArchiveCluster(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized
 
   def topNWords(output: String, sc: SparkContext, limit: Int = 10) = {
     var res:RDD[(Int, (Double, Seq[String]))] = sc.emptyRDD[(Int, (Double, Seq[String]))]
-    for (v <- 0 to clusters.k-1) {
+    clusterRdds.par.foreach(c => {
+      val v = c._1
       val cluster = clusters.clusterCenters(v)
       val topWords = sc.parallelize(cluster.toArray).zipWithIndex.takeOrdered(limit)(Ordering[Double].reverse.on(x=>x._1));
       res = res.union(sc.parallelize(topWords.map{ case (k, i) => (v, (k, hashIndexToTerm.lookup(i.toInt)))}))
-    }
+    })
     res.partitionBy(new HashPartitioner(clusters.k)).map(r=>r._2).saveAsTextFile(output)
     this
   }

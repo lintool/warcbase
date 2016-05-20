@@ -25,8 +25,10 @@ object ExtractClusters {
     }).persist()
 
     val tfidf = getTfIdf(lemmatized, minDocThreshold).cache()
+    val contents = rec.map(r=>r.getContentString).persist()
+    contents.count()
 
-    new KMeansArchiveCluster(KMeans.train(tfidf, k, numIterations), tfidf, lemmatized, rec.map(r=>r.getContentString))
+    new KMeansArchiveCluster(KMeans.train(tfidf, k, numIterations), tfidf, lemmatized, contents)
   }
 
   def getLemmas(q: ArchiveRecord, stemmer: EnglishStemmer, stopwords: Broadcast[Set[String]]): Seq[String] = {
