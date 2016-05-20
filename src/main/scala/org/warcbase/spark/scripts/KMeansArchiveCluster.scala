@@ -36,8 +36,8 @@ class KMeansArchiveCluster(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized
     res
   }
 
-  def saveSampleDocs(output: String, sc: SparkContext) = {
-    getSampleDocs(sc).partitionBy(new HashPartitioner(clusters.k)).map(r=>r._2).saveAsTextFile(output)
+  def saveSampleDocs(output: String, sc: SparkContext, numDocs: Int=10) = {
+    getSampleDocs(sc, numDocs).partitionBy(new HashPartitioner(clusters.k)).map(r=>r._2).saveAsTextFile(output)
     this
   }
 

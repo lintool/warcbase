@@ -39,7 +39,6 @@ object ExtractClusters {
       stemmer.setCurrent(word.toLowerCase.replaceAll("[^\\p{L}\\p{Nd}]+", ""))
       stemmer.stem()
       val lemma = stemmer.getCurrent()
-      println(lemma)
       if (lemma.length > 2 && !stopwords.value.contains(lemma)) {
         lemmas += lemma
       }
