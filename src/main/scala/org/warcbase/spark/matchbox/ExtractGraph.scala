@@ -40,7 +40,7 @@ object ExtractGraph {
   case class EdgeData(date: String, src: String, dst: String)
 
   def apply(records: RDD[ArchiveRecord], dynamic: Boolean = false,
-            tolerance: Double = 0.001, numIter: Int = 3): Graph[VertexData, EdgeData] = {
+            tolerance: Double = 0.005, numIter: Int = 20): Graph[VertexData, EdgeData] = {
     val extractedLinks = records.keepValidPages()
       .map(r => (r.getCrawlDate, ExtractLinks(r.getUrl, r.getContentString)))
       .flatMap(r => r._2.map(f => (r._1, ExtractDomain(f._1).removePrefixWWW(), ExtractDomain(f._2).removePrefixWWW())))
