@@ -28,14 +28,14 @@ class KMeansArchiveCluster(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized
   }
 
   def getSampleDocs(sc: SparkContext, numDocs: Int=10): RDD[(Int, String)] ={
-    var res:RDD[(Int, String)] = sc.emptyRDD[(Int, String)]
+    val accum = sc.accumulator(sc.emptyRDD[(Int, String)]: RDD[(Int, String)])(new RddAccumulator[(Int, String)])
     clusterRdds.par.foreach(c => {
       val cluster = c._2
       val p = clusters.clusterCenters(c._1)
       val docs = cluster.map(r => (Vectors.sqdist(p, r._1), r._2)).takeOrdered(numDocs)(Ordering[Double].on(x => x._1))
-      res = res.union(sc.parallelize(docs).map(r => (c._1, r._2)))
+      accum += sc.parallelize(docs).map(r => (c._1, r._2))
     })
-    res
+    accum.value
   }
 
   def saveSampleDocs(output: String, sc: SparkContext, numDocs: Int=10) = {
