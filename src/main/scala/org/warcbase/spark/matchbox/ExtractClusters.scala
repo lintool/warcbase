@@ -45,6 +45,11 @@ object ExtractClusters {
       stemmer.stem()
       r.map(q => getLemmas(q, stemmer, stopwords))
     }).persist()
+    lemmatized.count()
+
+    lemmatized.map(l => (l.length, l)).sortByKey().collect().foreach(pair=>{
+      println(pair._1, pair._2)
+    })
 
     val tfidf = getTfIdf(lemmatized, minDocThreshold).cache()
     val contents = rec.map(r=>r.getContentString).persist()

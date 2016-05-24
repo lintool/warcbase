@@ -6,9 +6,7 @@ import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{AccumulatorParam, HashPartitioner, SparkContext}
 import org.warcbase.spark.utils.RddAccumulator
-
-import scala.collection.mutable.ArrayBuffer
-
+import scala.collection.mutable.{HashMap, ListBuffer, ArrayBuffer}
 
 
 class KMeansArchiveCluster(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized: RDD[Seq[String]],
@@ -57,9 +55,17 @@ class KMeansArchiveCluster(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized
       val topicWords = topicRdd.zipWithIndex().map(_.swap).flatMap(r => r._2._1.map(word => (r._1, word)))
       val topicScores = topicRdd.flatMap(r => r._2.map(word=>word))
       val topics = topicWords.zip(topicScores)
-      accum += topics.map(r => (c._1, (r._1._1, r._1._2, r._2)))
+      accum += topics.map(r => (c._1, (r._1._1, r._1._2.toList, r._2)))
     })
-    accum.value.partitionBy(new HashPartitioner(clusters.k)).saveAsTextFile(output)
+    accum.value.partitionBy(new HashPartitioner(clusters.k)).map(_._2).mapPartitions(r=>{
+      val dict:HashMap[Long, ListBuffer[String]] = new HashMap()
+      r.map(r=>(r._1, r._2)).foreach(tuple=> {
+        val list = dict.getOrElse(tuple._1, new ListBuffer[String]())
+        list += tuple._2.mkString(start="(", ",", end=")")
+        dict.put(tuple._1, list)
+      })
+      dict.toSeq.sortBy(x=>x._1).map(x=> "Topic " + x._1 + ": " + x._2.mkString(",")).toIterator
+    }).saveAsTextFile(output)
     this
   }
 
@@ -70,10 +76,9 @@ class KMeansArchiveCluster(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized
       val v = c._1
       val cluster = clusters.clusterCenters(v)
       val topWords = sc.parallelize(cluster.toArray).zipWithIndex.takeOrdered(limit)(Ordering[Double].reverse.on(x=>x._1));
-      print(s"# top words for ${v} : ${topWords.length}")
       accum += sc.parallelize(topWords.map{ case (k, i) => (v, (k, hashIndexToTerm.lookup(i.toInt)))})
     })
-    accum.value.partitionBy(new HashPartitioner(clusters.k)).map(_._2).saveAsTextFile(output)
+    accum.value.partitionBy(new HashPartitioner(clusters.k)).map(_._2).map(x=>(x._1, x._2.mkString(","))).saveAsTextFile(output)
     this
   }
 }
