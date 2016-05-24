@@ -43,10 +43,9 @@ class KMeansArchiveCluster(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized
     this
   }
 
-  def computeLDA(output: String, sc: SparkContext, numTopics: Int = 3, numWordsPerTopic: Int = 10) = {
+  def computeLDA(output: String, sc: SparkContext, numTopics: Int = 5, numWordsPerTopic: Int = 12) = {
     val accum = sc.accumulator(sc.emptyRDD[(Int, (Long, Seq[String], Double))]:
       RDD[(Int, (Long, Seq[String], Double))])(new RddAccumulator[(Int, (Long, Seq[String], Double))])
-    // var res:RDD[(Int, (Long, Seq[String], Double))] = sc.emptyRDD[(Int, (Long, Seq[String], Double))]
     clusterRdds.par.foreach(c => {
       val cluster = c._2.map(x=>x._1).persist()
       println(s"cluster size ${cluster.count()}")
@@ -74,7 +73,7 @@ class KMeansArchiveCluster(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized
       print(s"# top words for ${v} : ${topWords.length}")
       accum += sc.parallelize(topWords.map{ case (k, i) => (v, (k, hashIndexToTerm.lookup(i.toInt)))})
     })
-    accum.value.partitionBy(new HashPartitioner(clusters.k)).saveAsTextFile(output)
+    accum.value.partitionBy(new HashPartitioner(clusters.k)).map(_._2).saveAsTextFile(output)
     this
   }
 }
