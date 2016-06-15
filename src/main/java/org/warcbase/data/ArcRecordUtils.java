@@ -94,8 +94,16 @@ public class ArcRecordUtils {
     byte[] raw = getContent(record);
     int bodyOffset = record.getBodyOffset();
 
-    byte[] content = new byte[raw.length - bodyOffset];
-    System.arraycopy(raw, bodyOffset, content, 0, content.length);
+    byte[] content = null;
+    try {
+      content = new byte[raw.length - bodyOffset];
+      System.arraycopy(raw, bodyOffset, content, 0, content.length);
+    } catch (java.lang.NegativeArraySizeException e) {
+      // To find out what URL causing the error: record.getMetaData().getUrl()
+      // For some records, we're missing the actual content data, likely due to a crawler gitch.
+      // Nothing much we can do, just swallow and move on...
+      content = new byte[0];
+    }
     
     return content;
   }
