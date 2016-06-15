@@ -58,7 +58,7 @@ Spark Quickstart
 
 For the impatient, let's do a simple analysis with Spark. Within the repo there's already a sample ARC file stored at `src/test/resources/arc/example.arc.gz`. Our supporting resources repository also has [larger ARC and WARC files as real-world examples](https://github.com/lintool/warcbase-resources/tree/master/Sample-Data).
 
-If you need to install Spark, [we have a walkthrough here for installation on OS X](http://lintool.github.io/warcbase-docs/Installing-and-Running-Spark-under-OS-X/). This page also has instructions on how to get Spark Notebook, an interactive web-based editor, running.
+If you need to install Spark, [we have a walkthrough here](http://lintool.github.io/warcbase-docs/Getting-Started/). This page also has instructions on how to get Spark Notebook, an interactive web-based editor, running.
 
 Once you've got Spark installed, you can go ahead and fire up the Spark shell:
 
