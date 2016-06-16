@@ -25,6 +25,7 @@
 
   <modules>
     <module>warcbase-core</module>
+    <module>warcbase-hbase</module>
   </modules>
 
 </project>
