@@ -54,7 +54,7 @@
     <hadoop.version>2.6.0-cdh5.4.1</hadoop.version>
     <hbase.version>1.0.0-cdh5.4.1</hbase.version>
     <zookeeper.version>3.4.5-cdh5.4.1</zookeeper.version>
-    <spark.version>1.3.0-cdh5.4.1</spark.version>    
+    <spark.version>1.3.0-cdh5.4.1</spark.version>
     <scala.version>2.10.4</scala.version>
   </properties>
 
@@ -534,6 +534,10 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
         <exclusion><groupId>com.typesafe</groupId><artifactId>config</artifactId></exclusion>
       </exclusions>
     </dependency>
-
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-mllib_2.10</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
   </dependencies>
 </project>
