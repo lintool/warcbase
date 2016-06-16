@@ -61,7 +61,7 @@
   <build>
     <plugins>
 
- <!--plugin>
+ <plugin>
     <artifactId>maven-clean-plugin</artifactId>
     <version>2.6.1</version>
     <configuration>
@@ -72,7 +72,7 @@
         </fileset>
       </filesets>
     </configuration>
-  </plugin-->
+  </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -128,7 +128,7 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
         </executions>
       </plugin>
 
-<!--plugin>
+<plugin>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-dependency-plugin</artifactId>
     <version>2.4</version>
@@ -146,7 +146,7 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
             </configuration>
         </execution>
     </executions>
-</plugin-->
+</plugin>
 
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -263,26 +263,53 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
       <version>2.2.4</version>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <version>1.8</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.4</version>
+    </dependency>
     <dependency>
       <groupId>org.jsoup</groupId>
       <artifactId>jsoup</artifactId>
       <version>1.7.3</version>
     </dependency>
-
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>14.0.1</version> 
       <!-- downgrade for Hadoop WARC indexer, see also https://issues.apache.org/jira/browse/HADOOP-10961 -->
     </dependency>
-
     <dependency>
       <groupId>tl.lin</groupId>
       <artifactId>lintools-datatypes</artifactId>
       <version>1.0.0</version>
     </dependency>
-    <!-- WacWarcLoaderTest depends on this -->
+
+    <!-- Begin: Hadoop-related dependencies -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-client</artifactId>
+      <version>${hbase.version}</version>
+      <exclusions>
+        <exclusion><groupId>org.apache.hadoop</groupId><artifactId>hadoop-core</artifactId></exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
+      <version>${hbase.version}</version>
+      <exclusions>
+        <exclusion><groupId>org.apache.hadoop</groupId><artifactId>hadoop-core</artifactId></exclusion>
+        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>servlet-api-2.5</artifactId></exclusion>
+        <exclusion><groupId>javax.servlet</groupId><artifactId>servlet-api</artifactId></exclusion>
+        <exclusion><groupId>asm</groupId><artifactId>asm</artifactId></exclusion>
+      </exclusions>
+    </dependency>
 
     <!-- See http://www.cloudera.com/content/cloudera-content/cloudera-docs/CDH5/latest/CDH-Version-and-Packaging-Information/cdhvd_hadoop_api_dependencies.html -->
     <dependency>
@@ -292,6 +319,12 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
       <exclusions>
         <exclusion><groupId>javax.servlet</groupId><artifactId>servlet-api</artifactId></exclusion>
       </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.zookeeper</groupId>
+      <artifactId>zookeeper</artifactId>
+      <version>${zookeeper.version}</version>
     </dependency>
 
     <!-- End: Hadoop-related dependencies -->
@@ -322,19 +355,44 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
     </dependency>
 
     <dependency>
+      <groupId>it.unimi.dsi</groupId>
+      <artifactId>dsiutils</artifactId>
+      <version>2.2.0</version>
+      <exclusions>
+        <exclusion><groupId>ch.qos.logback</groupId><artifactId>logback-classic</artifactId></exclusion>
+        <exclusion><groupId>commons-lang</groupId><artifactId>commons-lang</artifactId></exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>it.unimi.dsi</groupId>
+      <artifactId>fastutil</artifactId>
+      <version>6.5.15</version>
+      <exclusions>
+        <exclusion><groupId>commons-lang</groupId><artifactId>commons-lang</artifactId></exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
+      <version>${jettyVersion}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-webapp</artifactId>
+      <version>${jettyVersion}</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>1.6.4</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
       <version>3.0</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-codec</groupId>
-      <artifactId>commons-codec</artifactId>
-      <version>1.8</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>2.4</version>
     </dependency>
     <dependency>
       <groupId>commons-cli</groupId>
@@ -342,13 +400,11 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
       <version>1.2</version>
     </dependency>
 
-    <!--
     <dependency>
       <groupId>net.sf.opencsv</groupId>
       <artifactId>opencsv</artifactId>
       <version>2.3</version>
     </dependency>
-    -->
 
     <dependency>
       <groupId>org.apache.tika</groupId>
@@ -365,6 +421,17 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
       <groupId>org.antlr</groupId>
       <artifactId>antlr</artifactId>
       <version>3.5.2</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>2.42.2</version>
+      <exclusions>
+        <exclusion><groupId>org.seleniumhq.selenium</groupId><artifactId>selenium-htmlunit-driver</artifactId></exclusion>
+        <exclusion><groupId>org.seleniumhq.selenium</groupId><artifactId>selenium-ie-driver</artifactId></exclusion>
+        <exclusion><groupId>org.webbitserver</groupId><artifactId>webbit</artifactId></exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
@@ -416,13 +483,11 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
       <version>1.2.1</version>
     </dependency>
 
-    <!--
     <dependency>
       <groupId>org.xerial.snappy</groupId>
       <artifactId>snappy-java</artifactId>
       <version>1.0.5</version>
     </dependency>
-    -->
 
     <dependency>
       <groupId>edu.stanford.nlp</groupId>
@@ -442,6 +507,33 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
       <version>2.11.0</version>
     </dependency>
 
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-core</artifactId>
+      <version>4.7.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.solr</groupId>
+      <artifactId>solr-core</artifactId>
+      <version>4.7.2</version>
+      <exclusions>
+        <exclusion><artifactId>slf4j-api</artifactId><groupId>org.slf4j</groupId></exclusion>
+        <exclusion><artifactId>org.apache.hadoop</artifactId><groupId>hadoop-annotations</groupId></exclusion>
+        <exclusion><artifactId>org.apache.hadoop</artifactId><groupId>hadoop-common</groupId></exclusion>
+        <exclusion><artifactId>org.apache.hadoop</artifactId><groupId>hadoop-hdfs</groupId></exclusion>
+        <exclusion><groupId>com.typesafe</groupId><artifactId>config</artifactId></exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>uk.bl.wa.discovery</groupId>
+      <artifactId>warc-hadoop-indexer</artifactId>
+      <version>2.2.0-BETA-5</version>
+      <exclusions>
+        <exclusion><groupId>asm</groupId><artifactId>asm</artifactId></exclusion>
+        <exclusion><groupId>com.typesafe</groupId><artifactId>config</artifactId></exclusion>
+      </exclusions>
+    </dependency>
 
   </dependencies>
 </project>
