@@ -6,8 +6,18 @@
   <packaging>pom</packaging>
   <version>0.1.0-SNAPSHOT</version>
   <name>Warcbase</name>
-  <description>An open-source platform for managing web archives built on Hadoop and HBase</description>
+  <description>An open-source platform for managing and analyzing web archives</description>
   <url>http://warcbase.org/</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <scala.version>2.10.5</scala.version>
+    <hadoop.version>2.6.0-cdh5.4.1</hadoop.version>
+    <spark.version>1.3.0-cdh5.4.1</spark.version>
+    <hbase.version>1.0.0-cdh5.4.1</hbase.version>
+    <zookeeper.version>3.4.5-cdh5.4.1</zookeeper.version>
+  </properties>
 
   <licenses>
     <license>

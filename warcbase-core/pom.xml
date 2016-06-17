@@ -11,8 +11,8 @@
   <artifactId>warcbase-core</artifactId>
   <packaging>jar</packaging>
   <version>0.1.0-SNAPSHOT</version>
-  <name>Warcbase</name>
-  <description>An open-source platform for managing web archives built on Hadoop and HBase</description>
+  <name>Warcbase (Core)</name>
+  <description>An open-source platform for managing and analyzing web archives</description>
   <url>http://warcbase.org/</url>
 
   <licenses>
@@ -29,51 +29,8 @@
     <url>git@github.com:lintool/warcbase.git</url>
   </scm>
 
-  <developers>
-    <developer>
-      <id>lintool</id>
-      <name>Jimmy Lin</name>
-      <email>jimmylin@umd.edu</email>
-    </developer>
-    <developer>
-      <id>milad621</id>
-      <name>Milad Gholami</name>
-      <email>mgholami@cs.umd.edu</email>
-    </developer>
-    <developer>
-      <id>jeffyRao</id>
-      <name>Jinfeng Rao</name>
-      <email>jinfeng@cs.umd.edu</email>
-    </developer>
-  </developers>
-
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <jettyVersion>8.1.12.v20130726</jettyVersion>
-    <hadoop.version>2.6.0-cdh5.4.1</hadoop.version>
-    <hbase.version>1.0.0-cdh5.4.1</hbase.version>
-    <zookeeper.version>3.4.5-cdh5.4.1</zookeeper.version>
-    <spark.version>1.3.0-cdh5.4.1</spark.version>    
-    <scala.version>2.10.4</scala.version>
-  </properties>
-
   <build>
     <plugins>
-
- <!--plugin>
-    <artifactId>maven-clean-plugin</artifactId>
-    <version>2.6.1</version>
-    <configuration>
-      <filesets>
-        <fileset>
-          <directory>src/main/solr/lib</directory>
-          <followSymlinks>false</followSymlinks>
-        </fileset>
-      </filesets>
-    </configuration>
-  </plugin-->
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -94,14 +51,11 @@
               <goal>shade</goal>
             </goals>
             <configuration>
-
-<!--
-http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130822094206.310452@isped.u-bordeaux2.fr%3E
--->
-
-<transformers><transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-    <resource>META-INF/services/org.apache.lucene.codecs.Codec</resource></transformer></transformers>
-
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>META-INF/services/org.apache.lucene.codecs.Codec</resource>
+                </transformer>
+              </transformers>
 
               <!-- This fixes the issue "Invalid signature file digest for Manifest main attributes"
                    cf. http://zhentao-li.blogspot.com/2012/06/maven-shade-plugin-invalid-signature.html -->
@@ -121,6 +75,7 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
               <artifactSet>
                 <excludes>
                   <exclude>org.apache.hadoop:*</exclude>
+                  <exclude>org.apache.spark:*</exclude>
                 </excludes>
               </artifactSet>
             </configuration>
@@ -128,76 +83,6 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
         </executions>
       </plugin>
 
-<!--plugin>
-    <groupId>org.apache.maven.plugins</groupId>
-    <artifactId>maven-dependency-plugin</artifactId>
-    <version>2.4</version>
-    <executions>
-        <execution>
-            <id>copy</id>
-            <phase>package</phase>
-            <goals>
-                <goal>copy-dependencies</goal>
-            </goals>
-            <configuration>
-                <outputDirectory>
-                    src/main/solr/lib
-                </outputDirectory>
-            </configuration>
-        </execution>
-    </executions>
-</plugin-->
-
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>appassembler-maven-plugin</artifactId>
-        <version>1.9</version>
-        <configuration>
-          <extraJvmArguments>-Xms512M -Xmx24576M</extraJvmArguments>
-          <programs>
-            <program>
-              <mainClass>org.warcbase.WarcbaseAdmin</mainClass>
-              <name>WarcbaseAdmin</name>
-            </program>
-            <program>
-              <mainClass>org.warcbase.data.UrlMappingBuilder</mainClass>
-              <name>UrlMappingBuilder</name>
-            </program>
-            <program>
-              <mainClass>org.warcbase.data.UrlMapping</mainClass>
-              <name>UrlMapping</name>
-            </program>
-            <program>
-              <mainClass>org.warcbase.data.ExtractLinks</mainClass>
-              <name>ExtractLinks</name>
-            </program>
-            <program>
-              <mainClass>org.warcbase.data.ExtractSiteLinks</mainClass>
-              <name>ExtractSiteLinks</name>
-            </program>
-            <program>
-              <mainClass>org.warcbase.ingest.IngestFiles</mainClass>
-              <name>IngestFiles</name>
-            </program>
-            <program>
-              <mainClass>org.warcbase.ingest.SearchForUrl</mainClass>
-              <name>SearchForUrl</name>
-            </program>
-            <program>
-              <mainClass>org.warcbase.browser.WarcBrowser</mainClass>
-              <name>WarcBrowser</name>
-            </program>
-            <program>
-              <mainClass>org.warcbase.analysis.DetectDuplicates</mainClass>
-              <name>DetectDuplicates</name>
-            </program>
-            <program>
-              <mainClass>org.warcbase.browser.SeleniumBrowser</mainClass>
-              <name>SeleniumBrowser</name>
-            </program>
-          </programs>
-        </configuration>
-      </plugin>
       <!-- for Scala -->
       <plugin>
         <groupId>org.scala-tools</groupId>
@@ -260,8 +145,43 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
     <dependency>
       <groupId>org.scalatest</groupId>
       <artifactId>scalatest_2.10</artifactId>
-      <version>2.2.4</version>
+      <version>2.2.5</version>
       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <version>${scala.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.chuusai</groupId>
+      <artifactId>shapeless_2.10.5</artifactId>
+      <version>2.0.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_2.10</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-graphx_2.10</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>14.0.1</version> 
+      <!-- downgrade to fix http://stackoverflow.com/questions/36427291/illegalaccesserror-to-guavas-stopwatch-from-org-apache-hadoop-mapreduce-lib-inp -->
+    </dependency>
+
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <version>1.0.5</version>
     </dependency>
 
     <dependency>
@@ -271,84 +191,21 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
     </dependency>
 
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>14.0.1</version> 
-      <!-- downgrade for Hadoop WARC indexer, see also https://issues.apache.org/jira/browse/HADOOP-10961 -->
-    </dependency>
-
-    <dependency>
-      <groupId>tl.lin</groupId>
-      <artifactId>lintools-datatypes</artifactId>
-      <version>1.0.0</version>
-    </dependency>
-    <!-- WacWarcLoaderTest depends on this -->
-
-    <!-- See http://www.cloudera.com/content/cloudera-content/cloudera-docs/CDH5/latest/CDH-Version-and-Packaging-Information/cdhvd_hadoop_api_dependencies.html -->
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-client</artifactId>
-      <version>${hadoop.version}</version>
-      <exclusions>
-        <exclusion><groupId>javax.servlet</groupId><artifactId>servlet-api</artifactId></exclusion>
-      </exclusions>
-    </dependency>
-
-    <!-- End: Hadoop-related dependencies -->
-
-    <dependency>
       <groupId>org.netpreserve.openwayback</groupId>
       <artifactId>openwayback-core</artifactId>
       <version>2.0.0.BETA.2</version>
-      <exclusions>
-        <exclusion><groupId>org.apache.hadoop</groupId><artifactId>hadoop-core</artifactId></exclusion>
-        <exclusion><groupId>ch.qos.logback</groupId><artifactId>logback-classic</artifactId></exclusion>
-        <exclusion><groupId>org.netpreserve.openwayback</groupId><artifactId>openwayback-cdx-server</artifactId></exclusion>
-        <exclusion><groupId>org.netpreserve.openwayback</groupId><artifactId>openwayback-access-control-core</artifactId></exclusion>
-        <!-- swap in our own latest versions -->
-        <exclusion><groupId>it.unimi.dsi</groupId><artifactId>dsiutils</artifactId></exclusion>
-        <exclusion><groupId>fastutil</groupId><artifactId>fastutil</artifactId></exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.netpreserve.commons</groupId>
       <artifactId>webarchive-commons</artifactId>
       <version>1.1.4</version>
-      <exclusions>
-        <exclusion><groupId>org.apache.hadoop</groupId><artifactId>hadoop-core</artifactId></exclusion>
-        <exclusion><groupId>commons-lang</groupId><artifactId>commons-lang</artifactId></exclusion>
-        <exclusion><groupId>fastutil</groupId><artifactId>fastutil</artifactId></exclusion>
-      </exclusions>
     </dependency>
 
     <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
-      <version>3.0</version>
+      <groupId>edu.stanford.nlp</groupId>
+      <artifactId>stanford-corenlp</artifactId>
+      <version>3.4.1</version>
     </dependency>
-    <dependency>
-      <groupId>commons-codec</groupId>
-      <artifactId>commons-codec</artifactId>
-      <version>1.8</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>2.4</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-cli</groupId>
-      <artifactId>commons-cli</artifactId>
-      <version>1.2</version>
-    </dependency>
-
-    <!--
-    <dependency>
-      <groupId>net.sf.opencsv</groupId>
-      <artifactId>opencsv</artifactId>
-      <version>2.3</version>
-    </dependency>
-    -->
 
     <dependency>
       <groupId>org.apache.tika</groupId>
@@ -362,86 +219,10 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
     </dependency>
 
     <dependency>
-      <groupId>org.antlr</groupId>
-      <artifactId>antlr</artifactId>
-      <version>3.5.2</version>
+      <groupId>tl.lin</groupId>
+      <artifactId>lintools-datatypes</artifactId>
+      <version>1.0.0</version>
     </dependency>
-
-    <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-library</artifactId>
-      <version>2.10.4</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_2.10</artifactId>
-      <version>${spark.version}</version>
-      <exclusions>
-        <exclusion><groupId>com.typesafe</groupId><artifactId>config</artifactId></exclusion>
-        <exclusion><groupId>org.xerial.snappy</groupId><artifactId>snappy-java</artifactId>
-      </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-graphx_2.10</artifactId>
-      <version>${spark.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>com.chuusai</groupId>
-      <artifactId>shapeless_2.10.4</artifactId>
-      <version>2.0.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-      <version>2.7.2</version>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-      <version>2.7.2</version>
-    </dependency>
-    <dependency>
-      <groupId>org.json4s</groupId>
-      <artifactId>json4s-jackson_2.10</artifactId>
-      <version>3.2.10</version>
-      <!-- see this issue: http://stackoverflow.com/questions/32400061/spark-streaming-json4s-jackson-dependency-problems -->
-    </dependency>
-
-    <dependency>
-      <groupId>com.typesafe</groupId>
-      <artifactId>config</artifactId>
-      <version>1.2.1</version>
-    </dependency>
-
-    <!--
-    <dependency>
-      <groupId>org.xerial.snappy</groupId>
-      <artifactId>snappy-java</artifactId>
-      <version>1.0.5</version>
-    </dependency>
-    -->
-
-    <dependency>
-      <groupId>edu.stanford.nlp</groupId>
-      <artifactId>stanford-corenlp</artifactId>
-      <version>3.4.1</version>
-    </dependency>
-
-    <dependency>
-      <groupId>com.syncthemall</groupId>
-      <artifactId>boilerpipe</artifactId>
-      <version>1.2.2</version>
-    </dependency>
-
-    <dependency>
-      <groupId>xerces</groupId>
-      <artifactId>xercesImpl</artifactId>
-      <version>2.11.0</version>
-    </dependency>
-
 
   </dependencies>
 </project>

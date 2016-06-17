@@ -11,8 +11,8 @@
   <artifactId>warcbase-hbase</artifactId>
   <packaging>jar</packaging>
   <version>0.1.0-SNAPSHOT</version>
-  <name>Warcbase</name>
-  <description>An open-source platform for managing web archives built on Hadoop and HBase</description>
+  <name>Warcbase (HBase)</name>
+  <description>An open-source platform for managing and analyzing web archives</description>
   <url>http://warcbase.org/</url>
 
   <licenses>
@@ -29,51 +29,8 @@
     <url>git@github.com:lintool/warcbase.git</url>
   </scm>
 
-  <developers>
-    <developer>
-      <id>lintool</id>
-      <name>Jimmy Lin</name>
-      <email>jimmylin@umd.edu</email>
-    </developer>
-    <developer>
-      <id>milad621</id>
-      <name>Milad Gholami</name>
-      <email>mgholami@cs.umd.edu</email>
-    </developer>
-    <developer>
-      <id>jeffyRao</id>
-      <name>Jinfeng Rao</name>
-      <email>jinfeng@cs.umd.edu</email>
-    </developer>
-  </developers>
-
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <jettyVersion>8.1.12.v20130726</jettyVersion>
-    <hadoop.version>2.6.0-cdh5.4.1</hadoop.version>
-    <hbase.version>1.0.0-cdh5.4.1</hbase.version>
-    <zookeeper.version>3.4.5-cdh5.4.1</zookeeper.version>
-    <spark.version>1.3.0-cdh5.4.1</spark.version>    
-    <scala.version>2.10.4</scala.version>
-  </properties>
-
   <build>
     <plugins>
-
- <plugin>
-    <artifactId>maven-clean-plugin</artifactId>
-    <version>2.6.1</version>
-    <configuration>
-      <filesets>
-        <fileset>
-          <directory>src/main/solr/lib</directory>
-          <followSymlinks>false</followSymlinks>
-        </fileset>
-      </filesets>
-    </configuration>
-  </plugin>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -94,17 +51,15 @@
               <goal>shade</goal>
             </goals>
             <configuration>
-
-<!--
-http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130822094206.310452@isped.u-bordeaux2.fr%3E
--->
-
-<transformers><transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-    <resource>META-INF/services/org.apache.lucene.codecs.Codec</resource></transformer></transformers>
-
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>META-INF/services/org.apache.lucene.codecs.Codec</resource>
+                </transformer>
+              </transformers>
 
               <!-- This fixes the issue "Invalid signature file digest for Manifest main attributes"
                    cf. http://zhentao-li.blogspot.com/2012/06/maven-shade-plugin-invalid-signature.html -->
+
               <filters>
                 <filter>
                   <artifact>*:*</artifact>
@@ -128,12 +83,12 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
         </executions>
       </plugin>
 
-<plugin>
-    <groupId>org.apache.maven.plugins</groupId>
-    <artifactId>maven-dependency-plugin</artifactId>
-    <version>2.4</version>
-    <executions>
-        <execution>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>2.4</version>
+        <executions>
+          <execution>
             <id>copy</id>
             <phase>package</phase>
             <goals>
@@ -144,9 +99,9 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
                     src/main/solr/lib
                 </outputDirectory>
             </configuration>
-        </execution>
-    </executions>
-</plugin>
+          </execution>
+        </executions>
+      </plugin>
 
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -261,36 +216,17 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-client</artifactId>
       <version>${hbase.version}</version>
-      <exclusions>
-        <exclusion><groupId>org.apache.hadoop</groupId><artifactId>hadoop-core</artifactId></exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
       <version>${hbase.version}</version>
-      <exclusions>
-        <exclusion><groupId>org.apache.hadoop</groupId><artifactId>hadoop-core</artifactId></exclusion>
-        <exclusion><groupId>org.mortbay.jetty</groupId><artifactId>servlet-api-2.5</artifactId></exclusion>
-        <exclusion><groupId>javax.servlet</groupId><artifactId>servlet-api</artifactId></exclusion>
-        <exclusion><groupId>asm</groupId><artifactId>asm</artifactId></exclusion>
-      </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.zookeeper</groupId>
-      <artifactId>zookeeper</artifactId>
-      <version>${zookeeper.version}</version>
     </dependency>
 
     <dependency>
       <groupId>uk.bl.wa.discovery</groupId>
       <artifactId>warc-hadoop-indexer</artifactId>
       <version>2.2.0-BETA-5</version>
-      <exclusions>
-        <exclusion><groupId>asm</groupId><artifactId>asm</artifactId></exclusion>
-        <exclusion><groupId>com.typesafe</groupId><artifactId>config</artifactId></exclusion>
-      </exclusions>
     </dependency>
 
     <dependency>
@@ -302,26 +238,13 @@ http://mail-archives.apache.org/mod_mbox/lucene-java-user/201308.mbox/%3CWC20130
       <groupId>org.apache.solr</groupId>
       <artifactId>solr-core</artifactId>
       <version>4.7.2</version>
-      <exclusions>
-        <exclusion><artifactId>slf4j-api</artifactId><groupId>org.slf4j</groupId></exclusion>
-        <exclusion><artifactId>org.apache.hadoop</artifactId><groupId>hadoop-annotations</groupId></exclusion>
-        <exclusion><artifactId>org.apache.hadoop</artifactId><groupId>hadoop-common</groupId></exclusion>
-        <exclusion><artifactId>org.apache.hadoop</artifactId><groupId>hadoop-hdfs</groupId></exclusion>
-        <exclusion><groupId>com.typesafe</groupId><artifactId>config</artifactId></exclusion>
-      </exclusions>
     </dependency>
 
     <dependency>
       <groupId>org.seleniumhq.selenium</groupId>
       <artifactId>selenium-java</artifactId>
       <version>2.42.2</version>
-      <exclusions>
-        <exclusion><groupId>org.seleniumhq.selenium</groupId><artifactId>selenium-htmlunit-driver</artifactId></exclusion>
-        <exclusion><groupId>org.seleniumhq.selenium</groupId><artifactId>selenium-ie-driver</artifactId></exclusion>
-        <exclusion><groupId>org.webbitserver</groupId><artifactId>webbit</artifactId></exclusion>
-      </exclusions>
     </dependency>
-
 
   </dependencies>
 </project>
