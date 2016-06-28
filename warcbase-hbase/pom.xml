@@ -1,0 +1,250 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <parent>
+    <groupId>org.warcbase</groupId>
+    <artifactId>warcbase</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.warcbase</groupId>
+  <artifactId>warcbase-hbase</artifactId>
+  <packaging>jar</packaging>
+  <version>0.1.0-SNAPSHOT</version>
+  <name>Warcbase (HBase)</name>
+  <description>An open-source platform for managing and analyzing web archives</description>
+  <url>http://warcbase.org/</url>
+
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:git@github.com:lintool/warcbase.git</connection>
+    <developerConnection>scm:git:git@github.com:lintool/warcbase.git</developerConnection>
+    <url>git@github.com:lintool/warcbase.git</url>
+  </scm>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.2</version>
+        <configuration>
+          <source>1.7</source>
+          <target>1.7</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.3</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>META-INF/services/org.apache.lucene.codecs.Codec</resource>
+                </transformer>
+              </transformers>
+
+              <!-- This fixes the issue "Invalid signature file digest for Manifest main attributes"
+                   cf. http://zhentao-li.blogspot.com/2012/06/maven-shade-plugin-invalid-signature.html -->
+
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <!-- this will create both a normal thin jar and also a fatjar -->
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <shadedClassifierName>fatjar</shadedClassifierName>
+              <artifactSet>
+                <excludes>
+                  <exclude>org.apache.hadoop:*</exclude>
+                </excludes>
+              </artifactSet>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>2.4</version>
+        <executions>
+          <execution>
+            <id>copy</id>
+            <phase>package</phase>
+            <goals>
+                <goal>copy-dependencies</goal>
+            </goals>
+            <configuration>
+                <outputDirectory>
+                    src/main/solr/lib
+                </outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>appassembler-maven-plugin</artifactId>
+        <version>1.9</version>
+        <configuration>
+          <extraJvmArguments>-Xms512M -Xmx24576M</extraJvmArguments>
+          <programs>
+            <program>
+              <mainClass>org.warcbase.WarcbaseAdmin</mainClass>
+              <name>WarcbaseAdmin</name>
+            </program>
+            <program>
+              <mainClass>org.warcbase.data.UrlMappingBuilder</mainClass>
+              <name>UrlMappingBuilder</name>
+            </program>
+            <program>
+              <mainClass>org.warcbase.data.UrlMapping</mainClass>
+              <name>UrlMapping</name>
+            </program>
+            <program>
+              <mainClass>org.warcbase.data.ExtractLinks</mainClass>
+              <name>ExtractLinks</name>
+            </program>
+            <program>
+              <mainClass>org.warcbase.data.ExtractSiteLinks</mainClass>
+              <name>ExtractSiteLinks</name>
+            </program>
+            <program>
+              <mainClass>org.warcbase.ingest.IngestFiles</mainClass>
+              <name>IngestFiles</name>
+            </program>
+            <program>
+              <mainClass>org.warcbase.ingest.SearchForUrl</mainClass>
+              <name>SearchForUrl</name>
+            </program>
+            <program>
+              <mainClass>org.warcbase.browser.WarcBrowser</mainClass>
+              <name>WarcBrowser</name>
+            </program>
+            <program>
+              <mainClass>org.warcbase.analysis.DetectDuplicates</mainClass>
+              <name>DetectDuplicates</name>
+            </program>
+            <program>
+              <mainClass>org.warcbase.browser.SeleniumBrowser</mainClass>
+              <name>SeleniumBrowser</name>
+            </program>
+          </programs>
+        </configuration>
+      </plugin>
+      <!-- for Scala -->
+      <plugin>
+        <groupId>org.scala-tools</groupId>
+        <artifactId>maven-scala-plugin</artifactId>
+        <version>2.15.2</version>
+        <executions>
+          <execution>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>add-source</goal>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>scala-test-compile</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>testCompile</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <scalaVersion>${scala.version}</scalaVersion>
+          <sendJavaToScalac>true</sendJavaToScalac>
+          <args>
+            <arg>-target:jvm-1.7</arg>
+            <arg>-g:vars</arg>
+            <arg>-deprecation</arg>
+            <arg>-dependencyfile</arg>
+            <arg>${project.build.directory}/.scala_dependencies</arg>
+          </args>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <repositories>
+    <repository>
+      <id>maven</id>
+      <url>http://repo.maven.apache.org/maven2/</url>
+    </repository>
+    <repository>
+      <id>cloudera</id>
+      <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+    </repository>
+    <repository>
+      <id>internetarchive</id>
+      <name>Internet Archive Maven Repository</name>
+      <url>http://builds.archive.org:8080/maven2</url>
+    </repository>
+  </repositories>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.warcbase</groupId>
+      <artifactId>warcbase-core</artifactId>
+      <version>0.1.0-SNAPSHOT</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-client</artifactId>
+      <version>${hbase.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
+      <version>${hbase.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>uk.bl.wa.discovery</groupId>
+      <artifactId>warc-hadoop-indexer</artifactId>
+      <version>2.2.0-BETA-5</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-core</artifactId>
+      <version>4.7.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.solr</groupId>
+      <artifactId>solr-core</artifactId>
+      <version>4.7.2</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>2.42.2</version>
+    </dependency>
+
+  </dependencies>
+</project>

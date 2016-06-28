@@ -9,4 +9,4 @@ before_install:
  - "export JAVA_OPTS=-Xmx512m"
 
 script:
- - mvn clean package appassembler:assemble
+ - mvn clean package

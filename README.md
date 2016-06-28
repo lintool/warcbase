@@ -5,23 +5,15 @@ Warcbase is an open-source platform for managing web archives built on Hadoop an
 
 There are two main ways of using Warcbase:
 
-+ The first and most common is to analyze web archives using [Spark](http://spark.apache.org/).
-+ The second is to take advantage of HBase to provide random access as well as analytics capabilities. Random access allows Warcbase to provide temporal browsing of archived content (i.e., "wayback" functionality).
++ The first and most common is to analyze web archives using [Spark](http://spark.apache.org/): these functionalities are contained in the `warcbase-core` module.
++ The second is to take advantage of HBase to provide random access as well as analytics capabilities. Random access allows Warcbase to provide temporal browsing of archived content (i.e., "wayback" functionality): these functionalities are contained in the `warcbase-hbase` module.
 
 You can use Warcbase without HBase, and since HBase requires more extensive setup, it is recommended that if you're just starting out, play with the Spark analytics and don't worry about HBase.
 
-Warcbase is built against CDH 5.4.1:
+Other helpful links:
 
-+ Hadoop version: 2.6.0-cdh5.4.1
-+ HBase version: 1.0.0-cdh5.4.1
-+ Spark version: 1.3.0-cdh5.4.1
-
-The Hadoop ecosystem is evolving rapidly, so there may be incompatibilities with other versions.
-
-**Detailed documentation is available [here](http://lintool.github.io/warcbase-docs/).**
-
-Supporting files can be found in the [warcbase-resources repository](https://github.com/lintool/warcbase-resources).
-
++ Detailed documentation is available [here](http://lintool.github.io/warcbase-docs/).
++ Supporting files can be found in the [warcbase-resources repository](https://github.com/lintool/warcbase-resources).
 
 Getting Started
 ---------------
@@ -44,26 +36,25 @@ For the impatient, to skip tests:
 $ mvn clean package appassembler:assemble -DskipTests
 ```
 
-To generate Scaladocs:
+Warcbase is built against CDH 5.7.1:
 
-```
-$ mvn scala:doc
-```
++ Hadoop version: 2.6.0-cdh5.7.1
++ Spark version: 1.6.0-cdh5.7.1
++ HBase version: 1.2.0-cdh5.7.1
 
-Generated Scaladocs will be under the `target/site` directory
-
+The Hadoop ecosystem is evolving rapidly, so there may be incompatibilities with other versions.
 
 Spark Quickstart
 ----------------
 
-For the impatient, let's do a simple analysis with Spark. Within the repo there's already a sample ARC file stored at `src/test/resources/arc/example.arc.gz`. Our supporting resources repository also has [larger ARC and WARC files as real-world examples](https://github.com/lintool/warcbase-resources/tree/master/Sample-Data).
+For the impatient, let's do a simple analysis with Spark. Within the repo there's already a sample ARC file stored at `warcbase-core/src/test/resources/arc/example.arc.gz`. Our supporting resources repository also has [larger ARC and WARC files as real-world examples](https://github.com/lintool/warcbase-resources/tree/master/Sample-Data).
 
-If you need to install Spark, [we have a walkthrough here](http://lintool.github.io/warcbase-docs/Getting-Started/). This page also has instructions on how to get Spark Notebook, an interactive web-based editor, running.
+If you need to install Spark, [we have a walkthrough here](http://lintool.github.io/warcbase-docs/Getting-Started/). This page also has instructions on how to install and run Spark Notebook, an interactive web-based editor.
 
-Once you've got Spark installed, you can go ahead and fire up the Spark shell:
+Once you've got Spark installed, go ahead and fire up the Spark shell:
 
 ```
-$ spark-shell --jars target/warcbase-0.1.0-SNAPSHOT-fatjar.jar
+$ spark-shell --jars warcbase-core/target/warcbase-core-0.1.0-SNAPSHOT-fatjar.jar
 ```
 
 Here's a simple script that extracts and counts the top-level domains (i.e., number of pages for each top-level domain) in the sample ARC data:
@@ -72,7 +63,7 @@ Here's a simple script that extracts and counts the top-level domains (i.e., num
 import org.warcbase.spark.matchbox._
 import org.warcbase.spark.rdd.RecordRDD._
 
-val r = RecordLoader.loadArchives("src/test/resources/arc/example.arc.gz", sc)
+val r = RecordLoader.loadArchives("warcbase-core/src/test/resources/arc/example.arc.gz", sc)
   .keepValidPages()
   .map(r => ExtractDomain(r.getUrl))
   .countItems()
