@@ -24,16 +24,22 @@ Clone the repo:
 $ git clone http://github.com/lintool/warcbase.git
 ```
 
-You can then build Warcbase:
+You can then build Warcbase. If you are just interested in the analytics function, you can run the following:
 
 ```
-$ mvn clean package appassembler:assemble
+$ mvn clean package -pl warcbase-core
 ```
 
 For the impatient, to skip tests:
 
 ```
-$ mvn clean package appassembler:assemble -DskipTests
+$ mvn clean package -pl warcbase-core -DskipTests
+```
+
+If you are interested in the HBase functionality as well, you can build everything using:
+
+```
+mvn clean package
 ```
 
 Warcbase is built against CDH 5.7.1:
