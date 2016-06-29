@@ -93,6 +93,11 @@ public class WarcRecordUtils implements WARCConstants {
   public static byte[] getContent(WARCRecord record) throws IOException {
     int len = (int) record.getHeader().getContentLength();
 
+    // If we have a corrupt record, quit and move on.
+    if (len < 0) {
+      return new byte[0];
+    }
+
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dout = new DataOutputStream(baos);
     copyStream(record, len, true, dout);
