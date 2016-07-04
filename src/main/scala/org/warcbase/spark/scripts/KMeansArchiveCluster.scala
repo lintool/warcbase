@@ -16,6 +16,14 @@ class KMeansArchiveCluster(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized
   lazy val hashIndexToTerm = allWords.map(s=>(hashingTF.indexOf(s), s)).distinct().cache()
   lazy val clusterRdds = getClusterRdds()
 
+
+  implicit object ArrayAccumulator extends AccumulatorParam[ArrayBuffer[(Int, (List[String], List[String]))]] {
+    def zero(m: ArrayBuffer[(Int, (List[String], List[String]))]) =
+      new ArrayBuffer[(Int, (List[String], List[String]))]
+    def addInPlace(m1: ArrayBuffer[(Int, (List[String], List[String]))]
+                   , m2: ArrayBuffer[(Int, (List[String], List[String]))]) = m1 ++ m2
+  }
+
   private def getClusterRdds() = {
     val rdds = new ArrayBuffer[(Int, RDD[(Vector, String)])]
     val merged = tfidf.zip(rec).map(r=>(r._1, r._2))
@@ -69,16 +77,19 @@ class KMeansArchiveCluster(clusters: KMeansModel, tfidf: RDD[Vector], lemmatized
     this
   }
 
-  def topNWords(output: String, sc: SparkContext, limit: Int = 10) = {
-    val accum = sc.accumulator(sc.emptyRDD[(Int, (Double, Seq[String]))]:
-      RDD[(Int, (Double, Seq[String]))])(new RddAccumulator[(Int, (Double, Seq[String]))])
+  def topNWords(output: String, sc: SparkContext, limit: Int = 20, numDocs: Int = 20) = {
+    val accum = sc.accumulator(new ArrayBuffer[(Int, (List[String], List[String]))])(ArrayAccumulator)
     clusterRdds.par.foreach(c => {
-      val v = c._1
-      val cluster = clusters.clusterCenters(v)
-      val topWords = sc.parallelize(cluster.toArray).zipWithIndex.takeOrdered(limit)(Ordering[Double].reverse.on(x=>x._1));
-      accum += sc.parallelize(topWords.map{ case (k, i) => (v, (k, hashIndexToTerm.lookup(i.toInt)))})
+      val cluster = c._2
+      val clusterNum = c._1
+      val clusterCenter = clusters.clusterCenters(clusterNum)
+      val docs = cluster.map(r => (Vectors.sqdist(clusterCenter, r._1), r._2)).takeOrdered(numDocs)(Ordering[Double].on(x => x._1)).map(_._2)
+
+      val topWords = sc.parallelize(clusterCenter.toArray).zipWithIndex.takeOrdered(limit)(Ordering[Double].reverse.on(x=>x._1))
+        .map{ case (k, i) => hashIndexToTerm.lookup(i.toInt).mkString(",")}
+      accum += ArrayBuffer((clusterNum, (topWords.toList, docs.toList)))//.map(x=>x.mkString(","))))})
     })
-    accum.value.partitionBy(new HashPartitioner(clusters.k)).map(_._2).map(x=>(x._1, x._2.mkString(","))).saveAsTextFile(output)
+    val result = sc.parallelize(accum.value).partitionBy(new HashPartitioner(clusters.k)).map(_._2).saveAsTextFile(output)
     this
   }
 }
