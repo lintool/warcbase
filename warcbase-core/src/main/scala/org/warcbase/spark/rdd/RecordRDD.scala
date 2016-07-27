@@ -57,6 +57,17 @@ object RecordRDD extends java.io.Serializable {
           && !r.getUrl.endsWith("robots.txt"))
     }
 
+    def keepImages() = {
+      rdd.filter(r =>
+        r.getCrawlDate != null
+          && (
+          (r.getMimeType != null && r.getMimeType.contains("image/"))
+          || r.getUrl.endsWith("jpg")
+          || r.getUrl.endsWith("jpeg")
+          || r.getUrl.endsWith("png"))
+          && !r.getUrl.endsWith("robots.txt"))
+    }
+
     def keepMimeTypes(mimeTypes: Set[String]) = {
       rdd.filter(r => mimeTypes.contains(r.getMimeType))
     }

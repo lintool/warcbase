@@ -4,7 +4,7 @@ import org.apache.spark.SerializableWritable
 import org.warcbase.data.ArcRecordUtils
 import org.warcbase.io.ArcRecordWritable
 import org.warcbase.spark.matchbox.ExtractDate.DateComponent
-import org.warcbase.spark.matchbox.{ExtractDate, ExtractDomain}
+import org.warcbase.spark.matchbox.{RemoveHttpHeader, ExtractDate, ExtractDomain}
 
 class ArcRecord(r: SerializableWritable[ArcRecordWritable]) extends ArchiveRecord {
   val getCrawlDate: String = ExtractDate(r.t.getRecord.getMetaData.getDate, DateComponent.YYYYMMDD)
@@ -21,4 +21,12 @@ class ArcRecord(r: SerializableWritable[ArcRecordWritable]) extends ArchiveRecor
 
   val getContentString: String = new String(getContentBytes)
 
+  val getImageBytes: Array[Byte] = {
+    if (getContentString.startsWith("HTTP/"))
+      getContentBytes.slice(
+        getContentString.indexOf(RemoveHttpHeader.headerEnd)
+          + RemoveHttpHeader.headerEnd.length, getContentBytes.length)
+    else
+      getContentBytes
+  }
 }

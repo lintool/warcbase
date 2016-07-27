@@ -7,7 +7,7 @@ import org.archive.util.ArchiveUtils
 import org.warcbase.data.WarcRecordUtils
 import org.warcbase.io.WarcRecordWritable
 import org.warcbase.spark.matchbox.ExtractDate.DateComponent
-import org.warcbase.spark.matchbox.{ExtractDate, ExtractDomain}
+import org.warcbase.spark.matchbox.{RemoveHttpHeader, ExtractDate, ExtractDomain}
 
 class WarcRecord(r: SerializableWritable[WarcRecordWritable]) extends ArchiveRecord {
   val ISO8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX")
@@ -25,4 +25,13 @@ class WarcRecord(r: SerializableWritable[WarcRecordWritable]) extends ArchiveRec
   val getUrl = r.t.getRecord.getHeader.getUrl
 
   val getDomain = ExtractDomain(getUrl)
+
+  val getImageBytes: Array[Byte] = {
+    if (getContentString.startsWith("HTTP/"))
+      getContentBytes.slice(
+        getContentString.indexOf(RemoveHttpHeader.headerEnd)
+          + RemoveHttpHeader.headerEnd.length, getContentBytes.length)
+    else
+      getContentBytes
+  }
 }
