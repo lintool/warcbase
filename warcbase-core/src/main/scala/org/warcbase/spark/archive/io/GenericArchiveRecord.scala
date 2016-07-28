@@ -11,7 +11,7 @@ import org.warcbase.data.{ArcRecordUtils, WarcRecordUtils}
 import org.warcbase.io.GenericArchiveRecordWritable
 import org.warcbase.io.GenericArchiveRecordWritable.ArchiveFormat
 import org.warcbase.spark.matchbox.ExtractDate.DateComponent
-import org.warcbase.spark.matchbox.{ExtractDate, ExtractDomain}
+import org.warcbase.spark.matchbox.{RemoveHttpHeader, ExtractDate, ExtractDomain}
 
 class GenericArchiveRecord(r: SerializableWritable[GenericArchiveRecordWritable]) extends ArchiveRecord {
   var arcRecord: ARCRecord = null
@@ -68,4 +68,13 @@ class GenericArchiveRecord(r: SerializableWritable[GenericArchiveRecordWritable]
   }
 
   val getDomain: String = ExtractDomain(getUrl)
+
+  val getImageBytes: Array[Byte] = {
+    if (getContentString.startsWith("HTTP/"))
+      getContentBytes.slice(
+        getContentString.indexOf(RemoveHttpHeader.headerEnd)
+          + RemoveHttpHeader.headerEnd.length, getContentBytes.length)
+    else
+      getContentBytes
+  }
 }

@@ -14,4 +14,6 @@ trait ArchiveRecord extends Serializable {
   val getContentString: String
 
   val getContentBytes: Array[Byte]
+
+  val getImageBytes: Array[Byte]
 }
