@@ -39,7 +39,7 @@ p {
 
 <h1>Visualization of the Canadian Political Parties and Political Interest Groups Web Crawls</h1>
 
-<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="https://d3js.org/d3.v3.min.js"></script>
 <script>
 
 var margin = {top: 20, right: 120, bottom: 50, left: 32},
@@ -169,5 +169,7 @@ d3.csv("data.csv", function(error, data) {
 <p>This is a visualization of the <a href="https://www.archive-it.org/collections/227">Canadian Political Parties and Political Interest Groups</a> web crawl. Each bar shows the distribution of pages in that crawl by top-level domain. The legend on the right orders the domains by the number of pages across the <i>entire</i> collection, ordered from the bottom&mdash;that is, the bottom domain has the most pages, the second one from the bottom has the second most pages, etc. The legend breaks out the top 20 domains; everything else is grouped into "other" (at the very top). The stacking of the colors in each column is consistent with the legend ordering. Mousing over a portion of a bar will outline in red the domain across all crawls, as will mousing over any part of the legend.</p>
 
 <p>This visualization was created with d3, based on <a href="http://bl.ocks.org/mbostock/3886208">this example</a> and <a href="http://bl.ocks.org/yuuniverse4444/8325617">this example</a>. The raw data for this visualization comes from the output of a <a href="https://github.com/lintool/warcbase/wiki/Pig:-Gathering-Basic-Crawl-Statistics">Pig script</a>.</p>
+
+<p>Original code created by Jimmy Lin and found in the <a href="https://github.com/lintool/warcbase/tree/master/vis/crawl-sites">warcbase repo here.</a></p>
 
 </html>
