@@ -76,7 +76,7 @@ val r = RecordLoader.loadArchives("warcbase-core/src/test/resources/arc/example.
   .take(10)
 ```
 
-**Tip:** By default, commands in the Spark shell must be one line. To run multi-line commands, type `:paste` in Spark shell: you can then copy-paste the script above directly into Spark shell. Use Ctrl-D to finish the command.
+**Tip:** By default, commands in the Spark shell must be one line. To run multi-line commands, type `:paste` in the Spark shell: you can then copy-paste the script above directly into Spark shell. Use Ctrl-D to finish the command.
 
 What to learn more? Check out our [detailed documentation](http://lintool.github.io/warcbase-docs/).
 
