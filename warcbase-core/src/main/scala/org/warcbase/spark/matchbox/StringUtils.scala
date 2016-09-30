@@ -20,6 +20,7 @@ object StringUtils {
 
   implicit class WWWLink(s: String) {
     def removePrefixWWW(): String = {
+      if (s == null) return null
       s.replaceAll("^\\s*www\\.", "")
     }
   }
