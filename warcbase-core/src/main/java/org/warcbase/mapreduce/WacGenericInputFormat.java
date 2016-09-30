@@ -40,6 +40,7 @@ import org.warcbase.io.GenericArchiveRecordWritable.ArchiveFormat;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.lang.Exception;
 import java.util.Iterator;
 
 public class WacGenericInputFormat extends FileInputFormat<LongWritable, GenericArchiveRecordWritable> {
@@ -121,7 +122,13 @@ public class WacGenericInputFormat extends FileInputFormat<LongWritable, Generic
       }
       key.set(pos);
 
-      ArchiveRecord record = iter.next();
+      ArchiveRecord record = null;
+      try {
+        record = iter.next();
+      } catch (Exception e) {
+        return false;
+      }
+
       if (record == null) {
         return false;
       }

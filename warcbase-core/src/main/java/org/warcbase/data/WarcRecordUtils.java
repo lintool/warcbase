@@ -24,6 +24,7 @@ import org.archive.io.warc.WARCReaderFactory;
 import org.archive.io.warc.WARCRecord;
 
 import java.io.*;
+import java.lang.Exception;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -98,11 +99,16 @@ public class WarcRecordUtils implements WARCConstants {
       return new byte[0];
     }
 
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    DataOutputStream dout = new DataOutputStream(baos);
-    copyStream(record, len, true, dout);
+    try {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      DataOutputStream dout = new DataOutputStream(baos);
+      copyStream(record, len, true, dout);
 
-    return baos.toByteArray();
+      return baos.toByteArray();
+    } catch (Exception e) {
+      // Catch exceptions related to any corrupt archive files.
+      return new byte[0];
+    }
   }
 
   /**
