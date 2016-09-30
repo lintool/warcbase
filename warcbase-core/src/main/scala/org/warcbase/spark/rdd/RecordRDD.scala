@@ -52,6 +52,7 @@ object RecordRDD extends java.io.Serializable {
       rdd.filter(r =>
         r.getCrawlDate != null
           && (r.getMimeType == "text/html"
+          || r.getMimeType == "application/xhtml+xml"
           || r.getUrl.endsWith("htm")
           || r.getUrl.endsWith("html"))
           && !r.getUrl.endsWith("robots.txt"))
