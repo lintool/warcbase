@@ -25,7 +25,6 @@ import scala.collection.mutable
 
 /**
   * UDF for extracting links from a webpage given the HTML content (using Jsoup).
-  *
   */
 object ExtractLinks {
   /**
@@ -36,9 +35,13 @@ object ExtractLinks {
     * Returns a sequence of (source, target, anchortext)
     */
   def apply(src: String, html: String, base: String = ""): Seq[(String, String, String)] = {
-    if (html.isEmpty) return Nil
     try {
       val output = mutable.MutableList[(String, String, String)]()
+
+      // Basic input checking, return empty list if we fail.
+      if (src == null) return output
+      if (html.isEmpty) return output
+
       val doc = Jsoup.parse(html)
       val links: Elements = doc.select("a[href]")
       val it = links.iterator()
