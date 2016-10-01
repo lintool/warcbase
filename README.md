@@ -39,7 +39,7 @@ $ mvn clean package -pl warcbase-core -DskipTests
 If you are interested in the HBase functionality as well, you can build everything using:
 
 ```
-mvn clean package
+$ mvn clean package
 ```
 
 Warcbase is built against CDH 5.7.1:
