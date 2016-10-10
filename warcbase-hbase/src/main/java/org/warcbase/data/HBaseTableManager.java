@@ -16,18 +16,9 @@
 
 package org.warcbase.data;
 
-import java.lang.reflect.Field;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
@@ -42,27 +33,31 @@ public class HBaseTableManager {
   // Add a bit of padding for headers, etc.
   public static final int MAX_VERSIONS = Integer.MAX_VALUE;
 
-  private final HTable table;
-  private final HBaseAdmin admin;
+  private final Table table;
 
   public HBaseTableManager(String name, boolean create, Compression.Algorithm compression) throws Exception {
     Configuration hbaseConfig = HBaseConfiguration.create();
-    admin = new HBaseAdmin(hbaseConfig);
+    hbaseConfig.set("hbase.client.keyvalue.maxsize", String.valueOf(MAX_KEY_VALUE_SIZE));
+    LOG.info("Setting maxKeyValueSize to " + MAX_KEY_VALUE_SIZE);
 
-    if (admin.tableExists(name) && !create) {
+    Connection connection = ConnectionFactory.createConnection(hbaseConfig);
+    Admin admin = connection.getAdmin();
+
+    TableName tableName = TableName.valueOf(name);
+    if (admin.tableExists(tableName) && !create) {
       LOG.info(String.format("Table '%s' exists: doing nothing.", name));
     } else {
-      if (admin.tableExists(name)) {
+      if (admin.tableExists(tableName)) {
         LOG.info(String.format("Table '%s' exists: dropping table and recreating.", name));
         LOG.info(String.format("Disabling table '%s'", name));
-        admin.disableTable(name);
+        admin.disableTable(tableName);
         LOG.info(String.format("Droppping table '%s'", name));
-        admin.deleteTable(name);
+        admin.deleteTable(tableName);
       }
 
       HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf(name));
-      for (int i = 0; i < FAMILIES.length; i++) {
-        HColumnDescriptor hColumnDesc = new HColumnDescriptor(FAMILIES[i]);
+      for (String FAMILY : FAMILIES) {
+        HColumnDescriptor hColumnDesc = new HColumnDescriptor(FAMILY);
         hColumnDesc.setMaxVersions(MAX_VERSIONS);
         hColumnDesc.setCompressionType(compression);
         hColumnDesc.setCompactionCompressionType(compression);
@@ -73,12 +68,7 @@ public class HBaseTableManager {
       LOG.info(String.format("Successfully created table '%s'", name));
     }
 
-    table = new HTable(hbaseConfig, name);
-    Field maxKeyValueSizeField = HTable.class.getDeclaredField("maxKeyValueSize");
-    maxKeyValueSizeField.setAccessible(true);
-    maxKeyValueSizeField.set(table, MAX_KEY_VALUE_SIZE);
-
-    LOG.info("Setting maxKeyValueSize to " + maxKeyValueSizeField.get(table));
+    table = connection.getTable(tableName);
     admin.close();
   }
 
@@ -88,7 +78,7 @@ public class HBaseTableManager {
       long timestamp = ArchiveUtils.parse14DigitDate(date14digits).getTime();
       Put put = new Put(Bytes.toBytes(key));
       put.setDurability(Durability.SKIP_WAL);
-      put.add(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(type), timestamp, data);
+      put.addColumn(Bytes.toBytes(FAMILIES[0]), Bytes.toBytes(type), timestamp, data);
       table.put(put);
       return true;
     } catch (Exception e) {
