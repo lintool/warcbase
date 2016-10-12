@@ -37,7 +37,7 @@ public class HBaseTableManager {
 
   public HBaseTableManager(String name, boolean create, Compression.Algorithm compression) throws Exception {
     Configuration hbaseConfig = HBaseConfiguration.create();
-    hbaseConfig.set("hbase.client.keyvalue.maxsize", String.valueOf(MAX_KEY_VALUE_SIZE));
+    hbaseConfig.set(TableConfiguration.MAX_KEYVALUE_SIZE_KEY, String.valueOf(MAX_KEY_VALUE_SIZE));
     LOG.info("Setting maxKeyValueSize to " + MAX_KEY_VALUE_SIZE);
 
     Connection connection = ConnectionFactory.createConnection(hbaseConfig);
@@ -56,8 +56,8 @@ public class HBaseTableManager {
       }
 
       HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf(name));
-      for (String FAMILY : FAMILIES) {
-        HColumnDescriptor hColumnDesc = new HColumnDescriptor(FAMILY);
+      for (String family : FAMILIES) {
+        HColumnDescriptor hColumnDesc = new HColumnDescriptor(family);
         hColumnDesc.setMaxVersions(MAX_VERSIONS);
         hColumnDesc.setCompressionType(compression);
         hColumnDesc.setCompactionCompressionType(compression);
