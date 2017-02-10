@@ -17,6 +17,8 @@
 package org.warcbase.data;
 
 import org.apache.commons.httpclient.HttpParser;
+import org.apache.commons.io.input.BoundedInputStream;
+import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.archive.io.warc.WARCConstants;
 import org.archive.io.warc.WARCReader;
@@ -100,11 +102,7 @@ public class WarcRecordUtils implements WARCConstants {
     }
 
     try {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      DataOutputStream dout = new DataOutputStream(baos);
-      copyStream(record, len, true, dout);
-
-      return baos.toByteArray();
+      return copyToByteArray(record, len, true);
     } catch (Exception e) {
       // Catch exceptions related to any corrupt archive files.
       return new byte[0];
@@ -131,22 +129,14 @@ public class WarcRecordUtils implements WARCConstants {
     return baos.toByteArray();
   }
 
-  private static long copyStream(final InputStream is, final int recordLength,
-      boolean enforceLength, final DataOutputStream out) throws IOException {
-    byte [] scratchbuffer = new byte[recordLength];
-    int read = 0;
-    long tot = 0;
-    while ((tot < recordLength) && (read = is.read(scratchbuffer)) != -1) {
-      int write = read;
-      // never write more than enforced length
-      write = (int) Math.min(write, recordLength - tot);
-      tot += read;
-      out.write(scratchbuffer, 0, write);
-    }
-    if (enforceLength && tot != recordLength) {
-      LOG.error("Read " + tot + " bytes but expected " + recordLength + " bytes. Continuing...");
-    }
+  private static byte[] copyToByteArray(InputStream is, final int recordLength,
+      boolean enforceLength) throws IOException {
 
-    return tot;
+    BoundedInputStream bis = new BoundedInputStream(is, recordLength);
+    byte[] rawContents = IOUtils.toByteArray(bis);
+    if (enforceLength && rawContents.length != recordLength) {
+      LOG.error("Read " + rawContents.length + " bytes but expected " + recordLength + " bytes. Continuing...");
+    }
+    return rawContents;
   }
 }

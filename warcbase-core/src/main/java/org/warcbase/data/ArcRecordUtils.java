@@ -23,6 +23,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.commons.io.input.BoundedInputStream;
+import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.archive.io.arc.ARCReader;
 import org.archive.io.arc.ARCReaderFactory;
@@ -61,8 +63,12 @@ public class ArcRecordUtils {
     DataOutputStream dout = new DataOutputStream(baos);
     dout.write(metaline.getBytes());
     dout.write("\n".getBytes());
-    copyStream(record, (int) meta.getLength(), true, dout);
 
+    long recordLength = meta.getLength();
+    long len = IOUtils.copyLarge(new BoundedInputStream(record, recordLength), dout);
+    if (len != recordLength) {
+      LOG.error("Read " + len + " bytes but expected " + recordLength + " bytes. Continuing...");
+    }
     return baos.toByteArray();
   }
 
@@ -76,11 +82,7 @@ public class ArcRecordUtils {
   public static byte[] getContent(ARCRecord record) throws IOException {
     ARCRecordMetaData meta = record.getMetaData();
 
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    DataOutputStream dout = new DataOutputStream(baos);
-    copyStream(record, (int) meta.getLength(), true, dout);
-
-    return baos.toByteArray();
+    return copyToByteArray(record, (int) meta.getLength(), true);
   }
 
   /**
@@ -108,22 +110,14 @@ public class ArcRecordUtils {
     return content;
   }
 
-  private static long copyStream(final InputStream is, final int recordLength,
-      boolean enforceLength, final DataOutputStream out) throws IOException {
-    byte [] scratchbuffer = new byte[recordLength];
-    int read = 0;
-    long tot = 0;
-    while ((tot < recordLength) && (read = is.read(scratchbuffer)) != -1) {
-      int write = read;
-      // never write more than enforced length
-      write = (int) Math.min(write, recordLength - tot);
-      tot += read;
-      out.write(scratchbuffer, 0, write);
-    }
-    if (enforceLength && tot != recordLength) {
-      LOG.error("Read " + tot + " bytes but expected " + recordLength + " bytes. Continuing...");
-    }
+  private static byte[] copyToByteArray(InputStream is, final int recordLength,
+      boolean enforceLength) throws IOException {
 
-    return tot;
+    BoundedInputStream bis = new BoundedInputStream(is, recordLength);
+    byte[] rawContents = IOUtils.toByteArray(bis);
+    if (enforceLength && rawContents.length != recordLength) {
+      LOG.error("Read " + rawContents.length + " bytes but expected " + recordLength + " bytes. Continuing...");
+    }
+    return rawContents;
   }
 }
