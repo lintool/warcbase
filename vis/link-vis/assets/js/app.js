@@ -16,8 +16,8 @@ var threshold = 100;
 var max_links = 1;
 var num_nodes = 1;
 
-var min_year = 2005;
-var max_year = 2009;
+var min_year = 0;
+var max_year = 0;
 
 // setup D3 graph
 var graph = d3.select("#graph")
@@ -26,8 +26,8 @@ var graph = d3.select("#graph")
     .attr("width", width)
     .attr("height", height);
 
-var links = graph.selectAll(".link");
-var node = graph.selectAll(".node");
+var links = graph.selectAll("line");
+var node = graph.selectAll("g.node");
 
 // force-directed layout settings
 var force = d3.layout.force()
@@ -127,7 +127,7 @@ function updateGraph() {
     .on("tick", tick)
     .start();
 
-  links = links.data(force.links());
+  links = graph.selectAll("line").data(force.links(), JSON.stringify);
 
   links.enter().append("line")
     .attr("stroke-opacity", function (d) {
@@ -136,9 +136,11 @@ function updateGraph() {
     .attr("class", function (d) { return "link year" + d.year; })
     .on("mouseover", linktip.show)
     .on("mouseout", linktip.hide);
+  links.exit().remove();
 
   // node settings
-  node = node.data(force.nodes());
+  node = graph.selectAll("g.node").data(force.nodes(), JSON.stringify);
+  node.selectAll("text").remove();
   var node_enter = node.enter().append("g")
     .attr("class", function(d) {
       var dates = new Set();
@@ -147,12 +149,14 @@ function updateGraph() {
         dates.add(l.year);
       });
       dates.forEach(function(year) { classes.push("year" + year); });
+      if (d.fixed) classes.push("fixed");
       return classes.join(' ');
     })
     .on("mouseover", nodetip.show)
     .on("mouseout", nodetip.hide)
     .on("dblclick", dblclick)
     .call(drag);
+  node.exit().remove();
 
   // set node size
   node_enter.append("circle")
@@ -237,6 +241,7 @@ function dblclick(d) {
 
 function makeDateSlider() {
   var slider = document.getElementById('date-slider');
+  if (slider.noUiSlider) slider.noUiSlider.destroy();
   noUiSlider.create(slider, {
     start: [min_year, max_year],
     connect: true,
@@ -260,6 +265,7 @@ function makeDateSlider() {
 
 function makeThresholdSlider() {
   var thresholdSlider = document.getElementById('threshold-slider');
+  if (thresholdSlider.noUiSlider) thresholdSlider.noUiSlider.destroy();
   noUiSlider.create(thresholdSlider, {
     start: 100,
     step: 10,
@@ -280,56 +286,105 @@ function makeThresholdSlider() {
   });
 }
 
+// create file menu
+function makeFileMenu(){
+  var fileMenu = document.getElementById("file-menu");
 
+  for (var i=0; i<listOfAvailableDataFiles.length; i++) {
+    var fileName = listOfAvailableDataFiles[i];
+    fileName = fileName.substring(0, fileName.length - 5);
+    var option = document.createElement("option");
+    option.innerHTML = fileName;
+    fileMenu.appendChild(option);
+  }
+
+  var defaultIndex = listOfAvailableDataFiles.indexOf("graph.json");
+  if (defaultIndex >= 0) fileMenu.selectedIndex = defaultIndex;
+
+  fileMenu.onchange = function() {
+    displayLoader();
+    loadDataAndDrawGraph();
+  }
+}
+
+// get selected file name
+function getSelectedFileName() {
+  var fileMenu = document.getElementById("file-menu");
+  return "/data/" + listOfAvailableDataFiles[fileMenu.selectedIndex];
+}
 
 // Load data
 // ---------------------------------
 
 // display loader
 displayLoader();
+makeFileMenu();
 
-// import and process node data, then get link data
-d3.json("/data/graph.json", function (error, data) {
-  if (error) throw error;
 
-  // process nodes
-  var nodes = data.nodes;
-  num_nodes = nodes.length;
-  nodes.forEach(function (n) {
-    n.name = n.domain;
-    n.count = n.inDegree + n.outDegree;
-    n.weight = n.count;
+function loadDataAndDrawGraph() {
+  all_links = [];
+  all_nodes = [];
+  node_to_links = {};
+  node_by_name = {};
 
-    node_to_links[n.name] = [];
-    node_by_name[n.name] = n;
-  });
-  // sort descending for threshold selecting
-  all_nodes = _.sortBy(nodes, 'count').reverse();
+  min_year = 0;
+  max_year = 0;
 
-  // process link data
-  all_links = data.links;
-  all_links.forEach(function(l) {
-    l.source = l.src;
-    l.target = l.dst;
-    l.year = l.date.substr(0,4);
+  // import and process node data, then get link data
+  d3.json(getSelectedFileName(), function (error, data) {
+    if (error) throw error;
 
-    var source_str = l.source;
-    var target_str = l.target;
+    // process nodes
+    var nodes = data.nodes;
+    num_nodes = nodes.length;
+    nodes.forEach(function (n) {
+      n.name = n.domain;
+      n.count = n.inDegree + n.outDegree;
+      n.weight = n.count;
 
-    l.source = node_by_name[source_str];
-    l.target = node_by_name[target_str];
-    node_to_links[source_str].push(l);
+      node_to_links[n.name] = [];
+      node_by_name[n.name] = n;
+    });
+    // sort descending for threshold selecting
+    all_nodes = _.sortBy(nodes, 'count').reverse();
 
-    if (source_str != target_str) {
-      var l2 = l;
-      l2.source = node_by_name[target_str];
-      l2.target = node_by_name[source_str];
-      node_to_links[target_str].push(l2);
+    // process link data
+    all_links = data.links;
+    all_links.forEach(function(l) {
+      l.source = l.src;
+      l.target = l.dst;
+      l.year = l.date.substr(0,4);
+      if (l.year < min_year || min_year == 0) {
+        min_year = parseInt(l.year);
+      }
+      if (l.year > max_year || max_year == 0) {
+        max_year = parseInt(l.year);
+      }
+
+      var source_str = l.source;
+      var target_str = l.target;
+
+      l.source = node_by_name[source_str];
+      l.target = node_by_name[target_str];
+      node_to_links[source_str].push(l);
+
+      if (source_str != target_str) {
+        var l2 = l;
+        l2.source = node_by_name[target_str];
+        l2.target = node_by_name[source_str];
+        node_to_links[target_str].push(l2);
+      }
+    });
+
+    if (max_year == min_year) {
+      max_year = max_year + 1;
     }
+
+    makeDateSlider();
+    makeThresholdSlider();
+
+    updateGraph();
   });
+}
 
-  updateGraph();
-
-  makeDateSlider();
-  makeThresholdSlider();
-});
+loadDataAndDrawGraph();
