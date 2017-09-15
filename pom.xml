@@ -13,10 +13,10 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <scala.version>2.10.5</scala.version>
-    <hadoop.version>2.6.0-cdh5.7.1</hadoop.version>
-    <spark.version>1.6.0-cdh5.7.1</spark.version>
-    <hbase.version>1.2.0-cdh5.7.1</hbase.version>
-    <zookeeper.version>3.4.5-cdh5.7.1</zookeeper.version>
+    <hadoop.version>2.6.0</hadoop.version>
+    <spark.version>1.6.1</spark.version>
+    <hbase.version>1.2.2</hbase.version>
+    <zookeeper.version>3.4.9</zookeeper.version>
   </properties>
 
   <licenses>
