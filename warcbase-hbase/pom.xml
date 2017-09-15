@@ -107,6 +107,15 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>appassembler-maven-plugin</artifactId>
         <version>1.9</version>
+        <executions>
+          <execution>
+            <id>appassembler</id>
+            <phase>package</phase>
+            <goals>
+              <goal>assemble</goal>
+            </goals>
+          </execution>
+        </executions>
         <configuration>
           <extraJvmArguments>-Xms512M -Xmx24576M</extraJvmArguments>
           <programs>
